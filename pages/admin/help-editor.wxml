@@ -1,0 +1,63 @@
+<view class="page" wx:if="{{!loading}}">
+  <view class="form-card">
+    <view class="field">
+      <text class="field-label">标题</text>
+      <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="40" placeholder="例如：如何提交歌曲" />
+      <text class="field-count">{{title.length}}/40</text>
+    </view>
+
+    <view class="field">
+      <text class="field-label">折叠状态下的简短提示（可选）</text>
+      <input class="field-input" value="{{summary}}" bindinput="onSummaryInput" maxlength="80" placeholder="用一句话概括本条说明" />
+      <text class="field-count">{{summary.length}}/80</text>
+    </view>
+
+    <view class="field">
+      <text class="field-label">详细说明</text>
+      <textarea class="content-input" value="{{content}}" bindinput="onContentInput" maxlength="5000" placeholder="输入详细内容，支持换行和分段" auto-height></textarea>
+      <text class="field-count">{{content.length}}/5000</text>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <view class="image-heading">
+      <view>
+        <text class="field-label">说明图片</text>
+        <text class="image-subtitle">最多5张，超过2MB将自动压缩</text>
+      </view>
+      <text class="image-total">{{images.length}}/5</text>
+    </view>
+
+    <view class="editor-image-list" wx:if="{{images.length > 0}}">
+      <view class="editor-image-item" wx:for="{{images}}" wx:key="url">
+        <image class="editor-image" src="{{item.url}}" mode="aspectFill" bindtap="previewImage" data-url="{{item.url}}"></image>
+        <view class="image-actions">
+          <text class="image-action" wx:if="{{index > 0}}" bindtap="moveImage" data-index="{{index}}" data-direction="left">左移</text>
+          <text class="image-action" wx:if="{{index < images.length - 1}}" bindtap="moveImage" data-index="{{index}}" data-direction="right">右移</text>
+          <text class="image-action danger" bindtap="removeImage" data-index="{{index}}">删除</text>
+        </view>
+      </view>
+    </view>
+
+    <button class="choose-image-btn" bindtap="chooseImages" disabled="{{images.length >= 5}}">＋ 上传图片</button>
+  </view>
+
+  <view class="preview-card" wx:if="{{showPreview}}">
+    <text class="preview-label">用户端预览</text>
+    <text class="preview-title">{{title || '未填写标题'}}</text>
+    <text class="preview-summary" wx:if="{{summary}}">{{summary}}</text>
+    <text class="preview-content">{{content || '未填写详细说明'}}</text>
+    <view class="preview-images" wx:if="{{images.length > 0}}">
+      <image class="preview-image {{images.length === 1 ? 'single' : ''}}" wx:for="{{images}}" wx:key="url" src="{{item.url}}" mode="aspectFill" bindtap="previewImage" data-url="{{item.url}}"></image>
+    </view>
+  </view>
+
+  <view class="bottom-spacer"></view>
+  <view class="bottom-actions">
+    <button class="action-btn preview" bindtap="togglePreview">{{showPreview ? '收起预览' : '预览'}}</button>
+    <button class="action-btn draft" bindtap="onSaveDraft" disabled="{{saving}}">保存草稿</button>
+    <button class="action-btn publish" bindtap="onPublish" disabled="{{saving}}">发布</button>
+  </view>
+</view>
+
+<privacy-popup id="privacyPopup"></privacy-popup>

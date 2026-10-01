@@ -42,9 +42,10 @@ page { background: #f0f2f5; }
 .notice-text { font-size: 24rpx; color: #856404; flex: 1; line-height: 1.5; }
 
 /* 选项卡 */
-.tab-bar { display: flex; gap: 12rpx; margin-bottom: 24rpx; width: 100%; box-sizing: border-box; }
+.tab-scroll { width: 100%; margin-bottom: 24rpx; white-space: nowrap; box-sizing: border-box; }
+.tab-bar { display: inline-flex; gap: 12rpx; min-width: 100%; padding-bottom: 2rpx; box-sizing: border-box; }
 .tab-item {
-  flex: 1; text-align: center; padding: 18rpx 0;
+  flex: 1 0 160rpx; min-width: 160rpx; text-align: center; padding: 18rpx 20rpx;
   background: #fff; border-radius: 16rpx;
   font-size: 26rpx; color: #888; font-weight: 500;
   min-width: 0; box-sizing: border-box;
@@ -351,6 +352,52 @@ page { background: #f0f2f5; }
   background: linear-gradient(135deg, #1976d2, #1565c0);
   color: #fff; border: none; border-radius: 12rpx;
   font-size: 26rpx; font-weight: 500; padding: 16rpx 40rpx;
+}
+
+/* ========== 使用说明管理 ========== */
+
+.btn-add-help {
+  flex-shrink: 0; padding: 10rpx 22rpx; border-radius: 20rpx;
+  background: #e8f5e9; color: #07c160; font-size: 24rpx; font-weight: 600;
+}
+.help-manage-hint {
+  margin-bottom: 20rpx; padding: 18rpx 22rpx; border-radius: 14rpx;
+  background: #fff8e1; color: #856404; font-size: 23rpx; line-height: 1.55;
+}
+.help-manage-loading {
+  padding: 80rpx 0; color: #aaa; text-align: center; font-size: 26rpx;
+}
+.help-manage-item {
+  margin-bottom: 20rpx; padding: 28rpx; border-radius: 20rpx;
+  background: #fff; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+.help-manage-title-row { display: flex; align-items: center; gap: 14rpx; }
+.help-manage-title {
+  flex: 1; min-width: 0; color: #333; font-size: 30rpx; font-weight: 650;
+}
+.help-status {
+  flex-shrink: 0; padding: 5rpx 12rpx; border-radius: 10rpx; font-size: 20rpx;
+}
+.help-status.published { background: #e8f5e9; color: #07c160; }
+.help-status.draft { background: #fff3e0; color: #f57c00; }
+.help-manage-summary {
+  display: block; margin-top: 10rpx; color: #888; font-size: 24rpx; line-height: 1.5;
+}
+.help-image-count { display: block; margin-top: 10rpx; color: #bbb; font-size: 22rpx; }
+.help-manage-actions {
+  display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 22rpx; padding-top: 18rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.help-action {
+  padding: 10rpx 18rpx; border-radius: 10rpx; background: #f2f4f6;
+  color: #666; font-size: 23rpx;
+}
+.help-action.edit { background: #e3f2fd; color: #1976d2; }
+.help-action.delete { background: #ffebee; color: #e53e3e; }
+.help-empty-text { display: block; margin-bottom: 22rpx; }
+.btn-init-help {
+  border: none; border-radius: 12rpx; background: #e8f5e9;
+  color: #07c160; font-size: 25rpx; font-weight: 600;
 }
 
 /* 通行码结果弹窗 */

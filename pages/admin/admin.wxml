@@ -39,6 +39,7 @@
 </view>
 
 <!-- 管理选项卡 -->
+<scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
 <view class="tab-bar">
   <view class="tab-item {{currentTab === 'audit' ? 'active' : ''}}" bindtap="switchTab" data-tab="audit">
     列表审核
@@ -52,7 +53,11 @@
   <view class="tab-item {{currentTab === 'admins' ? 'active' : ''}}" bindtap="switchTab" data-tab="admins" wx:if="{{isSuperAdmin}}">
     管理员
   </view>
+  <view class="tab-item {{currentTab === 'help' ? 'active' : ''}}" bindtap="switchTab" data-tab="help" wx:if="{{isSuperAdmin}}">
+    说明管理
+  </view>
 </view>
+</scroll-view>
 
 <!-- ========== 列表审核 ========== -->
 <view class="tab-panel" wx:if="{{currentTab === 'audit'}}">
@@ -304,6 +309,43 @@
     <view class="admin-empty" wx:else>
       <text>暂无管理员</text>
     </view>
+  </view>
+</view>
+
+<!-- ========== 使用说明管理 ========== -->
+<view class="tab-panel" wx:elif="{{currentTab === 'help'}}">
+  <view class="header">
+    <text class="title">使用说明管理</text>
+    <text class="btn-add-help" bindtap="onAddHelpArticle">＋ 新建条目</text>
+  </view>
+
+  <view class="help-manage-hint">用户端按这里的顺序展示。草稿和已隐藏条目不会对用户显示。</view>
+
+  <view class="help-manage-loading" wx:if="{{helpLoading}}">加载中...</view>
+  <view class="help-manage-list" wx:elif="{{helpArticleList.length > 0}}">
+    <view class="help-manage-item" wx:for="{{helpArticleList}}" wx:key="_id">
+      <view class="help-manage-main">
+        <view class="help-manage-title-row">
+          <text class="help-manage-title">{{item.title}}</text>
+          <text class="help-status {{item.is_published ? 'published' : 'draft'}}">{{item.is_published ? '已发布' : '草稿'}}</text>
+        </view>
+        <text class="help-manage-summary" wx:if="{{item.summary}}">{{item.summary}}</text>
+        <text class="help-image-count">{{item.images.length}} 张图片</text>
+      </view>
+
+      <view class="help-manage-actions">
+        <text class="help-action" wx:if="{{index > 0}}" bindtap="onMoveHelpArticle" data-id="{{item._id}}" data-direction="up">上移</text>
+        <text class="help-action" wx:if="{{index < helpArticleList.length - 1}}" bindtap="onMoveHelpArticle" data-id="{{item._id}}" data-direction="down">下移</text>
+        <text class="help-action" bindtap="onToggleHelpArticle" data-id="{{item._id}}" data-published="{{item.is_published}}">{{item.is_published ? '隐藏' : '发布'}}</text>
+        <text class="help-action edit" bindtap="onEditHelpArticle" data-id="{{item._id}}">编辑</text>
+        <text class="help-action delete" bindtap="onDeleteHelpArticle" data-id="{{item._id}}" data-title="{{item.title}}">删除</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="admin-empty" wx:else>
+    <text class="help-empty-text">暂无使用说明</text>
+    <button class="btn-init-help" size="mini" bindtap="onInitializeHelpArticles">生成默认说明</button>
   </view>
 </view>
 

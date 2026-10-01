@@ -1,0 +1,11 @@
+{
+  "name": "manageHelpContent",
+  "version": "1.0.0",
+  "description": "动态使用说明读取与超级管理员维护",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~3.0.4"
+  }
+}

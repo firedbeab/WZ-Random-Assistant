@@ -20,6 +20,10 @@
           <text class="privacy-dot"></text>
           <text class="privacy-detail-text">剪切板：用于复制内容信息，方便粘贴到其他应用中使用</text>
         </view>
+        <view class="privacy-detail-item">
+          <text class="privacy-dot"></text>
+          <text class="privacy-detail-text">所选图片：仅在超级管理员主动上传使用说明图片时读取，不会读取未选择的照片</text>
+        </view>
       </view>
     </view>
 

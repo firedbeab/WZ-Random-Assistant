@@ -1,0 +1,51 @@
+<view class="page">
+  <view class="hero">
+    <text class="hero-title">使用说明</text>
+    <text class="hero-desc">点击条目即可展开详细内容</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading && articles.length === 0}}">
+    <text>正在加载说明...</text>
+  </view>
+
+  <view class="error-card" wx:elif="{{loadFailed}}">
+    <text class="error-title">暂时无法加载使用说明</text>
+    <text class="error-desc">请检查网络后重试</text>
+    <button class="retry-btn" bindtap="retryLoad">重新加载</button>
+  </view>
+
+  <view class="empty-card" wx:elif="{{articles.length === 0}}">
+    <text>暂无使用说明</text>
+  </view>
+
+  <view class="article-list" wx:else>
+    <view class="article-card {{expandedId === item._id ? 'expanded' : ''}}" wx:for="{{articles}}" wx:key="_id">
+      <view class="article-header" bindtap="toggleArticle" data-id="{{item._id}}">
+        <view class="article-heading">
+          <text class="article-title">{{item.title}}</text>
+          <text class="article-summary" wx:if="{{item.summary}}">{{item.summary}}</text>
+        </view>
+        <text class="article-arrow">{{expandedId === item._id ? '⌃' : '⌄'}}</text>
+      </view>
+
+      <view class="article-body" wx:if="{{item._opened}}" hidden="{{expandedId !== item._id}}">
+        <text class="article-content" user-select>{{item.content}}</text>
+        <view class="image-grid" wx:if="{{item.images.length > 0}}">
+          <image
+            class="help-image {{item.images.length === 1 ? 'single' : ''}}"
+            wx:for="{{item.images}}"
+            wx:for-item="imageUrl"
+            wx:key="*this"
+            src="{{imageUrl}}"
+            mode="aspectFill"
+            lazy-load
+            bindtap="previewImage"
+            data-current="{{imageUrl}}"
+            data-images="{{item.images}}"
+          ></image>
+        </view>
+        <text class="image-hint" wx:if="{{item.images.length > 0}}">点击图片可全屏查看</text>
+      </view>
+    </view>
+  </view>
+</view>

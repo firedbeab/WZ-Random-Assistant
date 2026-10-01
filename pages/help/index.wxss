@@ -1,0 +1,157 @@
+page {
+  background: #f4f6f8;
+  min-height: 100%;
+}
+
+.page {
+  padding: 28rpx;
+  box-sizing: border-box;
+}
+
+.hero {
+  padding: 34rpx 36rpx;
+  margin-bottom: 24rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #07c160, #05a94f);
+  color: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.2);
+}
+
+.hero-title {
+  display: block;
+  font-size: 38rpx;
+  font-weight: 700;
+}
+
+.hero-desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  opacity: 0.88;
+}
+
+.article-card {
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  border-radius: 20rpx;
+  background: #fff;
+  box-shadow: 0 3rpx 14rpx rgba(0, 0, 0, 0.045);
+}
+
+.article-card.expanded {
+  box-shadow: 0 6rpx 22rpx rgba(0, 0, 0, 0.08);
+}
+
+.article-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 96rpx;
+  padding: 24rpx 28rpx;
+  box-sizing: border-box;
+}
+
+.article-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.article-title {
+  display: block;
+  color: #222;
+  font-size: 30rpx;
+  font-weight: 650;
+}
+
+.article-summary {
+  display: block;
+  margin-top: 8rpx;
+  color: #999;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.article-arrow {
+  margin-left: 24rpx;
+  color: #07c160;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.article-body {
+  padding: 0 28rpx 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.article-content {
+  display: block;
+  padding-top: 24rpx;
+  color: #555;
+  font-size: 27rpx;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.help-image {
+  width: calc(50% - 8rpx);
+  height: 220rpx;
+  border-radius: 14rpx;
+  background: #eef0f2;
+}
+
+.help-image.single {
+  width: 100%;
+  height: 340rpx;
+}
+
+.image-hint {
+  display: block;
+  margin-top: 12rpx;
+  color: #aaa;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+.loading,
+.empty-card,
+.error-card {
+  padding: 90rpx 30rpx;
+  border-radius: 20rpx;
+  background: #fff;
+  color: #aaa;
+  font-size: 27rpx;
+  text-align: center;
+}
+
+.error-title,
+.error-desc {
+  display: block;
+}
+
+.error-title {
+  color: #555;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.error-desc {
+  margin-top: 10rpx;
+}
+
+.retry-btn {
+  width: 220rpx;
+  height: 72rpx;
+  margin-top: 28rpx;
+  border-radius: 36rpx;
+  background: #07c160;
+  color: #fff;
+  font-size: 26rpx;
+  line-height: 72rpx;
+}

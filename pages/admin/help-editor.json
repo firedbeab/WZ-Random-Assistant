@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "编辑使用说明",
+  "usingComponents": {
+    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+  }
+}

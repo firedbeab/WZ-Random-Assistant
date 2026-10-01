@@ -3,6 +3,8 @@ page {
 }
 .container {
   padding: 30rpx;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .card {
@@ -19,6 +21,10 @@ page {
   color: #333;
   display: block;
   margin-bottom: 30rpx;
+}
+
+.intro-card {
+  background: linear-gradient(145deg, #ffffff, #f8fbff);
 }
 
 .section {
@@ -46,6 +52,16 @@ page {
 .btn-admin {
   margin-top: 30rpx;
   background: #07c160;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+}
+
+.btn-help {
+  margin-top: 30rpx;
+  background: linear-gradient(135deg, #07c160, #05ad55);
   color: #fff;
   border-radius: 16rpx;
   font-size: 30rpx;

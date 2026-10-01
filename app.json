@@ -3,8 +3,10 @@
     "pages/index/index",
     "pages/playlist/index",
     "pages/about/index",
+    "pages/help/index",
     "pages/admin/login",
-    "pages/admin/admin"
+    "pages/admin/admin",
+    "pages/admin/help-editor"
   ],
   "window": {
     "navigationBarTextStyle": "black",

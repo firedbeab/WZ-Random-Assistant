@@ -1,19 +1,8 @@
-<view class="container" style="height: 110rpx; display: flex; box-sizing: border-box">
-
-  <view class="card">
-    <text class="title">使用说明</text>
-    <view class="section">
-      <text class="section-title">1. 什么是WZ随机助手？</text>
-      <text class="content">本工具用于每周内容提交与抽取，仅在周日 8:00-20:00 开放。提交后系统将在当晚自动抽取并排期。</text>
-    </view>
-    <view class="section">
-      <text class="section-title">2. 如何提交？</text>
-      <text class="content">在首页输入验证码、内容名称和补充说明，点击"提交"即可。每人每周限提交一次。</text>
-    </view>
-    <view class="section">
-      <text class="section-title">3. 查看已发布列表</text>
-      <text class="content">在首页点击"查看已发布列表"即可浏览本周排期。支持长按复制单条内容。</text>
-    </view>
+<view class="container">
+  <view class="card intro-card">
+    <text class="title">关于 WZ随机助手</text>
+    <text class="content">本工具用于每周内容提交、随机抽取与排期发布。提交通道通常在每周日 8:00-20:00 开放。</text>
+    <button class="btn-help" bindtap="goHelp">查看完整使用说明</button>
   </view>
 
   <view class="card">
@@ -28,11 +17,10 @@
     <button class="btn-feedback" bindtap="goFeedback">打开反馈问卷</button>
   </view>
 
-  <view class="footer" style="height: 106rpx; display: block; box-sizing: border-box">
-    <text class="btn-privacy" bindtap="openPrivacy" style="position: relative; left: 0rpx; top: -49rpx">隐私保护指引</text>
-    <text style="position: relative; left: 0rpx; top: -64rpx">WZ随机助手 v1.2 | @发牌的小度</text>
+  <view class="footer">
+    <text class="btn-privacy" bindtap="openPrivacy">隐私保护指引</text>
+    <text>WZ随机助手 v1.5 | @发牌的小度</text>
   </view>
-
 </view>
 
 <!-- 隐私协议弹窗 -->

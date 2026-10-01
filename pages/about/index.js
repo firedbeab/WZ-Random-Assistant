@@ -1,6 +1,10 @@
 Page({
   data: {},
 
+  goHelp() {
+    wx.navigateTo({ url: '/pages/help/index' });
+  },
+
   // 跳转管理员登录
   goAdminLogin() {
     wx.navigateTo({ url: '/pages/admin/login' });

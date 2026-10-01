@@ -51,6 +51,9 @@ Component({
      * 被拦截的隐私 API 将不会执行
      */
     onReject() {
+      if (typeof _resolveFn === 'function') {
+        _resolveFn({ event: 'disagree' });
+      }
       _resolveFn = null;
       this.setData({ visible: false });
     }

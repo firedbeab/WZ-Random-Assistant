@@ -31,6 +31,8 @@ Page({
     // 管理员管理
     passcodeList: [],
     adminList: [],
+    helpArticleList: [],
+    helpLoading: false,
     showPasscodeModal: false,
     newPasscodeLabel: '',
     showPasscodeResultModal: false,
@@ -59,6 +61,12 @@ Page({
 
     // 每次进入都从服务端校验权限，确保被撤销的管理员立即失效
     this.checkPermissionFromCloud();
+  },
+
+  onShow() {
+    if (this.data.currentTab === 'help' && this.data.isSuperAdmin) {
+      this.loadHelpArticles(false);
+    }
   },
 
   async checkPermissionFromCloud() {
@@ -133,6 +141,8 @@ Page({
       Promise.all([this.loadTestStats(), this.loadChannelStatus()]);
     } else if (tab === 'admins') {
       Promise.all([this.loadPasscodeList(), this.loadAdminList()]);
+    } else if (tab === 'help') {
+      this.loadHelpArticles();
     } else if (tab === 'audit') {
       this.loadPlaylist();
     }
@@ -1039,6 +1049,137 @@ Page({
             wx.hideLoading();
             wx.showToast({ title: '撤销失败', icon: 'none' });
           }
+        }
+      }
+    });
+  },
+
+  // ========== 使用说明管理 ==========
+
+  async loadHelpArticles(showLoading = true) {
+    if (!this.data.isSuperAdmin) return;
+    if (showLoading) this.setData({ helpLoading: true });
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'manageHelpContent',
+        data: { action: 'listAll' }
+      });
+      if (res.result && res.result.success) {
+        this.setData({ helpArticleList: res.result.data || [] });
+      } else {
+        wx.showToast({ title: (res.result && res.result.message) || '加载失败', icon: 'none' });
+      }
+    } catch (err) {
+      wx.showToast({ title: '说明列表加载失败', icon: 'none' });
+    } finally {
+      this.setData({ helpLoading: false });
+    }
+  },
+
+  onAddHelpArticle() {
+    wx.navigateTo({ url: '/pages/admin/help-editor' });
+  },
+
+  onInitializeHelpArticles() {
+    wx.showModal({
+      title: '生成默认说明',
+      content: '将生成一套可继续编辑的基础使用说明，是否继续？',
+      confirmText: '生成',
+      success: async modalRes => {
+        if (!modalRes.confirm) return;
+        wx.showLoading({ title: '生成中...' });
+        try {
+          const res = await wx.cloud.callFunction({
+            name: 'manageHelpContent',
+            data: { action: 'initializeDefaults' }
+          });
+          if (res.result && res.result.success) {
+            wx.showToast({ title: '已生成', icon: 'success' });
+            this.loadHelpArticles(false);
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '生成失败', icon: 'none' });
+          }
+        } catch (err) {
+          wx.showToast({ title: '生成失败', icon: 'none' });
+        } finally {
+          wx.hideLoading();
+        }
+      }
+    });
+  },
+
+  onEditHelpArticle(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: `/pages/admin/help-editor?id=${encodeURIComponent(id)}` });
+  },
+
+  async onMoveHelpArticle(e) {
+    const { id, direction } = e.currentTarget.dataset;
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'manageHelpContent',
+        data: { action: 'reorder', articleId: id, direction }
+      });
+      if (res.result && res.result.success) {
+        this.loadHelpArticles(false);
+      } else {
+        wx.showToast({ title: (res.result && res.result.message) || '排序失败', icon: 'none' });
+      }
+    } catch (err) {
+      wx.showToast({ title: '排序失败', icon: 'none' });
+    }
+  },
+
+  onToggleHelpArticle(e) {
+    const { id, published } = e.currentTarget.dataset;
+    const isPublished = published === true || published === 'true';
+    const nextPublished = !isPublished;
+    wx.showModal({
+      title: nextPublished ? '发布说明' : '隐藏说明',
+      content: nextPublished ? '发布后用户将立即看到这条说明。' : '隐藏后用户将暂时看不到这条说明。',
+      confirmText: nextPublished ? '发布' : '隐藏',
+      success: async modalRes => {
+        if (!modalRes.confirm) return;
+        try {
+          const res = await wx.cloud.callFunction({
+            name: 'manageHelpContent',
+            data: { action: 'setPublished', articleId: id, isPublished: nextPublished }
+          });
+          if (res.result && res.result.success) {
+            wx.showToast({ title: nextPublished ? '已发布' : '已隐藏', icon: 'success' });
+            this.loadHelpArticles(false);
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '操作失败', icon: 'none' });
+          }
+        } catch (err) {
+          wx.showToast({ title: '操作失败', icon: 'none' });
+        }
+      }
+    });
+  },
+
+  onDeleteHelpArticle(e) {
+    const { id, title } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '删除说明',
+      content: `确定删除「${title}」吗？相关图片也会一并删除。`,
+      confirmText: '删除',
+      confirmColor: '#e53e3e',
+      success: async modalRes => {
+        if (!modalRes.confirm) return;
+        try {
+          const res = await wx.cloud.callFunction({
+            name: 'manageHelpContent',
+            data: { action: 'delete', articleId: id }
+          });
+          if (res.result && res.result.success) {
+            wx.showToast({ title: '已删除', icon: 'success' });
+            this.loadHelpArticles(false);
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '删除失败', icon: 'none' });
+          }
+        } catch (err) {
+          wx.showToast({ title: '删除失败', icon: 'none' });
         }
       }
     });
