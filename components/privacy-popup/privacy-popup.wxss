@@ -1,0 +1,134 @@
+/* 隐私协议弹窗样式 */
+
+/* 半透明遮罩层 */
+.privacy-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 居中白色卡片 */
+.privacy-card {
+  width: 620rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 48rpx 40rpx 36rpx;
+  box-sizing: border-box;
+}
+
+/* 标题 */
+.privacy-title {
+  text-align: center;
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 32rpx;
+}
+
+/* 正文区域 */
+.privacy-body {
+  margin-bottom: 40rpx;
+}
+
+.privacy-text {
+  font-size: 28rpx;
+  color: #666666;
+  line-height: 1.7;
+}
+
+.privacy-link {
+  font-size: 28rpx;
+  color: #576b95;
+  line-height: 1.7;
+}
+
+/* 信息收集明细 */
+.privacy-detail {
+  margin-top: 24rpx;
+  padding: 20rpx 24rpx;
+  background: #f7f7f7;
+  border-radius: 12rpx;
+}
+
+.privacy-detail-title {
+  font-size: 26rpx;
+  color: #999999;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.privacy-detail-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8rpx;
+}
+
+.privacy-dot {
+  display: inline-block;
+  width: 8rpx;
+  height: 8rpx;
+  background: #999999;
+  border-radius: 50%;
+  margin-top: 14rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.privacy-detail-text {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+}
+
+/* 按钮区域 */
+.privacy-btns {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+/* 拒绝按钮 - 灰色边框 */
+.btn-reject {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  font-size: 30rpx;
+  color: #999999;
+  background: #ffffff;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 0;
+  margin: 0;
+}
+
+.btn-reject::after {
+  border: none;
+}
+
+/* 同意按钮 - 微信绿色 */
+.btn-agree {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  font-size: 30rpx;
+  color: #ffffff;
+  background: #07c160;
+  border: none;
+  border-radius: 12rpx;
+  padding: 0;
+  margin: 0;
+}
+
+.btn-agree::after {
+  border: none;
+}

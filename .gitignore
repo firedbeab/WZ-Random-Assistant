@@ -1,0 +1,45 @@
+# Dependencies generated locally
+node_modules/
+cloudfunctions/**/node_modules/
+miniprogram_npm/
+
+# WeChat / CloudBase local state
+project.config.json
+project.private.config.json
+.cloudbase/
+
+# Local assistant and editor state
+.claude/
+.codex/
+.aws/
+.vscode/
+.idea/
+
+# Obsolete project notes (kept locally; the broadcast-station document is canonical)
+Progress/进度1.0.md
+Progress/进度2.0.md
+Progress/进度3.0.md
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+
+# Logs, caches and temporary files
+*.log
+logs/
+tmp/
+temp/
+.tmp/
+.cache/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini

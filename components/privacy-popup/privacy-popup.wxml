@@ -1,0 +1,37 @@
+<!-- 隐私协议弹窗 -->
+<view class="privacy-mask" wx:if="{{visible}}" catchtouchmove="true">
+  <view class="privacy-card">
+    <!-- 标题 -->
+    <view class="privacy-title">隐私保护指引</view>
+
+    <!-- 说明文本 -->
+    <view class="privacy-body">
+      <text class="privacy-text">在使用「WZ随机助手」前，请阅读并同意</text>
+      <text class="privacy-link" bindtap="openContract">《隐私保护指引》</text>
+      <text class="privacy-text">。继续使用即表示你已阅读并同意该指引。</text>
+
+      <view class="privacy-detail">
+        <text class="privacy-detail-title">本小程序将会收集以下信息：</text>
+        <view class="privacy-detail-item">
+          <text class="privacy-dot"></text>
+          <text class="privacy-detail-text">设备信息：用于获取设备型号和屏幕尺寸，适配页面显示效果</text>
+        </view>
+        <view class="privacy-detail-item">
+          <text class="privacy-dot"></text>
+          <text class="privacy-detail-text">剪切板：用于复制内容信息，方便粘贴到其他应用中使用</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 按钮区域 -->
+    <view class="privacy-btns">
+      <button class="btn-reject" bindtap="onReject">拒绝</button>
+      <button
+        class="btn-agree"
+        id="agree-btn"
+        open-type="agreePrivacyAuthorization"
+        bindagreeprivacyauthorization="onAgreePrivacy"
+      >同意</button>
+    </view>
+  </view>
+</view>

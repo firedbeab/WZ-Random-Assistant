@@ -1,0 +1,173 @@
+page {
+  background-color: #f6f7f9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+
+.container {
+  padding: 40rpx;
+  padding-bottom: 80rpx;
+}
+
+/* 顶部区域 */
+.header-section {
+  text-align: center;
+  margin-bottom: 50rpx;
+  padding-top: 20rpx;
+}
+
+.app-title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.app-desc {
+  font-size: 26rpx;
+  color: #999;
+  display: block;
+  margin-bottom: 24rpx;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  border-radius: 40rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.status-badge.open {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.closed {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  margin-right: 10rpx;
+  display: inline-block;
+}
+
+.status-badge.open .status-dot { background-color: #4caf50; }
+.status-badge.closed .status-dot { background-color: #ef5350; }
+
+.submit-count {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 16rpx;
+}
+
+/* 卡片通用样式 */
+.card {
+  background-color: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+}
+
+/* 表单输入组 */
+.input-group {
+  margin-bottom: 40rpx;
+}
+.input-group:last-child { margin-bottom: 0; }
+
+.label {
+  display: block;
+  font-size: 28rpx;
+  color: #555;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  height: 80rpx;
+  font-size: 30rpx;
+  border-bottom: 2rpx solid #eee;
+  padding-bottom: 10rpx;
+  transition: border-color 0.3s;
+}
+
+.input:focus {
+  border-bottom-color: #07c160;
+}
+
+/* 按钮样式 */
+.submit-btn {
+  background-color: #07c160;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  margin-top: 40rpx;
+  font-weight: bold;
+  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.3);
+}
+
+.submit-btn.btn-loading {
+  background-color: #a8e6cf;
+  color: #fff;
+  box-shadow: none;
+}
+
+/* 底部消息 */
+.result-msg {
+  margin-top: 40rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #07c160;
+  font-weight: 500;
+}
+
+/* 管理员入口 */
+.admin-entry {
+  bottom: 50rpx;
+  background: #fff;
+  padding: 10rpx 20rpx;
+  border-radius: 30rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+}
+.admin-icon { font-size: 24rpx; margin-right: 10rpx; }
+.admin-text { font-size: 24rpx; color: #666; }
+
+/* 查看排期按钮 */
+.published-notice {
+  width: 320rpx;
+  margin: 8rpx auto 0;
+  padding: 14rpx 22rpx;
+  box-sizing: border-box;
+  text-align: center;
+  color: #078f49;
+  background-color: #e8f8ef;
+  border-radius: 30rpx;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.view-playlist-btn {
+  margin-top: 40rpx;
+  text-align: center;
+  padding: 20rpx;
+  color: #07c160;
+  font-size: 28rpx;
+  border: 2rpx dashed #07c160;
+  border-radius: 12rpx;
+}
+
+.view-playlist-btn.has-notice {
+  margin-top: 20rpx;
+}

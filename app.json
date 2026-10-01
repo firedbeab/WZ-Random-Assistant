@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/playlist/index",
+    "pages/about/index",
+    "pages/admin/login",
+    "pages/admin/admin"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "WZ随机助手",
+    "navigationBarBackgroundColor": "#ffffff"
+  },
+  "cloud": true,
+  "renderer": "webview",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json",
+  "__usePrivacyCheck__": true
+}

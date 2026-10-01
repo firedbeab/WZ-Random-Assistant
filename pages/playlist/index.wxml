@@ -1,0 +1,78 @@
+<view class="container">
+  <!-- 周次切换标签 -->
+  <view class="week-tabs">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="value"
+      class="tab-item {{activeTab === item.value ? 'active' : ''}}"
+      bindtap="switchWeek"
+      data-value="{{item.value}}"
+    >
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 通知订阅 -->
+  <view class="notify-bar">
+    <view wx:if="{{subscribed}}" class="notify-status on">
+      <text>✅ 已开启发布通知</text>
+    </view>
+    <view wx:else class="notify-status off" style="width: 440rpx; display: flex; box-sizing: border-box">
+      <text>🔔 开启发布通知</text>
+      <text class="notify-btn" bindtap="onEnableSub" style="position: relative; left: -25rpx; top: 0rpx">点击开启</text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:elif="{{!schedule && !loading}}">
+    <text wx:if="{{activeTab === 0}}">本周列表尚未发布</text>
+    <text wx:else>该期列表尚未发布</text>
+    <text class="hint">请等待管理员审核后公示</text>
+  </view>
+
+  <!-- 排期内容 -->
+  <view class="schedule-card" wx:else>
+    <view class="header">
+      <text class="title">{{tabs[activeTab].label}}</text>
+      <text class="time">{{schedule.week_key || ''}}</text>
+    </view>
+
+    <block wx:for="{{['周一','周二','周三','周四','周五']}}" wx:key="index">
+      <view class="day-section">
+        <view class="day-header">
+          <text class="day-title">{{item}}</text>
+          <text class="day-count">{{schedule['day'+(index+1)].length}}项</text>
+        </view>
+        <view class="song-list">
+          <block wx:for="{{schedule['day'+(index+1)] || []}}" wx:key="song_name" wx:for-index="idx">
+            <view class="song-item" bindlongpress="copyItem" data-song="{{item.song_name}} - {{item.singer}}">
+              <view class="song-info">
+                <text class="song-name">{{item.song_name}}</text>
+                <text class="song-singer">{{item.singer}}</text>
+                <text class="song-special" wx:if="{{item.special_note}}">📌 {{item.special_note}}</text>
+              </view>
+              <text class="copy-hint">长按复制</text>
+            </view>
+          </block>
+
+          <view class="no-song" wx:if="{{!(schedule['day'+(index+1)] && schedule['day'+(index+1)].length > 0)}}">
+            <text>今日无项目安排</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <view class="note" wx:if="{{schedule.admin_note}}">
+      <text class="note-label">备注</text>
+      <text class="note-content">{{schedule.admin_note}}</text>
+    </view>
+  </view>
+</view>
+
+<!-- 隐私协议弹窗 -->
+<privacy-popup id="privacyPopup"></privacy-popup>

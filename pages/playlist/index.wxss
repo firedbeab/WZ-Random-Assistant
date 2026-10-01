@@ -1,0 +1,79 @@
+page { background: #f6f7f9; }
+.container { padding: 30rpx; }
+
+/* 周次切换标签 */
+.week-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 20rpx;
+  margin-bottom: 30rpx;
+}
+.tab-item {
+  padding: 14rpx 32rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #666;
+  background: #fff;
+  border: 2rpx solid #e0e0e0;
+  transition: all 0.2s;
+}
+.tab-item.active {
+  background: #07c160;
+  color: #fff;
+  border-color: #07c160;
+  font-weight: bold;
+}
+
+/* 通知订阅 */
+.notify-bar { margin-bottom: 20rpx; }
+.notify-status {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20rpx 24rpx; border-radius: 16rpx; font-size: 28rpx;
+}
+.notify-status.on { background: #e8f5e9; color: #2e7d32; }
+.notify-status.off { background: #fff3e0; color: #e65100; }
+.notify-hint { font-size: 22rpx; color: #66bb6a; }
+.notify-btn { font-size: 26rpx; color: #ff6d00; font-weight: bold; padding: 8rpx 24rpx; background: #fff; border-radius: 20rpx; }
+
+.loading, .empty { text-align: center; margin-top: 300rpx; color: #999; }
+.hint { display: block; font-size: 24rpx; margin-top: 20rpx; }
+
+/* 排期内容卡片 - 对齐管理后台审核页样式 */
+.schedule-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.05);
+  min-width: 550rpx;
+}
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; padding: 0 8rpx; }
+.title { font-size: 36rpx; font-weight: bold; color: #333; }
+.time { font-size: 24rpx; color: #07c160; }
+
+.copy-tip-bar { font-size: 24rpx; color: #999; text-align: center; padding: 16rpx 0; margin-bottom: 20rpx; }
+
+.day-section { margin-bottom: 44rpx; }
+.day-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20rpx; padding-bottom: 16rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+.day-title { font-size: 32rpx; font-weight: bold; color: #333; }
+.day-count { color: #bbb; font-size: 24rpx; }
+
+.song-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 24rpx 0; border-bottom: 1rpx dashed #eee;
+}
+.song-item:last-child { border-bottom: none; }
+.song-info { flex: 1; }
+.song-name { font-size: 30rpx; color: #333; display: block; }
+.song-singer { font-size: 24rpx; color: #888; margin-top: 6rpx; display: block; }
+.song-special { font-size: 24rpx; color: #888; margin-top: 6rpx; display: block; }
+.copy-hint { font-size: 20rpx; color: #ccc; flex-shrink: 0; margin-left: 10rpx; }
+
+.no-song { text-align: center; color: #bbb; font-size: 24rpx; padding: 20rpx 0; }
+
+.note { background: #fffbe6; padding: 20rpx; border-radius: 12rpx; margin-top: 20rpx; }
+.note-label { font-size: 24rpx; color: #fa8c16; font-weight: bold; display: block; margin-bottom: 8rpx; }
+.note-content { font-size: 26rpx; color: #666; }

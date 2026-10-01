@@ -1,0 +1,78 @@
+page {
+  background: #f6f7f9;
+}
+.container {
+  padding: 30rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.section {
+  margin-bottom: 30rpx;
+}
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 28rpx;
+  color: #555;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.content {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.6;
+  display: block;
+}
+
+.btn-admin {
+  margin-top: 30rpx;
+  background: #07c160;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+}
+
+.btn-feedback {
+  margin-top: 30rpx;
+  background: #576b95;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+}
+
+.footer {
+  text-align: center;
+  padding: 40rpx 0;
+  color: #ccc;
+  font-size: 24rpx;
+}
+
+.btn-privacy {
+  display: block;
+  font-size: 26rpx;
+  color: #576b95;
+  margin-bottom: 16rpx;
+}

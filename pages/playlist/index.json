@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+  },
+  "navigationBarTitleText": "本周列表",
+  "enablePullDownRefresh": true
+}

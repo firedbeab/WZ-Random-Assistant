@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+  },
+  "navigationBarTitleText": "管理员验证",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black"
+}

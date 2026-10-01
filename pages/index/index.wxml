@@ -1,0 +1,117 @@
+<view class="container" style="position: relative; left: 0rpx; top: 29rpx">
+
+<!-- 管理员入口（admin 和 superadmin 可见） -->
+<view class="admin-entry" bindtap="goAdmin" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'superadmin'}}" style="position: relative; left: 0rpx; top: -39rpx">
+  <text class="admin-icon">⚙️</text>
+  <text class="admin-text">管理后台</text>
+</view>
+
+<!-- 顶部状态区 -->
+<view class="header-section">
+  <text class="app-title">🎲 WZ随机助手</text>
+  <text class="app-desc">每周日 8:00-20:00 开放提交</text>
+
+  <view class="status-badge {{canSubmit ? 'open' : 'closed'}}">
+    <text class="status-dot"></text>
+    <text>{{canSubmit ? '通道开放中' : '通道已关闭'}}</text>
+  </view>
+
+  <text class="submit-count" wx:if="{{canSubmit && totalSubmissions > 0 && !schedulePublished}}">本周已有 {{totalSubmissions}} 次提交</text>
+</view>
+<!-- ✅ 已提交锁定状态 -->
+<view class="card" wx:if="{{hasSubmitted}}" style="text-align: center; padding: 60rpx 0; width: 506rpx; display: block; box-sizing: border-box; height: 283rpx">
+  <text style="font-size:36rpx; color:#07c160; font-weight:bold;">✅ 本周你已提交</text>
+  <text style="display:block; margin-top:20rpx; font-size:30rpx; color:#333;">{{submittedInfo}}</text>
+  <text style="display:block; margin-top:30rpx; font-size:24rpx; color:#999;">提交已生效，请等待周日晚随机抽取</text>
+</view>
+
+<!-- 未提交且通道开放：显示表单 -->
+<view class="card form-card" wx:elif="{{canSubmit}}">
+  <view class="input-group">
+    <text class="label">🔑 本周验证码</text>
+    <input
+      class="input"
+      placeholder="请输入验证码"
+      value="{{weeklyCode}}"
+      data-field="weeklyCode"
+      bindinput="onInput"
+      maxlength="20"
+    />
+  </view>
+
+  <view class="input-group">
+    <text class="label">🎵 内容名称</text>
+    <input
+      class="input"
+      placeholder="例：稻香"
+      value="{{title}}"
+      data-field="title"
+      bindinput="onInput"
+      maxlength="50"
+    />
+  </view>
+
+  <view class="input-group">
+    <text class="label">🎤 补充说明</text>
+    <input
+      class="input"
+      placeholder="例：周杰伦"
+      value="{{remark}}"
+      data-field="remark"
+      bindinput="onInput"
+      maxlength="50"
+    />
+  </view>
+
+  <view class="input-group">
+    <text class="label">📌 特殊备注</text>
+    <input
+      class="input"
+      placeholder="选填，如要求特定版本"
+      value="{{specialNote}}"
+      data-field="specialNote"
+      bindinput="onInput"
+      maxlength="50"
+    />
+  </view>
+
+  <!-- 提交按钮 -->
+  <button
+    class="submit-btn {{loading ? 'btn-loading' : ''}}"
+    bindtap="submitRequest"
+    disabled="{{loading}}"
+  >
+    {{loading ? '提交中...' : '提交'}}
+  </button>
+</view>
+
+<!-- 通道关闭提示 -->
+<view class="card" wx:else style="text-align: center; padding: 40rpx 0; background: #fff5f5; width: 358rpx; display: block; box-sizing: border-box">
+  <text style="font-size:28rpx; color:#c62828;">⏳ 通道未开放</text>
+  <text style="display:block; margin-top:10rpx; font-size:24rpx; color:#999;">开放时间：每周日 8:00-20:00</text>
+</view>
+
+<!-- 最新一期发布提示 -->
+<view class="published-notice" wx:if="{{schedulePublished}}">
+  <text>🎉 最新列表已发布</text>
+</view>
+
+<!-- 查看排期入口 -->
+<view class="view-playlist-btn {{schedulePublished ? 'has-notice' : ''}}" bindtap="goPlaylist">
+  <text> 查看已发布列表</text>
+</view>
+
+<!-- 关于入口 -->
+<view class="view-playlist-btn" bindtap="goAbout">
+  <text> 关于 · 使用说明</text>
+</view>
+
+<!-- 底部结果提示 -->
+<view class="result-msg" wx:if="{{statusMsg}}">
+  <text>{{statusMsg}}</text>
+</view>
+
+</view>
+
+<!-- 隐私协议弹窗 -->
+<privacy-popup id="privacyPopup"></privacy-popup>

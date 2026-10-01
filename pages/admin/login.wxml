@@ -1,0 +1,46 @@
+<!-- pages/admin/login.wxml -->
+<view class="login-container">
+
+  <!-- 头部图标和标题 -->
+  <view class="header">
+    <text class="icon"></text>
+    <text class="title">管理员验证</text>
+    <text class="desc">请输入管理员通行码</text>
+  </view>
+
+  <!-- 输入区域 -->
+  <view class="input-group">
+    <input
+      class="code-input"
+      type="text"
+      placeholder="请输入通行码"
+      value="{{adminCode}}"
+      bindinput="onCodeInput"
+      password="{{!showCode}}"
+      autocorrect="off"
+      autocapitalize="none"
+      spell-check="false"
+    />
+    <text class="toggle-btn" bindtap="toggleShow">
+      {{showCode ? '隐藏' : '显示'}}
+    </text>
+  </view>
+
+  <!-- 确认按钮 -->
+  <button
+    class="btn-verify"
+    bindtap="handleVerify"
+    disabled="{{loading}}"
+  >
+    {{loading ? '验证中...' : '确认登录'}}
+  </button>
+
+  <!-- 底部提示 -->
+  <view class="footer">
+    <text>通行码由负责人分发 · 登录后免重复登录</text>
+  </view>
+
+</view>
+
+<!-- 隐私协议弹窗 -->
+<privacy-popup id="privacyPopup"></privacy-popup>
