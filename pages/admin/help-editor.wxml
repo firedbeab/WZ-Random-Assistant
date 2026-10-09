@@ -1,20 +1,21 @@
 <view class="page" wx:if="{{!loading}}">
+  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 图片写入 test/help-images/</view>
   <view class="form-card">
     <view class="field">
       <text class="field-label">标题</text>
-      <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="40" placeholder="例如：如何提交歌曲" />
+      <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="40" placeholder="例如：如何提交歌曲" placeholder-class="form-placeholder" />
       <text class="field-count">{{title.length}}/40</text>
     </view>
 
     <view class="field">
       <text class="field-label">折叠状态下的简短提示（可选）</text>
-      <input class="field-input" value="{{summary}}" bindinput="onSummaryInput" maxlength="80" placeholder="用一句话概括本条说明" />
+      <input class="field-input" value="{{summary}}" bindinput="onSummaryInput" maxlength="80" placeholder="用一句话概括本条说明" placeholder-class="form-placeholder" />
       <text class="field-count">{{summary.length}}/80</text>
     </view>
 
     <view class="field">
       <text class="field-label">详细说明</text>
-      <textarea class="content-input" value="{{content}}" bindinput="onContentInput" maxlength="5000" placeholder="输入详细内容，支持换行和分段" auto-height></textarea>
+      <textarea class="content-input" value="{{content}}" bindinput="onContentInput" maxlength="5000" placeholder="输入详细内容，支持换行和分段" placeholder-class="form-placeholder" auto-height></textarea>
       <text class="field-count">{{content.length}}/5000</text>
     </view>
   </view>

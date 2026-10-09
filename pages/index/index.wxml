@@ -1,7 +1,9 @@
-<view class="container" style="position: relative; left: 0rpx; top: 29rpx">
+<view class="container">
+
+<view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 当前操作不会写入正式业务集合</view>
 
 <!-- 管理员入口（admin 和 superadmin 可见） -->
-<view class="admin-entry" bindtap="goAdmin" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'superadmin'}}" style="position: relative; left: 0rpx; top: -39rpx">
+<view class="admin-entry" bindtap="goAdmin" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'superadmin'}}">
   <text class="admin-icon">⚙️</text>
   <text class="admin-text">管理后台</text>
 </view>
@@ -31,6 +33,7 @@
     <text class="label">🔑 本周验证码</text>
     <input
       class="input"
+      placeholder-class="form-placeholder"
       placeholder="请输入验证码"
       value="{{weeklyCode}}"
       data-field="weeklyCode"
@@ -43,6 +46,7 @@
     <text class="label">🎵 内容名称</text>
     <input
       class="input"
+      placeholder-class="form-placeholder"
       placeholder="例：稻香"
       value="{{title}}"
       data-field="title"
@@ -55,6 +59,7 @@
     <text class="label">🎤 补充说明</text>
     <input
       class="input"
+      placeholder-class="form-placeholder"
       placeholder="例：周杰伦"
       value="{{remark}}"
       data-field="remark"
@@ -67,6 +72,7 @@
     <text class="label">📌 特殊备注</text>
     <input
       class="input"
+      placeholder-class="form-placeholder"
       placeholder="选填，如要求特定版本"
       value="{{specialNote}}"
       data-field="specialNote"

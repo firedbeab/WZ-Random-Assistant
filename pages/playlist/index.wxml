@@ -1,4 +1,5 @@
 <view class="container">
+  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 当前显示测试排期</view>
   <!-- 周次切换标签 -->
   <view class="week-tabs">
     <view
@@ -50,7 +51,13 @@
         </view>
         <view class="song-list">
           <block wx:for="{{schedule['day'+(index+1)] || []}}" wx:key="song_name" wx:for-index="idx">
-            <view class="song-item" bindlongpress="copyItem" data-song="{{item.song_name}} - {{item.singer}}">
+            <view
+              class="song-item"
+              bindlongpress="copyItem"
+              data-name="{{item.song_name}}"
+              data-singer="{{item.singer}}"
+              data-note="{{item.special_note}}"
+            >
               <view class="song-info">
                 <text class="song-name">{{item.song_name}}</text>
                 <text class="song-singer">{{item.singer}}</text>

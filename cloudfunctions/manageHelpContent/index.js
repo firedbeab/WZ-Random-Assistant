@@ -1,10 +1,10 @@
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
+const { createDataScope, canUseTestData } = require('./dataScope');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
-const COLLECTION = 'help_articles';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGES = 5;
 const SAFETY_CHUNK_LENGTH = 1500;
@@ -62,15 +62,16 @@ function normalizeText(value, maxLength, required = false) {
   return text;
 }
 
-function isHelpFile(fileID) {
-  return typeof fileID === 'string' &&
-    fileID.startsWith('cloud://') &&
-    fileID.includes('/help/');
+function isHelpFile(fileID, scope) {
+  if (typeof fileID !== 'string' || !fileID.startsWith('cloud://')) return false;
+  return scope.testMode
+    ? fileID.includes('/test/help/')
+    : fileID.includes('/help/') && !fileID.includes('/test/help/');
 }
 
-function normalizeImages(images) {
+function normalizeImages(images, scope) {
   if (!Array.isArray(images) || images.length > MAX_IMAGES) return null;
-  if (!images.every(isHelpFile)) return null;
+  if (!images.every(fileID => isHelpFile(fileID, scope))) return null;
   return Array.from(new Set(images));
 }
 
@@ -87,26 +88,26 @@ function detectImageExtension(buffer) {
   return '';
 }
 
-async function getRole(openid) {
+async function getRole(openid, usersCollection) {
   if (!openid) return 'user';
-  const res = await db.collection('users')
+  const res = await db.collection(usersCollection)
     .where({ openid })
     .limit(1)
     .get();
   return res.data.length > 0 ? res.data[0].role : 'user';
 }
 
-async function requireSuperAdmin(openid) {
-  return (await getRole(openid)) === 'superadmin';
+async function requireSuperAdmin(openid, usersCollection) {
+  return (await getRole(openid, usersCollection)) === 'superadmin';
 }
 
-function publicArticle(article) {
+function publicArticle(article, scope) {
   return {
     _id: article._id,
     title: article.title || '',
     summary: article.summary || '',
     content: article.content || '',
-    images: Array.isArray(article.images) ? article.images.filter(isHelpFile) : [],
+    images: Array.isArray(article.images) ? article.images.filter(fileID => isHelpFile(fileID, scope)) : [],
     sort_order: Number(article.sort_order) || 0
   };
 }
@@ -119,8 +120,8 @@ function sortArticles(articles) {
   });
 }
 
-async function deleteHelpFiles(fileIDs) {
-  const safeFiles = Array.from(new Set((fileIDs || []).filter(isHelpFile)));
+async function deleteHelpFiles(fileIDs, scope) {
+  const safeFiles = Array.from(new Set((fileIDs || []).filter(fileID => isHelpFile(fileID, scope))));
   if (safeFiles.length === 0) return;
   try {
     await cloud.deleteFile({ fileList: safeFiles });
@@ -181,38 +182,44 @@ async function checkPublishedText(openid, fields) {
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext();
   const action = event && event.action;
+  const scope = createDataScope(event);
+  const collectionName = scope.collection('help_articles');
+  const usersCollection = scope.collection('users');
 
   try {
+    if (!(await canUseTestData(db, OPENID, scope))) {
+      return failure('仅超级管理员可使用测试环境');
+    }
     if (action === 'listPublished') {
-      const res = await db.collection(COLLECTION)
+      const res = await db.collection(collectionName)
         .limit(100)
         .get();
       const published = sortArticles(res.data.filter(article => article.is_published === true));
-      return success(published.map(publicArticle));
+      return success(published.map(article => publicArticle(article, scope)));
     }
 
-    if (!await requireSuperAdmin(OPENID)) {
+    if (!await requireSuperAdmin(OPENID, usersCollection)) {
       return failure('仅超级管理员可执行此操作');
     }
 
     if (action === 'listAll') {
-      const res = await db.collection(COLLECTION)
+      const res = await db.collection(collectionName)
         .limit(100)
         .get();
       return success(sortArticles(res.data).map(article => ({
         _id: article._id,
         title: article.title || '',
         summary: article.summary || '',
-        images: Array.isArray(article.images) ? article.images.filter(isHelpFile) : [],
+        images: Array.isArray(article.images) ? article.images.filter(fileID => isHelpFile(fileID, scope)) : [],
         is_published: Boolean(article.is_published),
         sort_order: Number(article.sort_order) || 0
       })));
     }
 
     if (action === 'initializeDefaults') {
-      const countRes = await db.collection(COLLECTION).count();
+      const countRes = await db.collection(collectionName).count();
       if (countRes.total > 0) return failure('已有说明内容，无需初始化');
-      await Promise.all(DEFAULT_ARTICLES.map((article, index) => db.collection(COLLECTION).add({
+      await Promise.all(DEFAULT_ARTICLES.map((article, index) => db.collection(collectionName).add({
         data: Object.assign({}, article, {
           images: [],
           is_published: true,
@@ -229,13 +236,13 @@ exports.main = async (event) => {
     if (action === 'getForAdmin') {
       const articleId = normalizeText(event.articleId, 64, true);
       if (!articleId) return failure('说明条目标识无效');
-      const res = await db.collection(COLLECTION).doc(articleId).get();
+      const res = await db.collection(collectionName).doc(articleId).get();
       return success({
         _id: res.data._id,
         title: res.data.title || '',
         summary: res.data.summary || '',
         content: res.data.content || '',
-        images: Array.isArray(res.data.images) ? res.data.images.filter(isHelpFile) : [],
+        images: Array.isArray(res.data.images) ? res.data.images.filter(fileID => isHelpFile(fileID, scope)) : [],
         is_published: Boolean(res.data.is_published),
         sort_order: Number(res.data.sort_order) || 0
       });
@@ -254,7 +261,7 @@ exports.main = async (event) => {
       if (!detectedExtension) return failure('仅支持 JPG、PNG 或 WebP 图片');
       const fileName = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${detectedExtension}`;
       const upload = await cloud.uploadFile({
-        cloudPath: `help/${fileName}`,
+        cloudPath: `${scope.testMode ? 'test/help' : 'help'}/${fileName}`,
         fileContent
       });
       return success(null, { fileID: upload.fileID });
@@ -262,19 +269,19 @@ exports.main = async (event) => {
 
     if (action === 'verifyUploadedImage') {
       const fileID = normalizeText(event.fileID, 1024, true);
-      if (!fileID || !isHelpFile(fileID)) return failure('图片路径无效');
+      if (!fileID || !isHelpFile(fileID, scope)) return failure('图片路径无效');
       const validation = await validateUploadedImages([fileID]);
       if (!validation.passed) {
-        await deleteHelpFiles([fileID]);
+        await deleteHelpFiles([fileID], scope);
         return failure(validation.message);
       }
       return success(null, { fileID });
     }
 
     if (action === 'deleteFiles') {
-      const fileIDs = normalizeImages(event.fileIDs || []);
+      const fileIDs = normalizeImages(event.fileIDs || [], scope);
       if (fileIDs === null) return failure('图片列表无效');
-      await deleteHelpFiles(fileIDs);
+      await deleteHelpFiles(fileIDs, scope);
       return success(null);
     }
 
@@ -283,8 +290,8 @@ exports.main = async (event) => {
       const title = normalizeText(event.title, 40, true);
       const summary = normalizeText(event.summary || '', 80, false);
       const content = normalizeText(event.content, 5000, true);
-      const images = normalizeImages(event.images || []);
-      const newImageIDs = normalizeImages(event.newImageIDs || []);
+      const images = normalizeImages(event.images || [], scope);
+      const newImageIDs = normalizeImages(event.newImageIDs || [], scope);
       if (!title || summary === null || !content || images === null || newImageIDs === null ||
         !newImageIDs.every(fileID => images.includes(fileID))) {
         return failure('说明内容格式不正确');
@@ -294,11 +301,13 @@ exports.main = async (event) => {
       const [imageValidation, safety] = await Promise.all([
         validateUploadedImages(newImageIDs),
         isPublished
-          ? checkPublishedText(OPENID, [title, summary, content])
+          ? (scope.testMode
+            ? Promise.resolve({ passed: true, unavailable: false })
+            : checkPublishedText(OPENID, [title, summary, content]))
           : Promise.resolve({ passed: true, unavailable: false })
       ]);
       if (!imageValidation.passed) {
-        await deleteHelpFiles(newImageIDs);
+        await deleteHelpFiles(newImageIDs, scope);
         return failure(imageValidation.message);
       }
       if (isPublished) {
@@ -316,19 +325,19 @@ exports.main = async (event) => {
       };
 
       if (articleId) {
-        const oldRes = await db.collection(COLLECTION).doc(articleId).get();
+        const oldRes = await db.collection(collectionName).doc(articleId).get();
         const oldImages = Array.isArray(oldRes.data.images) ? oldRes.data.images : [];
-        await db.collection(COLLECTION).doc(articleId).update({ data: commonData });
-        await deleteHelpFiles(oldImages.filter(fileID => !images.includes(fileID)));
+        await db.collection(collectionName).doc(articleId).update({ data: commonData });
+        await deleteHelpFiles(oldImages.filter(fileID => !images.includes(fileID)), scope);
         return success({ _id: articleId });
       }
 
-      const existingRes = await db.collection(COLLECTION).limit(100).get();
+      const existingRes = await db.collection(collectionName).limit(100).get();
       const sortOrder = existingRes.data.reduce(
         (maxOrder, article) => Math.max(maxOrder, Number(article.sort_order) || 0),
         0
       ) + 1;
-      const addRes = await db.collection(COLLECTION).add({
+      const addRes = await db.collection(collectionName).add({
         data: Object.assign({}, commonData, {
           sort_order: sortOrder,
           created_at: db.serverDate(),
@@ -343,13 +352,15 @@ exports.main = async (event) => {
       if (!articleId) return failure('说明条目标识无效');
       const isPublished = Boolean(event.isPublished);
       if (isPublished) {
-        const articleRes = await db.collection(COLLECTION).doc(articleId).get();
+        const articleRes = await db.collection(collectionName).doc(articleId).get();
         const article = articleRes.data;
-        const safety = await checkPublishedText(OPENID, [article.title, article.summary, article.content]);
+        const safety = scope.testMode
+          ? { passed: true, unavailable: false }
+          : await checkPublishedText(OPENID, [article.title, article.summary, article.content]);
         if (safety.unavailable) return failure('内容安全检查暂不可用，请稍后再试');
         if (!safety.passed) return failure('说明内容可能包含不适宜信息，请修改后重试');
       }
-      await db.collection(COLLECTION).doc(articleId).update({
+      await db.collection(collectionName).doc(articleId).update({
         data: {
           is_published: isPublished,
           updated_at: db.serverDate(),
@@ -365,7 +376,7 @@ exports.main = async (event) => {
       if (!articleId || !['up', 'down'].includes(direction)) {
         return failure('排序参数无效');
       }
-      const res = await db.collection(COLLECTION)
+      const res = await db.collection(collectionName)
         .limit(100)
         .get();
       const items = sortArticles(res.data);
@@ -373,7 +384,7 @@ exports.main = async (event) => {
       const target = direction === 'up' ? index - 1 : index + 1;
       if (index < 0 || target < 0 || target >= items.length) return success(null);
       [items[index], items[target]] = [items[target], items[index]];
-      await Promise.all(items.map((item, order) => db.collection(COLLECTION).doc(item._id).update({
+      await Promise.all(items.map((item, order) => db.collection(collectionName).doc(item._id).update({
         data: { sort_order: order + 1 }
       })));
       return success(null);
@@ -382,10 +393,10 @@ exports.main = async (event) => {
     if (action === 'delete') {
       const articleId = normalizeText(event.articleId, 64, true);
       if (!articleId) return failure('说明条目标识无效');
-      const res = await db.collection(COLLECTION).doc(articleId).get();
+      const res = await db.collection(collectionName).doc(articleId).get();
       const images = Array.isArray(res.data.images) ? res.data.images : [];
-      await db.collection(COLLECTION).doc(articleId).remove();
-      await deleteHelpFiles(images);
+      await db.collection(collectionName).doc(articleId).remove();
+      await deleteHelpFiles(images, scope);
       return success(null);
     }
 

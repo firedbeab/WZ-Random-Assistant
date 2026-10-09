@@ -1,5 +1,7 @@
-const CACHE_KEY = 'help_articles_cache_v1';
-const IMAGE_CACHE_KEY = 'help_image_file_cache_v1';
+const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
+
+const CACHE_KEY = storageKey('help_articles_cache_v1');
+const IMAGE_CACHE_KEY = storageKey('help_image_file_cache_v1');
 const IMAGE_CACHE_DIR = `${wx.env.USER_DATA_PATH}/help-image-cache`;
 const MAX_IMAGE_CACHE_BYTES = 12 * 1024 * 1024;
 
@@ -20,6 +22,7 @@ function hashText(text) {
 
 Page({
   data: {
+    isTestMode: isTestMode(),
     articles: [],
     expandedId: '',
     loading: true,
@@ -45,7 +48,7 @@ Page({
       this.setData({ loading: true });
     }
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageHelpContent',
         data: { action: 'listPublished' }
       });

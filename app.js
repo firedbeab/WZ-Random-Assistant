@@ -1,4 +1,6 @@
 // app.js
+const { PROD_ENV_ID, runtimeInfo } = require('./utils/runtime');
+
 App({
   onLaunch() {
     // 初始化云开发环境
@@ -6,10 +8,15 @@ App({
       console.error('请使用 2.2.3 或以上的基础库以使用云能力');
     } else {
       wx.cloud.init({
-        env: 'cloud1-d4g1y0o4n24d45fe6',  // 您的云环境ID
+        env: PROD_ENV_ID,
         traceUser: true,
       });
     }
+
+    const runtime = runtimeInfo();
+    this.globalData.runtime = runtime;
+    this.globalData.isTestMode = runtime.isTestMode;
+    console.info(`[运行环境] ${runtime.isTestMode ? 'TEST' : 'PRODUCTION'} / ${runtime.envVersion}`);
 
     // 隐私协议授权监听
     // 当隐私 API 被调用且用户尚未同意时触发
@@ -46,6 +53,8 @@ App({
 
   globalData: {
     systemInfo: null,
-    userInfo: null
+    userInfo: null,
+    runtime: null,
+    isTestMode: true
   }
 });

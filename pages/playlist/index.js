@@ -1,8 +1,10 @@
 // 订阅消息模板 ID（学生：新活动发布提醒）
 const STUDENT_TPL_ID = 'evJj_6Kl8CNKTf5C_j2PtJ6FPmMTbBESvuZ35DfOiGA';
+const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 
 Page({
   data: {
+    isTestMode: isTestMode(),
     schedule: null,
     loading: true,
     subscribed: false,
@@ -51,16 +53,15 @@ Page({
   // forceRefresh: true 时跳过缓存（下拉刷新）
   async loadWeekPlaylist(offset, forceRefresh) {
     const weekKey = this.getWeekKeyByOffset(offset);
-    const cacheKey = `schedule_cache_${weekKey}`;
+    const cacheKey = storageKey(`schedule_cache_${weekKey}`);
 
     // 1. 优先读本地缓存，立即显示（不转圈）
     if (!forceRefresh) {
       const cached = wx.getStorageSync(cacheKey);
       if (cached) {
         this.setData({ schedule: cached, loading: false });
-        // 历史周数据不会变，命中缓存后不再请求云端
-        if (offset > 0) return;
-        // 本周排期可能有更新，后台静默刷新
+        // 已发布排期现在支持超管修改或撤回；所有周次命中缓存后都静默校验云端。
+        // 缓存仍负责首屏秒开，云端 revision/状态变化会随后替换或清除本地内容。
         this.refreshFromCloud(offset, weekKey, cacheKey);
         return;
       }
@@ -74,14 +75,20 @@ Page({
   // 从云端拉取排期并写入缓存
   async refreshFromCloud(offset, weekKey, cacheKey) {
     try {
-      const db = wx.cloud.database();
-      const res = await db.collection('schedules')
-        .where({ week_key: weekKey, status: 'published' })
-        .limit(1)
-        .get();
+      const res = this.data.isTestMode
+        ? await cloudCall({
+          name: 'getUserInfo',
+          data: { action: 'getPublishedSchedule', weekKey }
+        })
+        : await wx.cloud.database().collection(collectionName('schedules'))
+          .where({ week_key: weekKey, status: 'published' })
+          .limit(1)
+          .get();
+      const schedule = this.data.isTestMode
+        ? (res.result && res.result.success ? res.result.data : null)
+        : res.data[0];
 
-      if (res.data.length > 0) {
-        const schedule = res.data[0];
+      if (schedule) {
         wx.setStorageSync(cacheKey, schedule);
         // 确保用户没切走标签，才更新显示
         if (this.data.activeTab === offset) {
@@ -109,7 +116,10 @@ Page({
 
   // 长按复制内容信息
   copyItem(e) {
-    const item = e.currentTarget.dataset.song;
+    const { name = '', singer = '', note = '' } = e.currentTarget.dataset;
+    const item = note
+      ? `${name} - ${singer}\n备注：${note}`
+      : `${name} - ${singer}`;
     wx.setClipboardData({
       data: item,
       success: () => wx.showToast({ title: '已复制', icon: 'success' }),
@@ -133,10 +143,14 @@ Page({
 
   // 检查本周是否已开启发布通知
   async checkSubStatus() {
+    if (this.data.isTestMode) {
+      this.setData({ subscribed: false });
+      return;
+    }
     try {
       const db = wx.cloud.database();
       const weekKey = this.getWeekKey();
-      const res = await db.collection('message_subscriptions')
+      const res = await db.collection(collectionName('message_subscriptions'))
         .where({ openid: '{openid}', template_id: STUDENT_TPL_ID, type: 'student', week_key: weekKey, consumed: false })
         .limit(1).get();
       this.setData({ subscribed: res.data.length > 0 });
@@ -147,6 +161,11 @@ Page({
 
   // 按钮点击：开启发布通知
   async onEnableSub() {
+    if (this.data.isTestMode) {
+      this.setData({ subscribed: true });
+      wx.showToast({ title: '测试环境已模拟订阅', icon: 'none' });
+      return;
+    }
     try {
       const db = wx.cloud.database();
       const openid = getApp().globalData.userInfo.openid;
@@ -155,11 +174,11 @@ Page({
       const res = await wx.requestSubscribeMessage({ tmplIds: [STUDENT_TPL_ID] });
       if (res[STUDENT_TPL_ID] === 'accept') {
         // 再次检查避免重复创建
-        const existing = await db.collection('message_subscriptions')
+        const existing = await db.collection(collectionName('message_subscriptions'))
           .where({ openid: '{openid}', template_id: STUDENT_TPL_ID, type: 'student', week_key: weekKey, consumed: false })
           .limit(1).get();
         if (existing.data.length === 0) {
-          await db.collection('message_subscriptions').add({
+          await db.collection(collectionName('message_subscriptions')).add({
             data: {
               openid,
               template_id: STUDENT_TPL_ID,

@@ -1,3 +1,5 @@
+const { cloudCall, isTestMode } = require('../../utils/runtime');
+
 const MAX_IMAGES = 5;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const TARGET_IMAGE_SIZE = Math.floor(1.8 * 1024 * 1024);
@@ -10,6 +12,7 @@ const IMAGE_COMPRESSION_STEPS = [
 
 Page({
   data: {
+    isTestMode: isTestMode(),
     articleId: '',
     title: '',
     summary: '',
@@ -36,7 +39,7 @@ Page({
 
   async checkPermission() {
     try {
-      const res = await wx.cloud.callFunction({ name: 'getUserInfo' });
+      const res = await cloudCall({ name: 'getUserInfo' });
       if (res.result && res.result.success && res.result.data.role === 'superadmin') {
         return true;
       }
@@ -51,7 +54,7 @@ Page({
   async loadArticle(articleId) {
     wx.showLoading({ title: '加载中...' });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageHelpContent',
         data: { action: 'getForAdmin', articleId }
       });
@@ -325,7 +328,7 @@ Page({
     const safeExtension = ['jpg', 'jpeg', 'png', 'webp'].includes(extension) ? extension : 'jpg';
     const randomPart = Math.random().toString(36).slice(2, 12);
     const upload = await wx.cloud.uploadFile({
-      cloudPath: `help/${Date.now()}-${randomPart}.${safeExtension}`,
+      cloudPath: `${isTestMode() ? 'test/help' : 'help'}/${Date.now()}-${randomPart}.${safeExtension}`,
       filePath: image.tempPath
     });
     if (!upload || !upload.fileID) {
@@ -337,7 +340,7 @@ Page({
   async cleanupUploadedFiles(fileIDs) {
     if (!fileIDs.length) return;
     try {
-      await wx.cloud.callFunction({
+      await cloudCall({
         name: 'manageHelpContent',
         data: { action: 'deleteFiles', fileIDs }
       });
@@ -400,7 +403,7 @@ Page({
       }
       const finalImages = uploadResults.map(result => result.fileID);
 
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageHelpContent',
         data: {
           action: 'save',

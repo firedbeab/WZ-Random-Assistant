@@ -1,5 +1,8 @@
+const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
+
 Page({
   data: {
+    isTestMode: isTestMode(),
     adminCode: '',
     showCode: false,
     loading: false
@@ -10,7 +13,7 @@ Page({
     // 已是管理员的用户自动恢复本机标记并进入后台，无需重复输入通行码。
     this.setData({ loading: true });
     try {
-      const res = await wx.cloud.callFunction({ name: 'getUserInfo' });
+      const res = await cloudCall({ name: 'getUserInfo' });
       if (res.result && res.result.success) {
         const userInfo = res.result.data;
         const role = userInfo.role;
@@ -29,7 +32,7 @@ Page({
   },
 
   saveAdminAuth(role) {
-    wx.setStorageSync('admin_auth', {
+    wx.setStorageSync(storageKey('admin_auth'), {
       isAdmin: true,
       isSuperAdmin: role === 'superadmin',
       role
@@ -45,7 +48,7 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'verifyAdmin',
         data: { action: 'verify', adminCode: adminCode.trim() }
       });

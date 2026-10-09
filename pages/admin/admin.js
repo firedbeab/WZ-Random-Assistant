@@ -1,10 +1,12 @@
 // pages/admin/admin.js
+const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 
 // 订阅消息模板 ID（管理员：参与活动提醒）
 const ADMIN_TPL_ID = 'G9y63KY2Q0mPOS-ML_PtxVu9wqE5xKqVnnNgEFtPC_8';
 
 Page({
   data: {
+    isTestMode: isTestMode(),
     // 审核相关
     schedule: null,
     note: '',
@@ -72,7 +74,7 @@ Page({
   async checkPermissionFromCloud() {
     wx.showLoading({ title: '验证身份...' });
     try {
-      const res = await wx.cloud.callFunction({ name: 'getUserInfo' });
+      const res = await cloudCall({ name: 'getUserInfo' });
       if (res.result.success && (res.result.data.role === 'admin' || res.result.data.role === 'superadmin')) {
         const app = getApp();
         const userInfo = res.result.data;
@@ -81,7 +83,7 @@ Page({
         app.globalData.userInfo = userInfo;
 
         // 本地缓存只用于兼容旧逻辑，管理权限和超管界面均以云端角色为准
-        wx.setStorageSync('admin_auth', {
+        wx.setStorageSync(storageKey('admin_auth'), {
           isAdmin: true,
           isSuperAdmin,
           role
@@ -109,9 +111,13 @@ Page({
 
   // 检查订阅状态，更新按钮显示
   async checkSubscriptionStatus() {
+    if (this.data.isTestMode) {
+      this.setData({ subscribed: false });
+      return;
+    }
     try {
       const db = wx.cloud.database();
-      const res = await db.collection('message_subscriptions')
+      const res = await db.collection(collectionName('message_subscriptions'))
         .where({ openid: '{openid}', template_id: ADMIN_TPL_ID, type: 'admin', consumed: false })
         .limit(1).get();
       this.setData({ subscribed: res.data.length > 0 });
@@ -150,6 +156,11 @@ Page({
 
   // 按钮点击：开启通知（首次订阅，会弹窗）
   async onEnableNotification() {
+    if (this.data.isTestMode) {
+      this.setData({ subscribed: true });
+      wx.showToast({ title: '测试环境已模拟订阅', icon: 'none' });
+      return;
+    }
     try {
       const db = wx.cloud.database();
       const openid = getApp().globalData.userInfo.openid;
@@ -157,11 +168,11 @@ Page({
       const res = await wx.requestSubscribeMessage({ tmplIds: [ADMIN_TPL_ID] });
       if (res[ADMIN_TPL_ID] === 'accept') {
         // 再次检查避免重复创建
-        const existing = await db.collection('message_subscriptions')
+        const existing = await db.collection(collectionName('message_subscriptions'))
           .where({ openid: '{openid}', template_id: ADMIN_TPL_ID, type: 'admin', consumed: false })
           .limit(1).get();
         if (existing.data.length === 0) {
-          await db.collection('message_subscriptions').add({
+          await db.collection(collectionName('message_subscriptions')).add({
             data: {
               openid,
               template_id: ADMIN_TPL_ID,
@@ -184,7 +195,7 @@ Page({
   async loadPlaylist(showLoading = true) {
     if (showLoading) wx.showLoading({ title: '加载中' });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'adminAuditPlaylist',
         data: { action: 'getPending' }
       });
@@ -226,7 +237,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '处理中' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'adminAuditPlaylist',
               data: {
                 action: 'skipDay',
@@ -258,7 +269,7 @@ Page({
 
     wx.showLoading({ title: '处理中' });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'adminAuditPlaylist',
         data: {
           action: 'markException',
@@ -294,7 +305,7 @@ Page({
         if (res.confirm) {
           this.setData({ publishing: true });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'adminAuditPlaylist',
               data: {
                 action: 'publish',
@@ -348,7 +359,7 @@ Page({
 
     this.setData({ noteSaving: true });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'adminAuditPlaylist',
         data: {
           action: 'updateNote',
@@ -416,7 +427,10 @@ Page({
   // ========== 复制相关方法 ==========
 
   onCopySong(e) {
-    const song = e.currentTarget.dataset.song;
+    const { name = '', singer = '', note = '' } = e.currentTarget.dataset;
+    const song = note
+      ? `${name} - ${singer}\n备注：${note}`
+      : `${name} - ${singer}`;
     wx.setClipboardData({
       data: song,
       success: () => wx.showToast({ title: '已复制', icon: 'success' }),
@@ -443,7 +457,7 @@ Page({
 
   async loadCodeList() {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageWeeklyCode',
         data: { action: 'list' }
       });
@@ -465,7 +479,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '生成中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'autoGenerateWeeklyCode'
             });
             wx.hideLoading();
@@ -528,7 +542,7 @@ Page({
 
     wx.showLoading({ title: editingCodeId ? '保存中...' : '添加中...' });
     try {
-      const ret = await wx.cloud.callFunction({
+      const ret = await cloudCall({
         name: 'manageWeeklyCode',
         data: {
           action: editingCodeId ? 'update' : 'add',
@@ -560,7 +574,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '发布中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'manageWeeklyCode',
               data: { action: 'publish', codeId }
             });
@@ -589,7 +603,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '删除中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'manageWeeklyCode',
               data: { action: 'delete', codeId }
             });
@@ -613,7 +627,7 @@ Page({
 
   async loadTestStats() {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'testTool',
         data: { action: 'stats' }
       });
@@ -630,10 +644,20 @@ Page({
     this.loadTestStats();
   },
 
+  goConsoleDetail(e) {
+    if (!this.data.isSuperAdmin) {
+      wx.showToast({ title: '仅超级管理员可查看', icon: 'none' });
+      return;
+    }
+    const mode = e.currentTarget.dataset.mode;
+    if (!['submissions', 'schedules', 'events', 'counters'].includes(mode)) return;
+    wx.navigateTo({ url: `/pages/admin/console?mode=${mode}` });
+  },
+
   // 加载通道状态（通过云函数读取，避免前端权限问题）
   async loadChannelStatus() {
     try {
-      const ret = await wx.cloud.callFunction({
+      const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'getChannelStatus' }
       });
@@ -650,7 +674,7 @@ Page({
   async onToggleChannel(e) {
     const mode = e.currentTarget.dataset.mode;
     try {
-      const ret = await wx.cloud.callFunction({
+      const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'toggleChannel', mode }
       });
@@ -674,7 +698,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '生成中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'testTool',
               data: { action: 'generateRequests', count }
             });
@@ -702,7 +726,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '生成中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'testTool',
               data: { action: 'generateCodes' }
             });
@@ -736,7 +760,7 @@ Page({
         }
         wx.showLoading({ title: '生成中...' });
         try {
-          const ret = await wx.cloud.callFunction({
+          const ret = await cloudCall({
             name: 'testTool',
             data: { action, offset }
           });
@@ -763,7 +787,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '抽取中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'testTool',
               data: { action: 'runDraw' }
             });
@@ -786,7 +810,7 @@ Page({
   async onTestSimulateSubmitted() {
     wx.showLoading({ title: '处理中...' });
     try {
-      const ret = await wx.cloud.callFunction({
+      const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'simulateSubmitted' }
       });
@@ -807,7 +831,7 @@ Page({
     wx.showLoading({ title: '统计影响范围...' });
     let previewResult;
     try {
-      const ret = await wx.cloud.callFunction({
+      const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'previewCleanup', scope }
       });
@@ -849,7 +873,7 @@ Page({
 
         wx.showLoading({ title: '清空中...' });
         try {
-          const ret = await wx.cloud.callFunction({
+          const ret = await cloudCall({
             name: 'testTool',
             data: {
               action: isWeek ? 'clearWeek' : 'clearSubscriptions',
@@ -897,7 +921,7 @@ Page({
 
   async loadPasscodeList() {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageAdmins',
         data: { action: 'listPasscodes' }
       });
@@ -914,7 +938,7 @@ Page({
 
   async loadAdminList() {
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageAdmins',
         data: { action: 'listAdmins' }
       });
@@ -954,7 +978,7 @@ Page({
 
     wx.showLoading({ title: '生成中...' });
     try {
-      const ret = await wx.cloud.callFunction({
+      const ret = await cloudCall({
         name: 'manageAdmins',
         data: { action: 'addPasscode', label: newPasscodeLabel.trim() }
       });
@@ -1003,7 +1027,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '删除中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'manageAdmins',
               data: { action: 'deletePasscode', passcodeId: id }
             });
@@ -1034,7 +1058,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '处理中...' });
           try {
-            const ret = await wx.cloud.callFunction({
+            const ret = await cloudCall({
               name: 'manageAdmins',
               data: { action: 'revokeAdmin', targetOpenid: openid }
             });
@@ -1060,7 +1084,7 @@ Page({
     if (!this.data.isSuperAdmin) return;
     if (showLoading) this.setData({ helpLoading: true });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageHelpContent',
         data: { action: 'listAll' }
       });
@@ -1089,7 +1113,7 @@ Page({
         if (!modalRes.confirm) return;
         wx.showLoading({ title: '生成中...' });
         try {
-          const res = await wx.cloud.callFunction({
+          const res = await cloudCall({
             name: 'manageHelpContent',
             data: { action: 'initializeDefaults' }
           });
@@ -1116,7 +1140,7 @@ Page({
   async onMoveHelpArticle(e) {
     const { id, direction } = e.currentTarget.dataset;
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'manageHelpContent',
         data: { action: 'reorder', articleId: id, direction }
       });
@@ -1141,7 +1165,7 @@ Page({
       success: async modalRes => {
         if (!modalRes.confirm) return;
         try {
-          const res = await wx.cloud.callFunction({
+          const res = await cloudCall({
             name: 'manageHelpContent',
             data: { action: 'setPublished', articleId: id, isPublished: nextPublished }
           });
@@ -1168,7 +1192,7 @@ Page({
       success: async modalRes => {
         if (!modalRes.confirm) return;
         try {
-          const res = await wx.cloud.callFunction({
+          const res = await cloudCall({
             name: 'manageHelpContent',
             data: { action: 'delete', articleId: id }
           });

@@ -2,6 +2,7 @@
 //testTool仅供开发者（超级管理员）操作使用，仅用于测试和紧急维护
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
+const { createDataScope, canUseTestData } = require('./dataScope');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
@@ -18,6 +19,13 @@ function getWeekKey(bjTime) {
   const sun = new Date(bjTime.getTime());
   sun.setUTCDate(bjTime.getUTCDate() + diff);
   return sun.toISOString().split('T')[0];
+}
+
+function normalizeSongName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]/gu, '');
 }
 
 // 计算指定周偏移的 week_key（0=本周, 1=上周, 2=上上周）
@@ -55,17 +63,17 @@ async function countMatching(collection, where) {
   return res.total;
 }
 
-async function getWeekCleanupPreview(weekKey) {
-  const counterExists = db.collection('submission_counters').doc(weekKey).get()
+async function getWeekCleanupPreview(weekKey, dataScope) {
+  const counterExists = db.collection(dataScope.collection('submission_counters')).doc(weekKey).get()
     .then(() => 1)
     .catch(() => 0);
   const [submissions, schedules, weeklyCodes, exceptions, subscriptions, counters] =
     await Promise.all([
-      countMatching('submissions', { week_key: weekKey }),
-      countMatching('schedules', { week_key: weekKey }),
-      countMatching('weekly_codes', { week_key: weekKey }),
-      countMatching('schedule_exceptions', { week_key: weekKey }),
-      countMatching('message_subscriptions', { week_key: weekKey }),
+      countMatching(dataScope.collection('submissions'), { week_key: weekKey }),
+      countMatching(dataScope.collection('schedules'), { week_key: weekKey }),
+      countMatching(dataScope.collection('weekly_codes'), { week_key: weekKey }),
+      countMatching(dataScope.collection('schedule_exceptions'), { week_key: weekKey }),
+      countMatching(dataScope.collection('message_subscriptions'), { week_key: weekKey }),
       counterExists
     ]);
 
@@ -82,14 +90,14 @@ async function getWeekCleanupPreview(weekKey) {
   return preview;
 }
 
-async function getSubscriptionsCleanupPreview() {
-  const total = await countMatching('message_subscriptions', {});
+async function getSubscriptionsCleanupPreview(dataScope) {
+  const total = await countMatching(dataScope.collection('message_subscriptions'), {});
   return { message_subscriptions: total, total };
 }
 
 // 审计日志暂存于现有 configs 集合，保留最近 50 条，避免新增集合后还需人工建表。
-async function appendCleanupAudit(entry) {
-  const ref = db.collection('configs').doc('test_tool_cleanup_audit');
+async function appendCleanupAudit(entry, dataScope) {
+  const ref = db.collection(dataScope.collection('configs')).doc('test_tool_cleanup_audit');
   let entries = [];
   try {
     const res = await ref.get();
@@ -107,19 +115,19 @@ async function appendCleanupAudit(entry) {
   });
 }
 
-async function createCleanupToken(scope, openid, weekKey, preview) {
+async function createCleanupToken(cleanupScope, openid, weekKey, preview, dataScope) {
   const token = crypto.randomBytes(24).toString('hex');
   const expiresAtMs = Date.now() + CLEANUP_TOKEN_TTL_MS;
-  const ref = db.collection('configs').doc(getCleanupTokenDocId(openid));
+  const ref = db.collection(dataScope.collection('configs')).doc(getCleanupTokenDocId(openid));
 
   await ref.set({
     data: {
       token_hash: hashText(token),
-      scope,
+      scope: cleanupScope,
       operator_openid: openid,
       week_key: weekKey,
       preview,
-      confirmation_text: CLEANUP_CONFIRMATIONS[scope],
+      confirmation_text: CLEANUP_CONFIRMATIONS[cleanupScope],
       expires_at_ms: expiresAtMs,
       used: false,
       created_at: db.serverDate()
@@ -129,12 +137,12 @@ async function createCleanupToken(scope, openid, weekKey, preview) {
   return { token, expiresAtMs };
 }
 
-async function verifyCleanupToken(scope, openid, weekKey, token, confirmationText) {
-  if (!token || confirmationText !== CLEANUP_CONFIRMATIONS[scope]) {
+async function verifyCleanupToken(cleanupScope, openid, weekKey, token, confirmationText, dataScope) {
+  if (!token || confirmationText !== CLEANUP_CONFIRMATIONS[cleanupScope]) {
     return { success: false, message: '服务端二次确认失败，请重新预览后操作' };
   }
 
-  const ref = db.collection('configs').doc(getCleanupTokenDocId(openid));
+  const ref = db.collection(dataScope.collection('configs')).doc(getCleanupTokenDocId(openid));
   let tokenData;
   try {
     const res = await ref.get();
@@ -144,7 +152,7 @@ async function verifyCleanupToken(scope, openid, weekKey, token, confirmationTex
   }
 
   const invalid = tokenData.used === true ||
-    tokenData.scope !== scope ||
+    tokenData.scope !== cleanupScope ||
     tokenData.operator_openid !== openid ||
     tokenData.week_key !== weekKey ||
     Number(tokenData.expires_at_ms) < Date.now() ||
@@ -204,13 +212,25 @@ const REMARKS = [
 
 exports.main = async (event) => {
   const { action, count, offset } = event;
+  const dataScope = createDataScope(event);
+  const submissionsCollection = dataScope.collection('submissions');
+  const schedulesCollection = dataScope.collection('schedules');
+  const codesCollection = dataScope.collection('weekly_codes');
+  const exceptionsCollection = dataScope.collection('schedule_exceptions');
+  const countersCollection = dataScope.collection('submission_counters');
+  const subscriptionsCollection = dataScope.collection('message_subscriptions');
+  const usersCollection = dataScope.collection('users');
+  const configsCollection = dataScope.collection('configs');
 
   // ===== 权限校验：仅超级管理员可操作 =====
   const { OPENID } = cloud.getWXContext();
   if (!OPENID) {
     return { success: false, message: '需要用户身份验证' };
   }
-  const userRes = await db.collection('users')
+  if (!(await canUseTestData(db, OPENID, dataScope))) {
+    return { success: false, message: '仅超级管理员可使用测试环境' };
+  }
+  const userRes = await db.collection(usersCollection)
     .where({ openid: OPENID }).limit(1).get();
   if (userRes.data.length === 0 || userRes.data[0].role !== 'superadmin') {
     return { success: false, message: '无权限访问' };
@@ -219,6 +239,13 @@ exports.main = async (event) => {
   const now = new Date();
   const bjTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const weekKey = getWeekKey(bjTime);
+  const TEST_ONLY_ACTIONS = new Set([
+    'generateRequests', 'generateCodes', 'simulateSubmitted', 'generateCarryover', 'runDraw',
+    'clearWeek', 'generatePublished', 'generateAllPublished'
+  ]);
+  if (TEST_ONLY_ACTIONS.has(action) && !dataScope.testMode) {
+    return { success: false, blocked: true, message: '该测试操作只能在测试版中执行' };
+  }
 
   // 清理操作必须先获取影响预览和两分钟一次性令牌。
   if (action === 'previewCleanup') {
@@ -232,7 +259,7 @@ exports.main = async (event) => {
           status: 'blocked',
           operator_openid: OPENID,
           reason: 'production_guard'
-        });
+        }, dataScope);
       } catch (e) {
         console.error('[testTool] 记录拦截日志失败:', e.message);
       }
@@ -249,9 +276,9 @@ exports.main = async (event) => {
 
     try {
       const preview = scope === 'week'
-        ? await getWeekCleanupPreview(weekKey)
-        : await getSubscriptionsCleanupPreview();
-      const tokenInfo = await createCleanupToken(scope, OPENID, weekKey, preview);
+        ? await getWeekCleanupPreview(weekKey, dataScope)
+        : await getSubscriptionsCleanupPreview(dataScope);
+      const tokenInfo = await createCleanupToken(scope, OPENID, weekKey, preview, dataScope);
       return {
         success: true,
         scope,
@@ -271,7 +298,7 @@ exports.main = async (event) => {
   if (action === 'generateRequests') {
     const num = count || 50;
     try {
-      await removeAll('submissions', { week_key: weekKey });
+      await removeAll(submissionsCollection, { week_key: weekKey });
 
       const data = [];
       for (let i = 0; i < num; i++) {
@@ -289,7 +316,7 @@ exports.main = async (event) => {
       for (let i = 0; i < data.length; i += batchSize) {
         const batch = data.slice(i, i + batchSize);
         const tasks = batch.map(item =>
-          db.collection('submissions').add({ data: item })
+          db.collection(submissionsCollection).add({ data: item })
         );
         await Promise.all(tasks);
       }
@@ -303,12 +330,12 @@ exports.main = async (event) => {
   // 2. 生成验证码
   if (action === 'generateCodes') {
     try {
-      await removeAll('weekly_codes', { week_key: weekKey });
+      await removeAll(codesCollection, { week_key: weekKey });
 
       const codes = ['TEST01', 'TEST02', 'TEST03'];
       const expireDate = '2026-12-31';
       const tasks = codes.map(code =>
-        db.collection('weekly_codes').add({
+        db.collection(codesCollection).add({
           data: {
             code, week_key: weekKey, expire_date: expireDate,
             is_published: true, type: 'test',
@@ -327,12 +354,12 @@ exports.main = async (event) => {
   // 3. 模拟已提交（当前用户）
   if (action === 'simulateSubmitted') {
     try {
-      const existRes = await db.collection('submissions')
+      const existRes = await db.collection(submissionsCollection)
         .where({ user_id: OPENID, week_key: weekKey }).count();
       if (existRes.total > 0) {
         return { success: false, message: '当前用户本周已有提交记录' };
       }
-      await db.collection('submissions').add({
+      await db.collection(submissionsCollection).add({
         data: {
           user_id: OPENID, song_name: '测试内容A', singer: '测试备注A',
           week_key: weekKey, submit_time: db.serverDate(), status: 'pending'
@@ -345,11 +372,47 @@ exports.main = async (event) => {
     }
   }
 
+  // 3.1 生成上一周历史候补，用于验证跨周补位逻辑。
+  // 仅写入 test_ 数据域，且调用入口已经过正式超级管理员身份校验。
+  if (action === 'generateCarryover') {
+    const num = Math.max(1, Math.min(Number(count) || 3, 20));
+    const currentWeek = new Date(`${weekKey}T00:00:00.000Z`);
+    currentWeek.setUTCDate(currentWeek.getUTCDate() - 7);
+    const previousWeekKey = currentWeek.toISOString().split('T')[0];
+    const runId = Date.now();
+    try {
+      const tasks = Array.from({ length: num }, (_, index) =>
+        db.collection(submissionsCollection).add({ data: {
+          user_id: `test_carryover_${runId}_${index}`,
+          song_name: `历史候补测试曲目${index + 1}`,
+          song_key: normalizeSongName(`历史候补测试曲目${index + 1}`),
+          singer: `历史候补歌手${index + 1}`,
+          special_note: '测试环境跨周候补',
+          week_key: previousWeekKey,
+          submit_time: db.serverDate(),
+          status: 'carryover',
+          carryover_at: db.serverDate()
+        }})
+      );
+      await Promise.all(tasks);
+      return {
+        success: true,
+        message: `已生成 ${num} 条上一周历史候补`,
+        weekKey: previousWeekKey,
+        count: num
+      };
+    } catch (err) {
+      console.warn('[testTool] 生成历史候补失败:', err.message || '未知错误');
+      return { success: false, message: '生成失败，请检查云函数日志' };
+    }
+  }
+
   // 4. 一键抽取（调用 drawWeeklyPlaylist 逻辑）
   if (action === 'runDraw') {
     try {
       const drawResult = await cloud.callFunction({
-        name: 'drawWeeklyPlaylist'
+        name: 'drawWeeklyPlaylist',
+        data: { _testMode: true }
       });
       return drawResult.result;
     } catch (err) {
@@ -361,7 +424,7 @@ exports.main = async (event) => {
   // 5. 清空本周所有测试数据（含 selected 项目和历史排期）
   if (action === 'clearWeek') {
     const guard = await verifyCleanupToken(
-      'week', OPENID, weekKey, event.confirmationToken, event.confirmationText
+      'week', OPENID, weekKey, event.confirmationToken, event.confirmationText, dataScope
     );
     if (!guard.success) return guard;
 
@@ -373,17 +436,17 @@ exports.main = async (event) => {
         operator_openid: OPENID,
         week_key: weekKey,
         preview: guard.preview
-      });
+      }, dataScope);
 
-      const reqDel = await removeAll('submissions', { week_key: weekKey });
-      const scheduleDel = await removeAll('schedules', { week_key: weekKey });
-      const codeDel = await removeAll('weekly_codes', { week_key: weekKey });
-      const exDel = await removeAll('schedule_exceptions', { week_key: weekKey });
-      const subDel = await removeAll('message_subscriptions', { week_key: weekKey });
+      const reqDel = await removeAll(submissionsCollection, { week_key: weekKey });
+      const scheduleDel = await removeAll(schedulesCollection, { week_key: weekKey });
+      const codeDel = await removeAll(codesCollection, { week_key: weekKey });
+      const exDel = await removeAll(exceptionsCollection, { week_key: weekKey });
+      const subDel = await removeAll(subscriptionsCollection, { week_key: weekKey });
       // 清除本周提交计数器
       let counterDel = 0;
       try {
-        await db.collection('submission_counters').doc(weekKey).remove();
+        await db.collection(countersCollection).doc(weekKey).remove();
         counterDel = 1;
       } catch (e) { /* 文档不存在则忽略 */ }
 
@@ -402,7 +465,7 @@ exports.main = async (event) => {
           operator_openid: OPENID,
           week_key: weekKey,
           details
-        });
+        }, dataScope);
       } catch (auditErr) {
         console.error('[testTool] 完成日志写入失败:', auditErr.message);
       }
@@ -420,7 +483,7 @@ exports.main = async (event) => {
           operator_openid: OPENID,
           week_key: weekKey,
           error: err.message
-        });
+        }, dataScope);
       } catch (auditErr) {
         console.error('[testTool] 失败日志写入失败:', auditErr.message);
       }
@@ -437,7 +500,7 @@ exports.main = async (event) => {
         status: 'blocked',
         operator_openid: OPENID,
         reason: 'production_guard'
-      });
+      }, dataScope);
     } catch (e) {
       console.error('[testTool] 记录拦截日志失败:', e.message);
     }
@@ -449,7 +512,7 @@ exports.main = async (event) => {
     const off = offset || 0;
     const targetWeekKey = getWeekKeyByOffset(bjTime, off);
     try {
-      await removeAll('schedules', { week_key: targetWeekKey });
+      await removeAll(schedulesCollection, { week_key: targetWeekKey });
 
       // 每期用不同的内容起始偏移，避免三期内容完全一样
       const startIdx = off * 5;
@@ -463,7 +526,7 @@ exports.main = async (event) => {
         schedule[day] = items;
       });
 
-      await db.collection('schedules').add({
+      await db.collection(schedulesCollection).add({
         data: {
           week_key: targetWeekKey, status: 'published',
           ...schedule, total_count: 20,
@@ -486,7 +549,7 @@ exports.main = async (event) => {
       const results = [];
       for (let off = 0; off <= 2; off++) {
         const targetWeekKey = getWeekKeyByOffset(bjTime, off);
-        await removeAll('schedules', { week_key: targetWeekKey });
+        await removeAll(schedulesCollection, { week_key: targetWeekKey });
 
         const startIdx = off * 5;
         const schedule = {};
@@ -499,7 +562,7 @@ exports.main = async (event) => {
           schedule[day] = items;
         });
 
-        await db.collection('schedules').add({
+        await db.collection(schedulesCollection).add({
           data: {
             week_key: targetWeekKey, status: 'published',
             ...schedule, total_count: 20,
@@ -528,7 +591,7 @@ exports.main = async (event) => {
       const pageSize = 100;
 
       while (true) {
-        const res = await db.collection('users')
+        const res = await db.collection(usersCollection)
           .field({ openid: true })
           .skip(offset)
           .limit(pageSize)
@@ -585,16 +648,16 @@ exports.main = async (event) => {
       const collections = [
         'submissions', 'schedules', 'weekly_codes',
         'schedule_exceptions', 'submission_counters',
-        'message_subscriptions', 'users'
+        'message_subscriptions', 'users', 'system_events'
       ];
       // 所有统计互不依赖，并行执行，避免十余次数据库请求串行累加延迟。
       const [collectionCounts, weekReq, weekSch, selectedCount, consumedSub, unconsumedSub] = await Promise.all([
-        Promise.all(collections.map(col => db.collection(col).count())),
-        db.collection('submissions').where({ week_key: weekKey }).count(),
-        db.collection('schedules').where({ week_key: weekKey }).count(),
-        db.collection('submissions').where({ status: 'selected' }).count(),
-        db.collection('message_subscriptions').where({ consumed: true }).count(),
-        db.collection('message_subscriptions').where({ consumed: false }).count()
+        Promise.all(collections.map(col => db.collection(dataScope.collection(col)).count())),
+        db.collection(submissionsCollection).where({ week_key: weekKey }).count(),
+        db.collection(schedulesCollection).where({ week_key: weekKey }).count(),
+        db.collection(submissionsCollection).where({ status: 'selected' }).count(),
+        db.collection(subscriptionsCollection).where({ consumed: true }).count(),
+        db.collection(subscriptionsCollection).where({ consumed: false }).count()
       ]);
 
       const stats = {};
@@ -621,7 +684,7 @@ exports.main = async (event) => {
   // 11. 清空所有订阅记录（含已消费和未消费）
   if (action === 'clearSubscriptions') {
     const guard = await verifyCleanupToken(
-      'subscriptions', OPENID, weekKey, event.confirmationToken, event.confirmationText
+      'subscriptions', OPENID, weekKey, event.confirmationToken, event.confirmationText, dataScope
     );
     if (!guard.success) return guard;
 
@@ -631,15 +694,15 @@ exports.main = async (event) => {
         status: 'started',
         operator_openid: OPENID,
         preview: guard.preview
-      });
-      const subDel = await removeAll('message_subscriptions', {});
+      }, dataScope);
+      const subDel = await removeAll(subscriptionsCollection, {});
       try {
         await appendCleanupAudit({
           action: 'clearSubscriptions',
           status: 'success',
           operator_openid: OPENID,
           details: { message_subscriptions: subDel }
-        });
+        }, dataScope);
       } catch (auditErr) {
         console.error('[testTool] 完成日志写入失败:', auditErr.message);
       }
@@ -655,7 +718,7 @@ exports.main = async (event) => {
           status: 'failed',
           operator_openid: OPENID,
           error: err.message
-        });
+        }, dataScope);
       } catch (auditErr) {
         console.error('[testTool] 失败日志写入失败:', auditErr.message);
       }
@@ -685,19 +748,9 @@ exports.main = async (event) => {
     }
 
     try {
-      try {
-        await db.collection('configs').doc('channel_override').update({ data });
-      } catch (e) {
-        try {
-          await db.collection('configs').add({
-            data: Object.assign({ _id: 'channel_override' }, data)
-          });
-        } catch (addErr) {
-          console.error('[toggleChannel] 写入 configs 失败:', addErr.errCode, addErr.message);
-          console.warn('[testTool] 写入通道配置失败:', addErr.message || '未知错误');
-          return { success: false, message: '写入失败，请检查云函数日志' };
-        }
-      }
+      // set 同时覆盖“文档已存在”和“首次创建”两种情况。
+      // update 在文档不存在时可能只返回 updated=0 而不抛错，不能用于这里的 upsert。
+      await db.collection(configsCollection).doc('channel_override').set({ data });
       return { success: true, message: msg };
     } catch (outerErr) {
       console.error('[toggleChannel] 意外异常:', outerErr.message);
@@ -709,7 +762,7 @@ exports.main = async (event) => {
   // 13. 获取通道状态
   if (action === 'getChannelStatus') {
     try {
-      const res = await db.collection('configs').doc('channel_override').get();
+      const res = await db.collection(configsCollection).doc('channel_override').get();
       return {
         success: true,
         forceOpen: res.data.forceOpen === true,

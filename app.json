@@ -6,6 +6,7 @@
     "pages/help/index",
     "pages/admin/login",
     "pages/admin/admin",
+    "pages/admin/console",
     "pages/admin/help-editor"
   ],
   "window": {

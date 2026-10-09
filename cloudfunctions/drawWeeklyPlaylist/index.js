@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
+const { createDataScope, canUseTestData } = require('./dataScope');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -34,6 +35,19 @@ function getHistoryKeys() {
   return keys;
 }
 
+function normalizeSongName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]/gu, '');
+}
+
+function getSongKey(item) {
+  return item && item.song_key
+    ? item.song_key
+    : normalizeSongName(item && item.song_name);
+}
+
 // Fisher-Yates 洗牌算法
 function shuffle(arr) {
   let m = arr.length, t, i;
@@ -49,10 +63,22 @@ function toScheduleItem(submission) {
   return {
     submission_id: submission._id,
     song_name: submission.song_name,
+    song_key: getSongKey(submission),
     singer: submission.singer,
     special_note: submission.special_note || '',
-    is_repeat: false
+    is_repeat: false,
+    source_week_key: submission.week_key || ''
   };
+}
+
+function uniqueBySong(items) {
+  const uniqueMap = new Map();
+  items.forEach(item => {
+    const key = getSongKey(item);
+    if (!key) return;
+    if (!uniqueMap.has(key) || crypto.randomInt(2) === 0) uniqueMap.set(key, item);
+  });
+  return Array.from(uniqueMap.values());
 }
 
 async function removeAllMatching(collection, where) {
@@ -84,13 +110,19 @@ async function fetchAll(collection, where, orderBy) {
 // ================= 订阅消息通知 =================
 
 // 向所有已订阅的管理员发送"有待审核排期"通知
-async function notifyAdmins(weekKey) {
+async function notifyAdmins(weekKey, scope) {
   const ADMIN_TPL_ID = 'G9y63KY2Q0mPOS-ML_PtxVu9wqE5xKqVnnNgEFtPC_8';
+  if (scope.testMode) {
+    console.log('[测试环境] 已跳过管理员订阅消息发送');
+    return;
+  }
+  const subscriptionsCollection = scope.collection('message_subscriptions');
+  const usersCollection = scope.collection('users');
   try {
     let allSubs = [];
     let skip = 0;
     while (true) {
-      const res = await db.collection('message_subscriptions')
+      const res = await db.collection(subscriptionsCollection)
         .where({ template_id: ADMIN_TPL_ID, type: 'admin', consumed: false })
         .skip(skip).limit(100).get();
       allSubs = allSubs.concat(res.data);
@@ -111,7 +143,7 @@ async function notifyAdmins(weekKey) {
       // 同一管理员只发一次
       if (sentOpenids.has(sub.openid)) {
         console.log(`[通知] openid ${sub.openid.slice(0,6)}... 已发送过，标记重复记录为 consumed`);
-        await db.collection('message_subscriptions').doc(sub._id).update({
+        await db.collection(subscriptionsCollection).doc(sub._id).update({
           data: { consumed: true }
         });
         continue;
@@ -119,12 +151,12 @@ async function notifyAdmins(weekKey) {
 
       try {
         // 检查该用户是否仍是管理员（防止被撤销后仍收到通知）
-        const userRes = await db.collection('users')
+        const userRes = await db.collection(usersCollection)
           .where({ openid: sub.openid }).limit(1).get();
         if (userRes.data.length === 0 ||
             !['admin', 'superadmin'].includes(userRes.data[0].role)) {
           console.log(`[通知] openid ${sub.openid.slice(0,6)}... 已不是管理员，跳过`);
-          await db.collection('message_subscriptions').doc(sub._id).update({
+          await db.collection(subscriptionsCollection).doc(sub._id).update({
             data: { consumed: true }
           });
           continue;
@@ -142,7 +174,7 @@ async function notifyAdmins(weekKey) {
         });
         console.log(`[通知] ✅ 发送成功`);
         sentOpenids.add(sub.openid);
-        await db.collection('message_subscriptions').doc(sub._id).update({
+        await db.collection(subscriptionsCollection).doc(sub._id).update({
           data: { consumed: true }
         });
       } catch (e) {
@@ -157,10 +189,18 @@ async function notifyAdmins(weekKey) {
 // ================= 主逻辑 =================
 
 exports.main = async (event, context) => {
+  const scope = createDataScope(event);
+  const schedulesCollection = scope.collection('schedules');
+  const submissionsCollection = scope.collection('submissions');
+  const subscriptionsCollection = scope.collection('message_subscriptions');
+  const usersCollection = scope.collection('users');
   // ===== 权限校验：仅管理员或定时任务可调用 =====
   const { OPENID } = cloud.getWXContext();
   if (OPENID) {
-    const userRes = await db.collection('users')
+    if (!(await canUseTestData(db, OPENID, scope))) {
+      return { success: false, message: '仅超级管理员可使用测试环境' };
+    }
+    const userRes = await db.collection(usersCollection)
       .where({ openid: OPENID }).limit(1).get();
     if (userRes.data.length === 0 ||
         !['admin', 'superadmin'].includes(userRes.data[0].role)) {
@@ -178,9 +218,9 @@ exports.main = async (event, context) => {
     // 0.1 清理过期提交；0.2 清理两周前已消费订阅。三个集合互不依赖，并行处理。
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const cleanupResults = await Promise.allSettled([
-      removeAllMatching('schedules', { week_key: _.nin(keepKeys) }),
-      removeAllMatching('submissions', { week_key: _.nin(keepKeys) }),
-      removeAllMatching('message_subscriptions', { consumed: true, created_at: _.lt(twoWeeksAgo) })
+      removeAllMatching(schedulesCollection, { week_key: _.nin(keepKeys) }),
+      removeAllMatching(submissionsCollection, { week_key: _.nin(keepKeys) }),
+      removeAllMatching(subscriptionsCollection, { consumed: true, created_at: _.lt(twoWeeksAgo) })
     ]);
     const cleanupLabels = ['过期排期', '过期提交请求', '已消费订阅记录'];
     cleanupResults.forEach((result, index) => {
@@ -197,65 +237,69 @@ exports.main = async (event, context) => {
 
     // 1. 本周候选与历史黑名单互不依赖，并行分页读取。
     const historyKeys = getHistoryKeys();
-    const [allRequests, allSchedules] = await Promise.all([
+    const [allRequests, carryoverRequests, currentWeekUsers, allSchedules] = await Promise.all([
       fetchAll(
-        'submissions',
+        submissionsCollection,
         { status: 'pending', week_key: weekKey },
         { field: 'submit_time', direction: 'asc' }
       ),
-      fetchAll('schedules', { week_key: _.in(historyKeys), status: 'published' })
+      fetchAll(
+        submissionsCollection,
+        { status: 'carryover', week_key: _.in(historyKeys) },
+        { field: 'submit_time', direction: 'asc' }
+      ),
+      fetchAll(submissionsCollection, { week_key: weekKey }),
+      fetchAll(schedulesCollection, { week_key: _.in(historyKeys), status: 'published' })
     ]);
 
-    if (allRequests.length === 0) {
-      return { success: false, message: '本周无提交请求，任务跳过' };
+    // 用户本周已提交（包括 overflow）时，不再用其历史候选补位，避免同一用户一周占两次机会。
+    const currentUserIds = new Set(currentWeekUsers.map(item => item.user_id).filter(Boolean));
+    const eligibleCarryover = carryoverRequests.filter(item => !currentUserIds.has(item.user_id));
+
+    if (allRequests.length === 0 && eligibleCarryover.length === 0) {
+      return { success: false, message: '本周及历史均无可用提交，任务跳过' };
     }
 
-    // 2. 按 "名称|补充" 去重（同内容多人提交 → 随机选一条，避免偏向早提交用户）
-    const uniqueMap = new Map();
-    allRequests.forEach(r => {
-      const key = `${r.song_name}|${r.singer}`;
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, r);
-      } else if (crypto.randomInt(2) === 0) {
-        uniqueMap.set(key, r);
-      }
-    });
-    const uniqueList = Array.from(uniqueMap.values());
+    // 2. 当前周与历史候选分别按规范化名称去重。当前周优先级始终更高。
+    const currentUnique = uniqueBySong(allRequests);
+    const currentSongKeys = new Set(currentUnique.map(getSongKey));
+    const carryoverUnique = uniqueBySong(eligibleCarryover)
+      .filter(item => !currentSongKeys.has(getSongKey(item)));
 
     // 3. 构建近2周已播放黑名单
     const historySet = new Set();
     allSchedules.forEach(pl => {
       ['day1','day2','day3','day4','day5'].forEach(d => {
         if (Array.isArray(pl[d])) {
-          pl[d].forEach(s => historySet.add(`${s.song_name}|${s.singer}`));
+          pl[d].forEach(s => historySet.add(getSongKey(s)));
         }
       });
     });
 
-    // 4. 划分新内容池与旧内容池
-    const newPool = uniqueList.filter(r => !historySet.has(`${r.song_name}|${r.singer}`));
-    const oldPool = uniqueList.filter(r => historySet.has(`${r.song_name}|${r.singer}`));
-    console.log(`[抽取] 原始:${allRequests.length} | 去重:${uniqueList.length} | 新内容:${newPool.length} | 旧内容:${oldPool.length}`);
+    // 4. 四级候选顺序：当周新内容 > 历史候选新内容 > 当周重复内容 > 历史候选重复内容。
+    const pools = [
+      currentUnique.filter(r => !historySet.has(getSongKey(r))),
+      carryoverUnique.filter(r => !historySet.has(getSongKey(r))),
+      currentUnique.filter(r => historySet.has(getSongKey(r))),
+      carryoverUnique.filter(r => historySet.has(getSongKey(r)))
+    ].map(pool => shuffle([...pool]));
+    console.log(`[抽取] 当周:${allRequests.length} | 历史候选:${eligibleCarryover.length} | 四级池:${pools.map(p => p.length).join('/')}`);
 
     // 5. 填充 5天 × 4项 = 20个位置
     const schedule = { day1: [], day2: [], day3: [], day4: [], day5: [] };
     const days = ['day1','day2','day3','day4','day5'];
     const selectedIds = [];
 
-    let shuffledNew = shuffle([...newPool]);
-    let shuffledOld = shuffle([...oldPool]);
-
     for (const day of days) {
       for (let i = 0; i < 4; i++) {
-        let item;
-        if (shuffledNew.length > 0) item = shuffledNew.pop();
-        else if (shuffledOld.length > 0) item = shuffledOld.pop();
-        else break; // 候选池已空
+        const activePool = pools.find(pool => pool.length > 0);
+        const item = activePool ? activePool.pop() : null;
+        if (!item) break;
 
-        if (item) {
-          schedule[day].push(toScheduleItem(item));
-          selectedIds.push(item._id);
-        }
+        const scheduleItem = toScheduleItem(item);
+        scheduleItem.is_repeat = historySet.has(getSongKey(item));
+        schedule[day].push(scheduleItem);
+        selectedIds.push(item._id);
       }
     }
 
@@ -265,7 +309,7 @@ exports.main = async (event, context) => {
     const tx = await db.startTransaction();
     try {
       // 6.0 竞态检查：防止重复抽取（事务内检查是否已有待审核排期）
-      const existingPending = await tx.collection('schedules')
+      const existingPending = await tx.collection(schedulesCollection)
         .where({ week_key: weekKey, status: 'pending' })
         .count();
       if (existingPending.total > 0) {
@@ -274,19 +318,20 @@ exports.main = async (event, context) => {
       }
 
       // 6.1 写入周排期
-      await tx.collection('schedules').add({
+      await tx.collection(schedulesCollection).add({
         data: {
           week_key: weekKey,
           status: 'pending',
           ...schedule,
           total_count: selectedIds.length,
+          revision: 1,
           generated_at: db.serverDate()
         }
       });
 
       // 6.2 更新请求状态
       if (selectedIds.length > 0) {
-        await tx.collection('submissions')
+        await tx.collection(submissionsCollection)
           .where({ _id: _.in(selectedIds) })
           .update({ data: { status: 'selected', picked_at: db.serverDate() } });
       }
@@ -295,7 +340,7 @@ exports.main = async (event, context) => {
       console.log(`[抽取] ✅ 成功 | 已排期 ${selectedIds.length} 项`);
 
       // 抽取成功后，通知所有已订阅的管理员前往审核
-      await notifyAdmins(weekKey);
+      await notifyAdmins(weekKey, scope);
 
       return { success: true, message: `抽取完成，共 ${selectedIds.length} 个项目`, count: selectedIds.length };
 

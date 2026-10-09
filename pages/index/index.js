@@ -1,5 +1,10 @@
+const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
+
+const LAST_SUBMISSION_KEY = storageKey('last_submission');
+
 Page({
   data: {
+    isTestMode: isTestMode(),
     userInfo: null,
     weeklyCode: '',
     title: '',
@@ -17,7 +22,7 @@ Page({
     // 获取用户信息并更新全局状态
     async checkUserStatus() {
       try {
-        const res = await wx.cloud.callFunction({ name: 'getUserInfo' });
+        const res = await cloudCall({ name: 'getUserInfo' });
         if (res.result.success) {
           const userInfo = res.result.data;
           this.setData({ userInfo });
@@ -94,18 +99,24 @@ Page({
         const publishedWeekKey = channelOpen
           ? currentWeekKey
           : this.getLatestScheduleWeekKey();
-        const db = wx.cloud.database();
-
         // 3. 检查本周是否已有已发布的排期
         //    如果已发布，说明本周流程已结束，重置为"通道已关闭"状态
         try {
-        const pubRes = await db.collection('schedules')
-            .where({ week_key: publishedWeekKey, status: 'published' })
-            .limit(1)
-            .get();
-          if (pubRes.data.length > 0) {
+          const pubRes = this.data.isTestMode
+            ? await cloudCall({
+              name: 'getUserInfo',
+              data: { action: 'getPublishedSchedule', weekKey: publishedWeekKey }
+            })
+            : await wx.cloud.database().collection(collectionName('schedules'))
+              .where({ week_key: publishedWeekKey, status: 'published' })
+              .limit(1)
+              .get();
+          const publishedSchedule = this.data.isTestMode
+            ? (pubRes.result && pubRes.result.success ? pubRes.result.data : null)
+            : pubRes.data[0];
+          if (publishedSchedule) {
             // 排期已发布 → 清除已提交状态和本地缓存
-            wx.removeStorageSync('last_submission');
+            wx.removeStorageSync(LAST_SUBMISSION_KEY);
             this.setData({ hasSubmitted: false, submittedInfo: '', schedulePublished: true });
             return;
           }
@@ -117,7 +128,7 @@ Page({
         this.setData({ schedulePublished: false });
 
         // 4. 先查本地缓存（优先读缓存，避免重复查询数据库）
-        const cached = wx.getStorageSync('last_submission');
+        const cached = wx.getStorageSync(LAST_SUBMISSION_KEY);
         if (cached && cached.week_key === currentWeekKey && cached.song_name) {
           this.setData({
             hasSubmitted: true,
@@ -131,13 +142,20 @@ Page({
         const userInfo = app.globalData.userInfo;
         if (!userInfo || !userInfo.openid) return;
 
-        const res = await db.collection('submissions')
-          .where({ user_id: userInfo.openid, week_key: currentWeekKey })
-          .limit(1)
-          .get();
+        const res = this.data.isTestMode
+          ? await cloudCall({
+            name: 'getUserInfo',
+            data: { action: 'getMySubmission', weekKey: currentWeekKey }
+          })
+          : await wx.cloud.database().collection(collectionName('submissions'))
+            .where({ user_id: userInfo.openid, week_key: currentWeekKey })
+            .limit(1)
+            .get();
+        const song = this.data.isTestMode
+          ? (res.result && res.result.success ? res.result.data : null)
+          : res.data[0];
 
-        if (res.data.length > 0) {
-          const song = res.data[0];
+        if (song) {
           this.setData({
             hasSubmitted: true,
             submittedInfo: `《${song.song_name}》- ${song.singer}`
@@ -180,7 +198,7 @@ Page({
 
     async onPullDownRefresh() {
       // 下拉刷新：清除本地缓存，重新从云端同步所有状态
-      wx.removeStorageSync('last_submission');
+      wx.removeStorageSync(LAST_SUBMISSION_KEY);
       try {
         await this.checkUserStatus();
         await Promise.all([
@@ -195,11 +213,23 @@ Page({
   // 加载本周提交总次数
   async loadSubmitCount() {
     try {
-      const db = wx.cloud.database();
       const weekKey = this.getWeekKey();
-      const res = await db.collection('submission_counters').doc(weekKey).get();
-      if (res.data && res.data.count !== undefined) {
-        this.setData({ totalSubmissions: res.data.count });
+      if (this.data.isTestMode) {
+        const res = await cloudCall({
+          name: 'getUserInfo',
+          data: { action: 'getSubmitCount', weekKey }
+        });
+        if (res.result && res.result.success) {
+          this.setData({ totalSubmissions: res.result.data });
+        }
+      } else {
+        const res = await wx.cloud.database()
+          .collection(collectionName('submission_counters'))
+          .doc(weekKey)
+          .get();
+        if (res.data && res.data.count !== undefined) {
+          this.setData({ totalSubmissions: res.data.count });
+        }
       }
     } catch (err) {
       // 文档不存在或查询失败，忽略（显示0）
@@ -225,7 +255,7 @@ Page({
 
     try {
       // 2. 调用云函数
-      const res = await wx.cloud.callFunction({
+      const res = await cloudCall({
         name: 'checkWeeklyCode',
         data: {
           weeklyCode,
@@ -242,7 +272,7 @@ Page({
         wx.showToast({ title: '提交成功', icon: 'success' });
         // 缓存提交信息（含 week_key，防止跨周误显示）
         const weekKey = this.getWeekKey();
-        wx.setStorageSync('last_submission', {
+        wx.setStorageSync(LAST_SUBMISSION_KEY, {
           week_key: weekKey,
           song_name: title,
           remark: remark

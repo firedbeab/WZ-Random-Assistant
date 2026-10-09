@@ -47,9 +47,9 @@ page {
 }
 
 .field-input {
-  height: 80rpx;
+  height: 84rpx;
   padding: 0 24rpx;
-  line-height: 80rpx;
+  line-height: 84rpx;
   caret-color: #07c160;
   -webkit-text-fill-color: #333;
   opacity: 1;
@@ -58,6 +58,8 @@ page {
 .content-input {
   min-height: 260rpx;
   line-height: 1.7;
+  -webkit-text-fill-color: #333;
+  opacity: 1;
 }
 
 .field-count {

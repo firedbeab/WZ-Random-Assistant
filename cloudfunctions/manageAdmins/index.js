@@ -2,6 +2,7 @@
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { createDataScope, canUseTestData } = require('./dataScope');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -14,12 +15,18 @@ function isValidDocId(value) {
 exports.main = async (event, context) => {
   const { action } = event;
   const { OPENID } = cloud.getWXContext();
+  const scope = createDataScope(event);
+  const usersCollection = scope.collection('users');
+  const passcodesCollection = scope.collection('admin_passcodes');
 
   // ===== 权限校验：仅超级管理员可操作 =====
   if (!OPENID) {
     return { success: false, message: '需要用户身份验证' };
   }
-  const userRes = await db.collection('users')
+  if (!(await canUseTestData(db, OPENID, scope))) {
+    return { success: false, message: '仅超级管理员可使用测试环境' };
+  }
+  const userRes = await db.collection(usersCollection)
     .where({ openid: OPENID }).limit(1).get();
   if (userRes.data.length === 0 || userRes.data[0].role !== 'superadmin') {
     return { success: false, message: '无权限访问' };
@@ -30,7 +37,7 @@ exports.main = async (event, context) => {
   // 1. 列出所有通行码
   if (action === 'listPasscodes') {
     try {
-      const res = await db.collection('admin_passcodes')
+      const res = await db.collection(passcodesCollection)
         .orderBy('created_at', 'desc')
         .get();
       const list = res.data.map(pc => ({
@@ -71,7 +78,7 @@ exports.main = async (event, context) => {
       const hash = bcrypt.hashSync(code, 10);
 
       // 存储
-      await db.collection('admin_passcodes').add({
+      await db.collection(passcodesCollection).add({
         data: {
           code_hash: hash,
           code_preview: preview,
@@ -97,7 +104,7 @@ exports.main = async (event, context) => {
     }
 
     try {
-      await db.collection('admin_passcodes').doc(passcodeId).remove();
+      await db.collection(passcodesCollection).doc(passcodeId).remove();
       return { success: true, message: '通行码已删除' };
     } catch (err) {
       console.warn('[管理员] 删除通行码失败:', err.message || '未知错误');
@@ -110,7 +117,7 @@ exports.main = async (event, context) => {
   // 4. 列出管理员
   if (action === 'listAdmins') {
     try {
-      const res = await db.collection('users')
+      const res = await db.collection(usersCollection)
         .where({ role: _.in(['admin', 'superadmin']) })
         .orderBy('last_admin_verify', 'desc')
         .get();
@@ -143,7 +150,7 @@ exports.main = async (event, context) => {
     }
 
     try {
-      await db.collection('users')
+      await db.collection(usersCollection)
         .where({ openid: targetOpenid })
         .update({
           data: {

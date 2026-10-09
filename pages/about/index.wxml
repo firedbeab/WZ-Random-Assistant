@@ -19,7 +19,7 @@
 
   <view class="footer">
     <text class="btn-privacy" bindtap="openPrivacy">隐私保护指引</text>
-    <text>WZ随机助手 v1.5 | @发牌的小度</text>
+    <text>WZ随机助手 v1.6 | @发牌的小度</text>
   </view>
 </view>
 

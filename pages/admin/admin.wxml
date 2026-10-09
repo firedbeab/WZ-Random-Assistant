@@ -1,6 +1,8 @@
 <!-- pages/admin/admin.wxml -->
 <view class="container">
 
+<view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 所有维护操作仅作用于 test_ 集合</view>
+
 <!-- 返回首页 -->
 <view class="logout-bar">
   <text class="btn-logout" bindtap="onBackHome">返回首页</text>
@@ -81,9 +83,16 @@
         <view class="song-list">
           <block wx:for="{{schedule['day'+(dayIdx+1)]}}" wx:key="_id" wx:for-index="songIdx">
             <view class="song-item">
-              <view class="song-info" bindlongpress="onCopySong" data-song="{{item.song_name}} - {{item.singer}}">
+              <view
+                class="song-info"
+                bindlongpress="onCopySong"
+                data-name="{{item.song_name}}"
+                data-singer="{{item.singer}}"
+                data-note="{{item.special_note}}"
+              >
                 <text class="song-name">{{item.song_name}}</text>
                 <text class="song-singer">{{item.singer}}</text>
+                <text class="song-special" wx:if="{{item.special_note}}">📌 {{item.special_note}}</text>
               </view>
               <view class="song-actions">
                 <button class="btn-note" size="mini" bindtap="onOpenNote" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}">
@@ -102,7 +111,7 @@
     <!-- 备注输入 -->
     <view class="note-section">
       <text class="label">📝 备注 (公示时显示)</text>
-      <textarea class="note-input" placeholder="例：周三因活动调整顺序..." value="{{note}}" bindinput="onNoteInput" maxlength="100"></textarea>
+      <textarea class="note-input" placeholder="例：周三因活动调整顺序..." placeholder-class="form-placeholder" value="{{note}}" bindinput="onNoteInput" maxlength="100"></textarea>
     </view>
 
     <!-- 底部按钮 -->
@@ -170,19 +179,21 @@
 <!-- ========== 测试工具 ========== -->
 <view class="tab-panel" wx:elif="{{currentTab === 'test'}}">
   <view class="header">
-    <text class="title">测试控制台</text>
+    <text class="title">{{isTestMode ? '测试控制台' : '运行控制台'}}</text>
   </view>
+
+  <view class="test-safety-hint" wx:if="{{!isTestMode}}">正式版仅开放只读统计和通道控制；模拟数据与清理入口已隐藏并由服务端拒绝。</view>
 
   <!-- 数据统计 -->
   <view class="test-section">
     <view class="test-section-title">数据统计</view>
     <view wx:if="{{testStats}}">
       <view class="stats-row">
-        <view class="stat-item">
+        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="submissions">
           <text class="stat-num">{{testStats.total.submissions}}</text>
           <text class="stat-label">提交请求</text>
         </view>
-        <view class="stat-item">
+        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="schedules">
           <text class="stat-num">{{testStats.total.schedules}}</text>
           <text class="stat-label">排期</text>
         </view>
@@ -190,13 +201,13 @@
           <text class="stat-num">{{testStats.total.weekly_codes}}</text>
           <text class="stat-label">验证码</text>
         </view>
-        <view class="stat-item">
-          <text class="stat-num">{{testStats.total.schedule_exceptions}}</text>
+        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="events">
+          <text class="stat-num">{{(testStats.total.schedule_exceptions || 0) + (testStats.total.system_events || 0)}}</text>
           <text class="stat-label">异常记录</text>
         </view>
       </view>
       <view class="stats-row">
-        <view class="stat-item">
+        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="counters">
           <text class="stat-num">{{testStats.total.submission_counters}}</text>
           <text class="stat-label">计数器</text>
         </view>
@@ -212,27 +223,29 @@
     </view>
   </view>
 
-  <!-- 数据生成 -->
-  <view class="test-section">
-    <view class="test-section-title">数据生成</view>
-    <view class="test-grid">
-      <view class="test-btn blue" bindtap="onTestGenerate" data-count="10">生成10条</view>
-      <view class="test-btn blue" bindtap="onTestGenerate" data-count="50">生成50条</view>
-      <view class="test-btn blue" bindtap="onTestGenerate" data-count="250">生成250条</view>
-      <view class="test-btn blue" bindtap="onTestGenCodes">生成验证码</view>
-      <view class="test-btn blue" bindtap="onTestGenPublished">生成已发布排期（支持往期）</view>
+  <block wx:if="{{isTestMode}}">
+    <!-- 数据生成 -->
+    <view class="test-section">
+      <view class="test-section-title">数据生成</view>
+      <view class="test-grid">
+        <view class="test-btn blue" bindtap="onTestGenerate" data-count="10">生成10条</view>
+        <view class="test-btn blue" bindtap="onTestGenerate" data-count="50">生成50条</view>
+        <view class="test-btn blue" bindtap="onTestGenerate" data-count="250">生成250条</view>
+        <view class="test-btn blue" bindtap="onTestGenCodes">生成验证码</view>
+        <view class="test-btn blue" bindtap="onTestGenPublished">生成已发布排期（支持往期）</view>
+      </view>
     </view>
-  </view>
 
-  <!-- 流程模拟 -->
-  <view class="test-section">
-    <view class="test-section-title">流程模拟</view>
-    <view class="test-grid">
-      <view class="test-btn green" bindtap="onTestDraw">一键抽取</view>
-      <view class="test-btn green" bindtap="onTestSimulateSubmitted">模拟已提交</view>
-      <view class="test-btn green" bindtap="onTestStats">刷新统计</view>
+    <!-- 流程模拟 -->
+    <view class="test-section">
+      <view class="test-section-title">流程模拟</view>
+      <view class="test-grid">
+        <view class="test-btn green" bindtap="onTestDraw">一键抽取</view>
+        <view class="test-btn green" bindtap="onTestSimulateSubmitted">模拟已提交</view>
+        <view class="test-btn green" bindtap="onTestStats">刷新统计</view>
+      </view>
     </view>
-  </view>
+  </block>
 
   <!-- 通道控制 -->
   <view class="test-section">
@@ -248,9 +261,9 @@
   </view>
 
   <!-- 数据清理 -->
-  <view class="test-section">
+  <view class="test-section" wx:if="{{isTestMode}}">
     <view class="test-section-title">数据清理</view>
-    <text class="test-safety-hint">生产保护已开启：清理前会显示影响范围并进行服务端二次确认</text>
+    <text class="test-safety-hint">仅清理 test_ 集合；执行前会显示影响范围并进行服务端二次确认</text>
     <view class="test-grid">
       <view class="test-btn orange" bindtap="onTestClearWeek">清空本周</view>
       <view class="test-btn orange" bindtap="onTestClearSubscriptions">清空订阅记录</view>
@@ -365,7 +378,7 @@
       </block>
     </view>
 
-    <input class="reason-input" placeholder="其他原因..." value="{{customReason}}" bindinput="onReasonInput"/>
+    <input class="reason-input" placeholder="其他原因..." placeholder-class="form-placeholder" value="{{customReason}}" bindinput="onReasonInput"/>
 
     <view class="modal-actions">
       <button class="btn-cancel" bindtap="closeModal">取消</button>
@@ -378,7 +391,7 @@
 <view class="modal" wx:if="{{showCodeModal}}">
   <view class="modal-content">
     <text class="modal-title">{{editingCodeId ? '编辑验证码' : '添加验证码'}}</text>
-    <input class="code-modal-input" placeholder="输入6位验证码" value="{{newCode}}" bindinput="onNewCodeInput" maxlength="6"/>
+    <input class="code-modal-input" placeholder="输入6位验证码" placeholder-class="form-placeholder" value="{{newCode}}" bindinput="onNewCodeInput" maxlength="6"/>
     <view class="date-inputs">
       <view class="date-field">
         <text class="date-label">过期日期</text>
@@ -398,7 +411,7 @@
 <view class="modal" wx:if="{{showPasscodeModal}}">
   <view class="modal-content">
     <text class="modal-title">生成管理员通行码</text>
-    <input class="code-modal-input" placeholder="输入描述标签（如：张老师）" value="{{newPasscodeLabel}}" bindinput="onPasscodeLabelInput" maxlength="20"/>
+    <input class="code-modal-input" placeholder="输入描述标签（如：张老师）" placeholder-class="form-placeholder" value="{{newPasscodeLabel}}" bindinput="onPasscodeLabelInput" maxlength="20"/>
     <view class="modal-actions">
       <button class="btn-cancel" bindtap="closePasscodeModal">取消</button>
       <button class="btn-confirm" bindtap="confirmAddPasscode">生成</button>
@@ -426,7 +439,7 @@
   <form class="modal-content" bindsubmit="confirmSaveNote">
     <text class="modal-title">特殊备注</text>
     <text class="modal-song">《{{noteSong.song_name}}》- {{noteSong.singer}}</text>
-    <textarea name="noteText" class="note-modal-input" placeholder="输入特殊备注（选填，如：要求特定版本）" value="{{noteText}}" bindinput="onNoteTextInput" maxlength="50" auto-height></textarea>
+    <textarea name="noteText" class="note-modal-input" placeholder="输入特殊备注（选填，如：要求特定版本）" placeholder-class="form-placeholder" value="{{noteText}}" bindinput="onNoteTextInput" maxlength="50" auto-height></textarea>
     <view class="modal-actions">
       <button class="btn-cancel" bindtap="closeNoteModal" disabled="{{noteSaving}}">取消</button>
       <button class="btn-delete-note" wx:if="{{noteSong.special_note}}" bindtap="deleteNote" disabled="{{noteSaving}}">删除备注</button>

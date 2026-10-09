@@ -1,6 +1,7 @@
 // cloudfunctions/adminAuditPlaylist/index.js
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
+const { createDataScope, canUseTestData } = require('./dataScope');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
@@ -9,10 +10,24 @@ function getSubmissionId(item) {
   return item && (item.submission_id || item._id);
 }
 
+function normalizeSongName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]/gu, '');
+}
+
+function getSongKey(item) {
+  return item && item.song_key
+    ? item.song_key
+    : normalizeSongName(item && item.song_name);
+}
+
 function toScheduleItem(item) {
   return {
     submission_id: getSubmissionId(item),
     song_name: item.song_name,
+    song_key: getSongKey(item),
     singer: item.singer,
     special_note: item.special_note || '',
     is_repeat: item.is_repeat === true
@@ -36,16 +51,45 @@ function safeOperationMessage(err, fallback) {
   return err && allowed.has(err.message) ? err.message : fallback;
 }
 
+function getPriorWeekKeys(weekKey) {
+  const base = new Date(`${weekKey}T00:00:00.000Z`);
+  return [1, 2].map(offset => {
+    const d = new Date(base.getTime());
+    d.setUTCDate(d.getUTCDate() - offset * 7);
+    return d.toISOString().split('T')[0];
+  });
+}
+
+async function appendSystemEvent(scope, entry) {
+  try {
+    await db.collection(scope.collection('system_events')).add({
+      data: Object.assign({
+        category: 'admin_action',
+        severity: 'info',
+        created_at: db.serverDate()
+      }, entry)
+    });
+  } catch (err) {
+    // 审计不可用不能让已完成的业务操作回滚；错误仍会进入云函数运行日志。
+    console.warn('[审计] 写入 system_events 失败:', err.message || '未知错误');
+  }
+}
+
 // ================= 订阅消息通知 =================
 
 // 向所有已订阅的用户发送"排期已发布"通知
-async function notifyStudents(weekKey) {
+async function notifyStudents(weekKey, scope) {
   const STUDENT_TPL_ID = 'evJj_6Kl8CNKTf5C_j2PtJ6FPmMTbBESvuZ35DfOiGA';
+  if (scope.testMode) {
+    console.log('[测试模式] 已跳过真实用户订阅消息发送');
+    return;
+  }
+  const subscriptionsCollection = scope.collection('message_subscriptions');
   try {
     let allSubs = [];
     let skip = 0;
     while (true) {
-      const res = await db.collection('message_subscriptions')
+      const res = await db.collection(subscriptionsCollection)
         .where({
           template_id: STUDENT_TPL_ID,
           type: 'student',
@@ -74,7 +118,7 @@ async function notifyStudents(weekKey) {
     for (const sub of allSubs) {
       // 同一用户只发一次
       if (sentOpenids.has(sub.openid)) {
-        await db.collection('message_subscriptions').doc(sub._id).update({
+        await db.collection(subscriptionsCollection).doc(sub._id).update({
           data: { consumed: true }
         });
         continue;
@@ -91,7 +135,7 @@ async function notifyStudents(weekKey) {
           page: 'pages/playlist/index'
         });
         sentOpenids.add(sub.openid);
-        await db.collection('message_subscriptions').doc(sub._id).update({
+        await db.collection(subscriptionsCollection).doc(sub._id).update({
           data: { consumed: true }
         });
       } catch (e) {
@@ -106,10 +150,18 @@ async function notifyStudents(weekKey) {
 exports.main = async (event, context) => {
   const { action, playlistId, dayIndex, songIndex, reason } = event;
   const { OPENID } = cloud.getWXContext();
+  const scope = createDataScope(event);
+  if (!(await canUseTestData(db, OPENID, scope))) {
+    return { success: false, message: '测试数据仅限超级管理员访问' };
+  }
+  const usersCollection = scope.collection('users');
+  const schedulesCollection = scope.collection('schedules');
+  const submissionsCollection = scope.collection('submissions');
+  const exceptionsCollection = scope.collection('schedule_exceptions');
 
   // ===== 权限校验：仅管理员可操作（定时任务无 OPENID，此处不涉及） =====
   if (OPENID) {
-    const userRes = await db.collection('users')
+    const userRes = await db.collection(usersCollection)
       .where({ openid: OPENID }).limit(1).get();
     if (userRes.data.length === 0 ||
         !['admin', 'superadmin'].includes(userRes.data[0].role)) {
@@ -122,7 +174,7 @@ exports.main = async (event, context) => {
   // 1. 获取待审核排期
   if (action === 'getPending') {
     try {
-      const res = await db.collection('schedules')
+      const res = await db.collection(schedulesCollection)
         .where({ status: 'pending' })
         .orderBy('generated_at', 'desc')
         .limit(1)
@@ -148,8 +200,11 @@ exports.main = async (event, context) => {
     const tx = await db.startTransaction();
     try {
       // A. 获取当前排期
-      const plRes = await tx.collection('schedules').doc(playlistId).get();
+      const plRes = await tx.collection(schedulesCollection).doc(playlistId).get();
       const schedule = plRes.data;
+      const beforeDay = Array.isArray(schedule[`day${dayIndex + 1}`])
+        ? schedule[`day${dayIndex + 1}`].map(toScheduleItem)
+        : [];
       if (schedule.status !== 'pending') throw new Error('排期状态已变更');
 
       // B. 移除异常项目
@@ -164,7 +219,7 @@ exports.main = async (event, context) => {
       const removedSubmissionId = getSubmissionId(removedItem);
 
       // C. 记录异常日志
-      await tx.collection('schedule_exceptions').add({
+      await tx.collection(exceptionsCollection).add({
         data: {
           schedule_id: playlistId,
           week_key: schedule.week_key,
@@ -176,31 +231,39 @@ exports.main = async (event, context) => {
         }
       });
 
-      // D. 寻找替补项目 (从本周未选中的 pending 请求中随机取，需排除已在排期中的项目)
-      const candidates = await tx.collection('submissions')
-        .where({
-          week_key: schedule.week_key,
-          status: 'pending'
-        })
-        .get();
+      // D. 替补优先使用本周 pending；不足时再从前两周 carryover 中选择。
+      const priorWeekKeys = getPriorWeekKeys(schedule.week_key);
+      const [currentCandidates, carryoverCandidates, currentWeekRecords] = await Promise.all([
+        tx.collection(submissionsCollection)
+          .where({ week_key: schedule.week_key, status: 'pending' }).limit(100).get(),
+        tx.collection(submissionsCollection)
+          .where({ week_key: _.in(priorWeekKeys), status: 'carryover' }).limit(100).get(),
+        tx.collection(submissionsCollection)
+          .where({ week_key: schedule.week_key }).limit(100).get()
+      ]);
 
       // 构建当前排期已包含的项目集合
       const existingItems = new Set();
       ['day1','day2','day3','day4','day5'].forEach(d => {
         if (Array.isArray(schedule[d])) {
-          schedule[d].forEach(s => existingItems.add(`${s.song_name}|${s.singer}`));
+          schedule[d].forEach(s => existingItems.add(getSongKey(s)));
         }
       });
 
       // 过滤掉已在排期中的候选项目
-      const validCandidates = candidates.data.filter(c =>
-        !existingItems.has(`${c.song_name}|${c.singer}`)
+      const currentUsers = new Set(currentWeekRecords.data.map(item => item.user_id).filter(Boolean));
+      const filterCandidates = list => list.filter(c =>
+        !existingItems.has(getSongKey(c)) && !currentUsers.has(c.user_id)
       );
+      // 本周候选本身当然属于 currentUsers，不应用“本周已有提交”过滤。
+      const validCurrent = currentCandidates.data.filter(c => !existingItems.has(getSongKey(c)));
+      const validCarryover = filterCandidates(carryoverCandidates.data);
+      const validCandidates = validCurrent.length > 0 ? validCurrent : validCarryover;
 
       let replacement = null;
       // 被移出排期的原提交不应继续保持 selected 状态。
       if (removedSubmissionId) {
-        await tx.collection('submissions').doc(removedSubmissionId).update({
+        await tx.collection(submissionsCollection).doc(removedSubmissionId).update({
           data: { status: 'rejected', rejected_at: db.serverDate() }
         });
       }
@@ -210,7 +273,7 @@ exports.main = async (event, context) => {
         replacement = validCandidates[randomIdx];
 
         // 更新替补项目状态为 selected
-        await tx.collection('submissions').doc(replacement._id).update({
+        await tx.collection(submissionsCollection).doc(replacement._id).update({
           data: { status: 'selected', picked_at: db.serverDate() }
         });
 
@@ -218,6 +281,7 @@ exports.main = async (event, context) => {
         schedule[dayKey].push({
           submission_id: replacement._id,
           song_name: replacement.song_name,
+          song_key: getSongKey(replacement),
           singer: replacement.singer,
           special_note: replacement.special_note || '',
           is_repeat: false
@@ -225,11 +289,21 @@ exports.main = async (event, context) => {
       }
 
       // E. 更新排期
-      await tx.collection('schedules').doc(playlistId).update({
-        data: { [dayKey]: schedule[dayKey] }
+      await tx.collection(schedulesCollection).doc(playlistId).update({
+        data: {
+          [dayKey]: schedule[dayKey],
+          revision: (Number(schedule.revision) || 1) + 1,
+          updated_at: db.serverDate()
+        }
       });
 
       await tx.commit();
+      await appendSystemEvent(scope, {
+        action: 'schedule.mark_exception', operator_openid: OPENID,
+        target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
+        before: { [dayKey]: beforeDay }, after: { [dayKey]: schedule[dayKey].map(toScheduleItem) },
+        reason: reason || '管理员手动移除'
+      });
       return { success: true, message: replacement ? '已替换' : '已移除 (无替补)' };
 
     } catch (e) {
@@ -246,7 +320,7 @@ exports.main = async (event, context) => {
     }
     const tx = await db.startTransaction();
     try {
-      const plRes = await tx.collection('schedules').doc(playlistId).get();
+      const plRes = await tx.collection(schedulesCollection).doc(playlistId).get();
       const schedule = plRes.data;
       if (schedule.status !== 'pending') throw new Error('排期状态已变更');
 
@@ -255,13 +329,17 @@ exports.main = async (event, context) => {
       const removedSubmissionIds = removedItems.map(getSubmissionId).filter(Boolean);
 
       // 清空该日项目
-      await tx.collection('schedules').doc(playlistId).update({
-        data: { [dayKey]: [] }
+      await tx.collection(schedulesCollection).doc(playlistId).update({
+        data: {
+          [dayKey]: [],
+          revision: (Number(schedule.revision) || 1) + 1,
+          updated_at: db.serverDate()
+        }
       });
 
       // 记录跳过操作日志
       if (removedItems.length > 0) {
-        await tx.collection('schedule_exceptions').add({
+        await tx.collection(exceptionsCollection).add({
           data: {
             schedule_id: playlistId,
             week_key: schedule.week_key,
@@ -276,12 +354,18 @@ exports.main = async (event, context) => {
 
 
       if (removedSubmissionIds.length > 0) {
-        await tx.collection('submissions')
+        await tx.collection(submissionsCollection)
           .where({ _id: _.in(removedSubmissionIds) })
           .update({ data: { status: 'rejected', rejected_at: db.serverDate() } });
       }
 
       await tx.commit();
+      await appendSystemEvent(scope, {
+        action: 'schedule.skip_day', operator_openid: OPENID,
+        target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
+        before: { [dayKey]: removedItems.map(toScheduleItem) }, after: { [dayKey]: [] },
+        reason: '管理员跳过该日'
+      });
       const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
       return { success: true, message: `已跳过「${dayLabel}」` };
 
@@ -306,7 +390,7 @@ exports.main = async (event, context) => {
     // 事务：读取 + 状态检查 + 状态更新（防止重复发布和中途失败）
     const tx = await db.startTransaction();
     try {
-      const plRes = await tx.collection('schedules').doc(playlistId).get();
+      const plRes = await tx.collection(schedulesCollection).doc(playlistId).get();
       const schedule = plRes.data;
 
       // 防止重复发布
@@ -317,38 +401,62 @@ exports.main = async (event, context) => {
 
       weekKey = schedule.week_key;
 
-      await tx.collection('schedules').doc(playlistId).update({
+      await tx.collection(schedulesCollection).doc(playlistId).update({
         data: {
           status: 'published',
           admin_note: note || '',
+          revision: (Number(schedule.revision) || 1) + 1,
           publish_time: db.serverDate()
         }
       });
 
       await tx.commit();
+      await appendSystemEvent(scope, {
+        action: 'schedule.publish', operator_openid: OPENID,
+        target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
+        before: { status: schedule.status, admin_note: schedule.admin_note || '' },
+        after: { status: 'published', admin_note: note || '' }
+      });
     } catch (e) {
       await tx.rollback();
       return { success: false, message: '发布失败，请重试' };
     }
 
-    // 事务外：清理 pending 与发送通知彼此隔离；任一失败都不阻断另一项。
+    // 事务外：未入选的当周 pending 转为 carryover，供随后两周补位。
     try {
-      const pendingRes = await db.collection('submissions')
+      const pendingRes = await db.collection(submissionsCollection)
         .where({ week_key: weekKey, status: 'pending' })
         .get();
 
       if (pendingRes.data.length > 0) {
-        await db.collection('submissions')
+        await db.collection(submissionsCollection)
           .where({ week_key: weekKey, status: 'pending' })
-          .update({ data: { status: 'rejected', rejected_at: db.serverDate() } });
-        console.log(`[发布清理] 已将 ${pendingRes.data.length} 条 pending 标记为 rejected`);
+          .update({ data: { status: 'carryover', carryover_at: db.serverDate() } });
+        console.log(`[发布清理] 已将 ${pendingRes.data.length} 条 pending 标记为 carryover`);
       }
     } catch (cleanupErr) {
-      console.warn('[发布] 清理剩余提交失败，不影响推送:', cleanupErr.message || '');
+      console.warn('[发布] 转换历史候选失败，不影响推送:', cleanupErr.message || '');
+    }
+
+    // overflow 不参与抽取，发布完成后即可清理；失败不影响发布结果。
+    try {
+      let removed = 0;
+      while (true) {
+        const overflowRes = await db.collection(submissionsCollection)
+          .where({ week_key: weekKey, status: 'overflow' }).limit(100).get();
+        if (overflowRes.data.length === 0) break;
+        const ids = overflowRes.data.map(item => item._id);
+        const result = await db.collection(submissionsCollection)
+          .where({ _id: _.in(ids) }).remove();
+        removed += result.stats && result.stats.removed ? result.stats.removed : ids.length;
+      }
+      if (removed > 0) console.log(`[发布清理] 已删除 ${removed} 条 overflow`);
+    } catch (overflowErr) {
+      console.warn('[发布] 清理 overflow 失败，不影响发布:', overflowErr.message || '');
     }
 
     try {
-      await notifyStudents(weekKey);
+      await notifyStudents(weekKey, scope);
     } catch (notifyErr) {
       console.warn('[发布] 学生通知异常，不影响发布:', notifyErr.message || '');
     }
@@ -383,7 +491,7 @@ exports.main = async (event, context) => {
         }
       }
 
-      const plRes = await db.collection('schedules').doc(playlistId).get();
+      const plRes = await db.collection(schedulesCollection).doc(playlistId).get();
       const schedule = plRes.data;
       if (schedule.status !== 'pending') {
         return { success: false, message: '排期已发布，无法修改' };
@@ -395,10 +503,22 @@ exports.main = async (event, context) => {
       }
 
       const savedNote = (note || '').substring(0, 50);
+      const previousNote = schedule[dayKey][songIndex].special_note || '';
       schedule[dayKey][songIndex].special_note = savedNote;
 
-      await db.collection('schedules').doc(playlistId).update({
-        data: { [dayKey]: schedule[dayKey] }
+      await db.collection(schedulesCollection).doc(playlistId).update({
+        data: {
+          [dayKey]: schedule[dayKey],
+          revision: (Number(schedule.revision) || 1) + 1,
+          updated_at: db.serverDate()
+        }
+      });
+
+      await appendSystemEvent(scope, {
+        action: 'schedule.update_note', operator_openid: OPENID,
+        target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
+        before: { day: dayKey, song_index: songIndex, special_note: previousNote },
+        after: { day: dayKey, song_index: songIndex, special_note: savedNote }
       });
 
       return {

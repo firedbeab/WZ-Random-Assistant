@@ -95,8 +95,15 @@ page { background: #f0f2f5; }
   padding: 24rpx 0; border-bottom: 1rpx dashed #eee;
 }
 .song-item:last-child { border-bottom: none; }
+.song-info { flex: 1; min-width: 0; }
 .song-name { font-size: 30rpx; color: #333; display: block; }
 .song-singer { font-size: 24rpx; color: #888; margin-top: 6rpx; display: block; }
+.song-special {
+  display: inline-block; max-width: 100%; box-sizing: border-box;
+  margin-top: 10rpx; padding: 6rpx 12rpx; border-radius: 8rpx;
+  background: #fff7e6; color: #d97706; font-size: 23rpx; line-height: 1.45;
+  word-break: break-all;
+}
 .copy-hint { font-size: 20rpx; color: #ccc; flex-shrink: 0; margin-left: 10rpx; }
 .copy-tip-bar { font-size: 24rpx; color: #999; text-align: center; padding: 16rpx 0; margin-bottom: 20rpx; }
 .btn-exception {
@@ -114,16 +121,19 @@ page { background: #f0f2f5; }
 /* 备注弹窗输入框 */
 .note-modal-input {
   background: #f8f9fa; padding: 24rpx; border-radius: 16rpx;
-  font-size: 28rpx; min-height: 80rpx; margin-bottom: 32rpx;
-  border: 1rpx solid #eee; width: 100%; box-sizing: border-box;
+  font-size: 28rpx; line-height: 1.55; min-height: 120rpx; margin-bottom: 32rpx;
+  color: #222; -webkit-text-fill-color: #222; opacity: 1;
+  border: 2rpx solid #dfe3e8; width: 100%; box-sizing: border-box;
 }
 
 .note-section { margin-top: 40rpx; padding-top: 24rpx; border-top: 2rpx solid #f0f0f0; }
 .note-section .label { font-size: 26rpx; color: #555; font-weight: 500; }
 .note-input {
   background: #f8f9fa; padding: 24rpx; border-radius: 16rpx;
-  font-size: 28rpx; min-height: 100rpx; margin-top: 16rpx;
-  border: 1rpx solid #eee;
+  width: 100%; box-sizing: border-box;
+  font-size: 28rpx; line-height: 1.55; min-height: 130rpx; margin-top: 16rpx;
+  color: #222; -webkit-text-fill-color: #222; opacity: 1;
+  border: 2rpx solid #dfe3e8;
 }
 
 .footer { margin-top: 50rpx; }
@@ -151,7 +161,12 @@ page { background: #f0f2f5; }
 .reason-options { display: flex; flex-wrap: wrap; gap: 16rpx; margin-bottom: 20rpx; }
 .reason-tag { background: #f5f5f5; padding: 14rpx 28rpx; border-radius: 32rpx; font-size: 24rpx; }
 .reason-tag.active { background: #e3f2fd; color: #1976d2; border: 1rpx solid #bbdefb; }
-.reason-input { border-bottom: 2rpx solid #ddd; padding: 12rpx 0; margin-bottom: 32rpx; }
+.reason-input {
+  width: 100%; height: 82rpx; box-sizing: border-box;
+  margin-bottom: 32rpx; padding: 0 22rpx; line-height: 82rpx;
+  border: 2rpx solid #dfe3e8; border-radius: 14rpx; background: #fafbfc;
+  color: #222; font-size: 28rpx; -webkit-text-fill-color: #222; opacity: 1;
+}
 
 .modal-actions { display: flex; gap: 20rpx; }
 .btn-cancel { flex: 1; background: #f5f5f5; color: #666; border: none; border-radius: 12rpx; font-size: 28rpx; }
@@ -234,7 +249,8 @@ page { background: #f0f2f5; }
 
 /* 验证码弹窗输入 */
 .code-modal-input {
-  background: #f8f9fa; padding: 28rpx; border-radius: 16rpx;
+  width: 100%; height: 92rpx; box-sizing: border-box;
+  background: #f8f9fa; padding: 0 28rpx; line-height: 92rpx; border-radius: 16rpx;
   font-size: 36rpx; text-align: center; letter-spacing: 12rpx;
   margin-bottom: 28rpx; border: 2rpx solid #eee; font-weight: bold;
   font-family: 'Courier New', monospace; color: #333;
@@ -265,6 +281,11 @@ page { background: #f0f2f5; }
 /* 数据统计 */
 .stats-row { display: flex; justify-content: space-between; }
 .stat-item { text-align: center; flex: 1; }
+.stat-item.clickable {
+  margin: 6rpx; padding: 14rpx 6rpx; border-radius: 14rpx;
+  background: #f7fbff; border: 1rpx solid #e4f0fb;
+}
+.stat-item.clickable:active { background: #e3f2fd; }
 .stat-num {
   display: block; font-size: 40rpx; font-weight: 800;
   color: #1976d2; line-height: 1.2;

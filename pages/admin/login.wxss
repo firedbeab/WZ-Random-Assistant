@@ -39,9 +39,12 @@ page {
 /* 输入框样式 */
 .input-group {
   width: 100%;
+  min-height: 92rpx;
+  box-sizing: border-box;
   background: #fff;
-  padding: 20rpx 30rpx;
+  padding: 0 28rpx;
   border-radius: 16rpx;
+  border: 2rpx solid #e0e4e8;
   margin-bottom: 60rpx;
   display: flex;
   align-items: center;
@@ -50,8 +53,13 @@ page {
 
 .code-input {
   flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
   font-size: 32rpx;
   color: #333;
+  caret-color: #07c160;
+  -webkit-text-fill-color: #333;
+  opacity: 1;
 }
 
 .toggle-btn {

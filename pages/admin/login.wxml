@@ -1,6 +1,8 @@
 <!-- pages/admin/login.wxml -->
 <view class="login-container">
 
+  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 使用测试管理员数据</view>
+
   <!-- 头部图标和标题 -->
   <view class="header">
     <text class="icon"></text>
@@ -12,6 +14,7 @@
   <view class="input-group">
     <input
       class="code-input"
+      placeholder-class="form-placeholder"
       type="text"
       placeholder="请输入通行码"
       value="{{adminCode}}"
