@@ -25,14 +25,26 @@ function load(testMode) {
       downloads++; const tempFilePath = `wxfile://temp/${downloads}`;
       disk.set(tempFilePath, fileID.includes('large') ? 3 * 1024 * 1024 : 2 * 1024 * 1024);
       return { tempFilePath };
-    } }
+    } },
+    // 私有桶下普通用户走服务端签发的短时地址下载，不再直接用 fileID。
+    downloadFile({ url, success, fail }) {
+      downloads++; const tempFilePath = `wxfile://temp/${downloads}`;
+      disk.set(tempFilePath, url.includes('large') ? 3 * 1024 * 1024 : 2 * 1024 * 1024);
+      if (success) success({ statusCode: 200, tempFilePath });
+      else if (fail) fail({ errMsg: 'downloadFile:fail' });
+    }
   };
   const runtime = { isTestMode: () => testMode, storageKey: key => `${testMode ? 'test' : 'prod'}_${key}`,
     async cloudCall() { reads++; await Promise.resolve(); if (offline) throw new Error('offline'); return { result: { success: true, data: { entries: structuredClone(entries) } } }; }
   };
   const encounterContext = { module: { exports: {} }, require: () => runtime, wx };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../utils/easter-encounters.js'), 'utf8'), encounterContext);
-  const context = { module: { exports: {} }, require: name => name.includes('encounters') ? encounterContext.module.exports : runtime, wx, setTimeout, clearTimeout };
+  const imageAccess = { async resolve(fnName, fileID) { return `https://signed.example/${fileID}`; }, forget() {}, valid() { return ''; } };
+  const diagnostics = { record() {} };
+  const context = { module: { exports: {} }, require: name => name.includes('encounters') ? encounterContext.module.exports
+    : name.includes('image-access') ? imageAccess
+    : name.includes('diagnostics') ? diagnostics
+    : runtime, wx, setTimeout, clearTimeout };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../utils/easter-egg-photos.js'), 'utf8'), context);
   return context.module.exports;
 }

@@ -1,6 +1,6 @@
 //用户信息获取
 const cloud = require('wx-server-sdk');
-const { createDataScope, isProductionSuperadmin } = require('./dataScope');
+const { createDataScope, canUseTestData, isProductionSuperadmin } = require('./dataScope');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -20,12 +20,13 @@ exports.main = async (event = {}, context) => {
   if (!OPENID) return { success: false, code: 'UNAUTHENTICATED', message: '无法确认用户身份' };
 
   try {
+    // 测试域准入：正式超管或测试白名单账号；白名单账号仍只以普通用户身份使用。
     let testSuperadmin = false;
     if (scope.testMode) {
-      testSuperadmin = await isProductionSuperadmin(db, OPENID);
-      if (!testSuperadmin) {
-        return { success: false, code: 'TEST_ACCESS_DENIED', message: '测试数据仅限超级管理员访问' };
+      if (!(await canUseTestData(db, OPENID, scope))) {
+        return { success: false, code: 'TEST_ACCESS_DENIED', message: '测试数据仅限超级管理员或测试白名单账号访问' };
       }
+      testSuperadmin = await isProductionSuperadmin(db, OPENID);
     }
 
     // 身份只取云端上下文，不接受客户端传来的用户ID；只读最近一条，不查找更早的合格记录。

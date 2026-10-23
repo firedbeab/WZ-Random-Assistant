@@ -32,18 +32,31 @@
       <view class="article-body" wx:if="{{item._opened}}" hidden="{{expandedId !== item._id}}">
         <text class="article-content" user-select>{{item.content}}</text>
         <view class="image-grid" wx:if="{{item.images.length > 0}}">
-          <image
-            class="help-image {{item.images.length === 1 ? 'single' : ''}}"
+          <view
+            class="help-image-wrap {{item.images.length === 1 ? 'single' : ''}}"
             wx:for="{{item.images}}"
             wx:for-item="imageUrl"
             wx:key="*this"
-            src="{{imageUrl}}"
-            mode="aspectFill"
-            lazy-load
-            bindtap="previewImage"
-            data-current="{{imageUrl}}"
-            data-images="{{item.images}}"
-          ></image>
+          >
+            <image
+              class="help-image"
+              src="{{imageSrcs[imageUrl] || ''}}"
+              mode="aspectFill"
+              lazy-load
+              bindtap="previewImage"
+              binderror="onImageError"
+              data-current="{{imageUrl}}"
+              data-images="{{item.images}}"
+              data-file-id="{{imageUrl}}"
+            ></image>
+            <view
+              class="image-failed"
+              wx:if="{{imageErrors[imageUrl]}}"
+              catchtap="retryImages"
+              data-images="{{item.images}}"
+              data-file-id="{{imageUrl}}"
+            >图片加载失败，点此重试</view>
+          </view>
         </view>
         <text class="image-hint" wx:if="{{item.images.length > 0}}">点击图片可全屏查看</text>
       </view>

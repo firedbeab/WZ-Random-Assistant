@@ -15,7 +15,7 @@ const photos = { DEFAULT_TOP: 'top', DEFAULT_BOTTOM: 'bottom', prepare: async ()
 let records = 0;
 const encounters = { pick: (_, catalog) => catalog[0], summary: (_, ids) => ({ seen: 0, total: ids.length }), record: (_, id, ids) => { records++; return { seen: 1, total: ids.length }; } };
 const context = { Component: value => { component = value; }, setTimeout, clearTimeout,
-  require(name) { return name.includes('easter-cats') ? cats : name.includes('replies') ? replies : name.includes('encounters') ? encounters : name.includes('photos') ? photos : dice; }
+  require(name) { return name.includes('easter-cats') ? cats : name.includes('replies') ? replies : name.includes('encounters') ? encounters : name.includes('photos') ? photos : name.includes('diagnostics') ? { record() {} } : dice; }
 };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../components/easter-dice/easter-dice.js'), 'utf8'), context);
 function instance(test = true, superadmin = true) {

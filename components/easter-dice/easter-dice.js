@@ -1,10 +1,13 @@
 const { newRound, nextRoll } = require('../../utils/dice-easter-egg');
 const photos = require('../../utils/easter-egg-photos');
+const diagnostics = require('../../utils/image-diagnostics');
 const encounters = require('../../utils/easter-encounters');
 const replies = require('../../utils/easter-replies');
 const { cats, invitations, ASCII_REWARD_CHANCE } = require('../../utils/easter-cats');
 const FACE_PIPS = [[4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const FACE_ROTATIONS = [[0, 0], [0, -90], [-90, 0], [90, 0], [0, 90], [0, 180]];
+// 原生预览标记的兜底存活时间：超过该时长仍未收到页面 show，就当作标记泄漏并清除。
+const PREVIEW_FLAG_TTL = 5 * 60 * 1000;
 const SCENARIOS = [
   { value: 'quick', label: '快速四连（10次内）' }, { value: 'pairs', label: '8次二连累计（16次投掷）' },
   { value: 'triples', label: '2次三连累计（6次投掷）' }, { value: 'mixed', label: '混合计数（验证小点不相加）' },
@@ -37,9 +40,30 @@ Component({
   },
   lifetimes: {
     attached() { this._timers = []; this._token = 0; this._rotation = [-18, -26]; this.resetRound(); },
-    detached() { this._detached = true; this.clearTimers(); this._token++; }
+    detached() { this._detached = true; this.clearTimers(); this._token++; this._previewing = false; this._previewSuspended = false; this._previewStartedAt = 0; }
   },
-  pageLifetimes: { hide() { this.close(); } },
+  pageLifetimes: {
+    // 打开原生大图时页面也会触发 hide，此时只能挂起，不能结束奖励或重置轮次。
+    hide() {
+      if (this._previewing) { this._previewSuspended = true; return; }
+      this.close();
+    },
+    // 从大图返回只恢复布局；照片、上下文案、遇见计数和菜单展开状态保持原样。
+    show() {
+      if (this._previewSuspended) {
+        this._previewSuspended = false;
+        this._previewing = false;
+        this._previewStartedAt = 0;
+        this.later(() => this.refreshLayout(), 0);
+        return;
+      }
+      // 标记长时间未释放说明回调丢失，清掉它，避免以后真正离开页面时不再清理。
+      if (this._previewing && Date.now() - (this._previewStartedAt || 0) > PREVIEW_FLAG_TTL) {
+        this._previewing = false;
+        this._previewStartedAt = 0;
+      }
+    }
+  },
   methods: {
     refreshLayout() {
       if (!this.data.visible) return;
@@ -69,7 +93,10 @@ Component({
       if (this._pendingDelay) { this._pendingDelay(); this._pendingDelay = null; }
     },
     preloadPhoto() {
-      this._photoTask = photos.manifest(true).then(() => photos.prepare(this._lastPhotoId)).catch(() => null);
+      // 预加载失败必须清掉任务，否则领奖时会一直复用一个已经失败的任务。
+      this._photoTask = photos.manifest(true)
+        .then(() => photos.prepare(this._lastPhotoId))
+        .catch(err => { this._photoTask = null; diagnostics.record('easter_photo', 'preload', err); return null; });
     },
     preloadReply() {
       const request = this._replyRequest = (this._replyRequest || 0) + 1;
@@ -105,6 +132,7 @@ Component({
       if (this._beforeRollRotation) this._rotation = this._beforeRollRotation;
       this._beforeRollRotation = null; this._touchStart = null;
       this._currentPhoto = null; this._layoutStage = null;
+      this._previewing = false; this._previewSuspended = false; this._previewStartedAt = 0;
       this._replyRequest = (this._replyRequest || 0) + 1; this._replySubmission = null;
       if (this._round && this._round.won) this.resetRound();
       this.setData({ visible: false, rolling: false, celebrating: false, meows: [], confetti: [], dotPulse: false,
@@ -203,10 +231,18 @@ Component({
           this.later(() => { this._pendingDelay = null; resolve(); }, 1600);
         });
         if (token !== this._token || !this.data.visible) return;
-        const photo = network === 1
-          ? await photos.withTimeout(photos.prepareCached(this._lastPhotoId))
-          : await photos.withTimeout(this._photoTask || photos.prepare(this._lastPhotoId));
+        let photo = network === 1
+          ? await photos.withTimeout(photos.prepareCached(this._lastPhotoId)).catch(() => null)
+          : await photos.withTimeout(this._photoTask || photos.prepare(this._lastPhotoId)).catch(() => null);
         if (token !== this._token || !this.data.visible) return;
+        // 预加载失败时允许在领奖时有限重试一次；不重抽20%文字概率、不改通关规则。
+        if (!photo && network !== 1) {
+          photo = await photos.withTimeout(photos.prepare(this._lastPhotoId)).catch(err => {
+            diagnostics.record('easter_photo', 'reward_retry', err);
+            return null;
+          });
+          if (token !== this._token || !this.data.visible) return;
+        }
         if (!photo) { this.showAscii(); return; }
         if (network === 3) { this.later(() => { if (token === this._token) this.showAscii(); }, 400); return; }
         this._currentPhoto = photo;
@@ -227,9 +263,22 @@ Component({
     onPhotoError(e) {
       if (!this.data.visible || this.data.stage !== 'photo') return;
       if (e && e.currentTarget && this._currentPhoto && e.currentTarget.dataset.photoId !== this._currentPhoto.id) return;
+      diagnostics.record('easter_photo', 'render', (e && e.detail && e.detail.errMsg) || 'render_failed');
       this.showAscii();
     },
-    previewCat() { if (this.data.photoReady) wx.previewImage({ current: this.data.photoSrc, urls: [this.data.photoSrc] }); },
+    // 原生预览期间只挂起奖励：进入/返回都不结束本轮，照片、文案与遇见数保持原样。
+    // 预览启动失败要立刻释放标记，否则之后真正离开页面时不再清理。
+    previewCat() {
+      if (!this.data.visible || this.data.stage !== 'photo' || !this.data.photoReady || !this.data.photoSrc) return;
+      if (this._previewing) return;
+      this._previewing = true;
+      this._previewStartedAt = Date.now();
+      wx.previewImage({
+        current: this.data.photoSrc,
+        urls: [this.data.photoSrc],
+        fail: () => { if (!this._previewSuspended) { this._previewing = false; this._previewStartedAt = 0; } }
+      });
+    },
     toggleTest() { if (this.testAllowed()) this.setData({ testExpanded: !this.data.testExpanded }); },
     onTestOption(e) {
       if (!this.testAllowed() || this.data.rolling) return;

@@ -11,7 +11,7 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../utils/easter-enco
 const encounters = encounterContext.module.exports;
 const photos = { DEFAULT_TOP: 'top', DEFAULT_BOTTOM: 'bottom', prepare: async () => ({ id: 'cat', path: 'cached.jpg' }), withTimeout: promise => promise };
 const context = {
-  require: name => name.includes('easter-cats') ? { cats, invitations, ASCII_REWARD_CHANCE } : name.includes('replies') ? replies : name.includes('encounters') ? encounters : name.includes('photos') ? photos : {},
+  require: name => name.includes('easter-cats') ? { cats, invitations, ASCII_REWARD_CHANCE } : name.includes('replies') ? replies : name.includes('encounters') ? encounters : name.includes('photos') ? photos : name.includes('diagnostics') ? { record() {} } : {},
   Component: value => { component = value; }, Math: Object.create(Math)
 };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../components/easter-dice/easter-dice.js'), 'utf8'), context);

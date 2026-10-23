@@ -1,4 +1,6 @@
 const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
+const imageAccess = require('../../utils/image-access');
+const diagnostics = require('../../utils/image-diagnostics');
 
 const CACHE_KEY = storageKey('help_articles_cache_v1');
 const IMAGE_CACHE_KEY = storageKey('help_image_file_cache_v1');
@@ -26,7 +28,9 @@ Page({
     articles: [],
     expandedId: '',
     loading: true,
-    loadFailed: false
+    loadFailed: false,
+    imageSrcs: {},
+    imageErrors: {}
   },
 
   onLoad() {
@@ -66,6 +70,9 @@ Page({
       ));
       wx.setStorageSync(CACHE_KEY, articles);
       this.setData({ articles: displayArticles, loading: false, loadFailed: false });
+      // 已展开的条目重新进入时补齐图片地址；未展开的等展开时再取。
+      const opened = displayArticles.filter(article => article._opened && Array.isArray(article.images) && article.images.length > 0);
+      opened.forEach(article => this.prepareImages(article.images));
     } catch (err) {
       this.setData({ loading: false, loadFailed: this.data.articles.length === 0 });
     }
@@ -84,6 +91,8 @@ Page({
       return Object.assign({}, article, { _opened: true });
     });
     this.setData({ articles, expandedId: id });
+    const target = articles.find(article => article._id === id);
+    if (target && Array.isArray(target.images) && target.images.length > 0) this.prepareImages(target.images);
   },
 
   getImageCacheIndex() {
@@ -199,7 +208,24 @@ Page({
       const existingPath = await this.getCachedImagePath(fileID);
       if (existingPath) return existingPath;
 
-      const download = await wx.cloud.downloadFile({ fileID });
+      // 私有桶下普通用户不能用 fileID 直接下载，先换服务端签发的短时地址；
+      // 换不到时回退直连，兼容上传者本人与旧环境。
+      let download;
+      try {
+        const url = await imageAccess.resolve('manageHelpContent', fileID);
+        download = await new Promise((resolve, reject) => {
+          wx.downloadFile({
+            url,
+            success: res => (res.statusCode === 200 && res.tempFilePath
+              ? resolve(res)
+              : reject(Object.assign(new Error(`HTTP_${res.statusCode || 0}`), { code: `HTTP_${res.statusCode || 0}` }))),
+            fail: reject
+          });
+        });
+      } catch (err) {
+        diagnostics.record('help_image', 'signed_download', err);
+        download = await wx.cloud.downloadFile({ fileID });
+      }
       if (!download || !download.tempFilePath) throw new Error('图片下载失败');
       const fileSize = await this.getLocalFileSize(download.tempFilePath);
       await this.ensureImageCacheDirectory();
@@ -229,20 +255,70 @@ Page({
       try {
         currentPath = await this.cacheImage(current);
       } catch (err) {
-        // 本地缓存不可用时退回云端地址，不阻断用户查看。
-        currentPath = current;
+        // 缓存不可用时退回短时签名地址；绝不再把裸 fileID 交给预览，那对普通用户必然失败。
+        diagnostics.record('help_image', 'preview', err);
+        currentPath = await imageAccess.resolve('manageHelpContent', current).catch(() => '');
       } finally {
         wx.hideLoading();
       }
     }
+    if (!currentPath) {
+      wx.showToast({ title: '图片暂时无法打开', icon: 'none' });
+      return;
+    }
     const urls = await Promise.all(images.map(async fileID => {
       if (fileID === current) return currentPath;
-      return (await this.getCachedImagePath(fileID, false)) || fileID;
+      const cached = await this.getCachedImagePath(fileID, false);
+      if (cached) return cached;
+      return (await imageAccess.resolve('manageHelpContent', fileID).catch(() => '')) || currentPath;
     }));
     wx.previewImage({ current: currentPath, urls });
   },
 
   retryLoad() {
     this.loadArticles();
+  },
+
+  // 缩略图优先用本地缓存，其次用短时签名地址；都拿不到就记录一次失败，等用户手动重试。
+  async prepareImages(fileIDs) {
+    const list = (Array.isArray(fileIDs) ? fileIDs : []).filter(id => typeof id === 'string' && id);
+    if (!list.length) return;
+    const srcs = Object.assign({}, this.data.imageSrcs);
+    const errors = Object.assign({}, this.data.imageErrors);
+    let changed = false;
+    for (const fileID of list) {
+      if (srcs[fileID]) continue;
+      try {
+        const cachedPath = await this.getCachedImagePath(fileID, false);
+        const display = cachedPath || await imageAccess.resolve('manageHelpContent', fileID);
+        if (display) { srcs[fileID] = display; delete errors[fileID]; changed = true; }
+      } catch (err) {
+        diagnostics.record('help_image', 'resolve', err);
+        if (!errors[fileID]) { errors[fileID] = true; changed = true; }
+      }
+    }
+    if (changed) this.setData({ imageSrcs: srcs, imageErrors: errors });
+  },
+
+  onImageError(e) {
+    const fileID = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.fileId;
+    if (!fileID) return;
+    diagnostics.record('help_image', 'render', (e.detail && e.detail.errMsg) || 'render_failed');
+    imageAccess.forget(fileID);
+    const srcs = Object.assign({}, this.data.imageSrcs);
+    delete srcs[fileID];
+    const errors = Object.assign({}, this.data.imageErrors);
+    errors[fileID] = true;
+    this.setData({ imageSrcs: srcs, imageErrors: errors });
+  },
+
+  // 重试只清掉失败项并重新申请地址，不清空其它已成功显示的图片。
+  retryImages(e) {
+    const ids = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.images;
+    const list = Array.isArray(ids) ? ids : [];
+    const srcs = Object.assign({}, this.data.imageSrcs);
+    const errors = Object.assign({}, this.data.imageErrors);
+    list.forEach(fileID => { delete srcs[fileID]; delete errors[fileID]; imageAccess.forget(fileID); });
+    this.setData({ imageSrcs: srcs, imageErrors: errors }, () => this.prepareImages(list));
   }
 });
