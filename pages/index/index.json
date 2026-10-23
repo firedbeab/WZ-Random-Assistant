@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+    "privacy-popup": "../../components/privacy-popup/privacy-popup",
+    "easter-dice": "../../components/easter-dice/easter-dice"
   },
   "enablePullDownRefresh": true
 }

@@ -8,6 +8,26 @@ const db = cloud.database();
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGES = 5;
 const SAFETY_CHUNK_LENGTH = 1500;
+const IMAGE_URL_MAX_AGE = 600;
+const recentErrors = new Map();
+
+async function recordServerError(scope, action, err) {
+  const allowed = ['listPublished', 'getImageAccess', 'listAll', 'getForAdmin', 'initializeDefaults', 'uploadImage',
+    'verifyUploadedImage', 'deleteFiles', 'save', 'setPublished', 'reorder', 'delete'];
+  const operation = allowed.includes(action) ? action : 'unknown';
+  const error = Number.isInteger(err && err.errCode) ? `SDK_${err.errCode}` : 'BACKEND_UNAVAILABLE';
+  const entry = { source: 'server', module: 'manageHelpContent', action: `help.${operation}`, error,
+    data_scope: scope.testMode ? 'test' : 'production' };
+  console.warn('[使用说明] 后端异常', entry);
+  const key = `${scope.prefix}${operation}`;
+  if (Date.now() - (recentErrors.get(key) || 0) < 60000) return;
+  recentErrors.set(key, Date.now());
+  try {
+    await db.collection(scope.collection('system_events')).add({ data: {
+      ...entry, category: 'system_error', severity: 'error', created_at: db.serverDate()
+    } });
+  } catch (_) { console.warn('[使用说明] 错误事件写入失败'); }
+}
 
 const DEFAULT_ARTICLES = [
   {
@@ -63,10 +83,11 @@ function normalizeText(value, maxLength, required = false) {
 }
 
 function isHelpFile(fileID, scope) {
-  if (typeof fileID !== 'string' || !fileID.startsWith('cloud://')) return false;
-  return scope.testMode
-    ? fileID.includes('/test/help/')
-    : fileID.includes('/help/') && !fileID.includes('/test/help/');
+  if (typeof fileID !== 'string' || fileID.length > 1024) return false;
+  const match = /^cloud:\/\/([^/]+)\/(.+)$/.exec(fileID);
+  const env = cloud.getWXContext().ENV;
+  return Boolean(match && env && (match[1] === env || match[1].startsWith(`${env}.`)) &&
+    new RegExp(`^${scope.testMode ? 'test/' : ''}help/[a-zA-Z0-9_-]+\\.(jpg|jpeg|png|webp)$`).test(match[2]));
 }
 
 function normalizeImages(images, scope) {
@@ -124,13 +145,21 @@ async function deleteHelpFiles(fileIDs, scope) {
   const safeFiles = Array.from(new Set((fileIDs || []).filter(fileID => isHelpFile(fileID, scope))));
   if (safeFiles.length === 0) return;
   try {
-    await cloud.deleteFile({ fileList: safeFiles });
+    // 保护其他说明（含草稿）的共享引用；删除/保存后重新查询，不能仅依赖页面传来的清理列表。
+    const res = await db.collection(scope.collection('help_articles')).limit(100).get();
+    if (res.data.length === 100) {
+      console.warn('[使用说明] 引用查询达到上限，跳过文件清理');
+      return;
+    }
+    const used = new Set(res.data.flatMap(article => Array.isArray(article.images) ? article.images : []));
+    const unused = safeFiles.filter(fileID => !used.has(fileID));
+    if (unused.length) await cloud.deleteFile({ fileList: unused });
   } catch (err) {
-    console.warn('[使用说明] 图片清理失败:', err.message || '未知错误');
+    await recordServerError(scope, 'deleteFiles', err);
   }
 }
 
-async function validateUploadedImages(fileIDs) {
+async function validateUploadedImages(fileIDs, scope) {
   const results = await Promise.all(fileIDs.map(async fileID => {
     try {
       const download = await cloud.downloadFile({ fileID });
@@ -143,14 +172,14 @@ async function validateUploadedImages(fileIDs) {
       }
       return { passed: true };
     } catch (err) {
-      console.warn('[使用说明] 图片校验失败:', err.message || '未知错误');
+      await recordServerError(scope, 'verifyUploadedImage', err);
       return { passed: false, message: '图片校验失败，请重试' };
     }
   }));
   return results.find(result => !result.passed) || { passed: true };
 }
 
-async function checkPublishedText(openid, fields) {
+async function checkPublishedText(openid, fields, scope) {
   const text = fields.filter(value => typeof value === 'string' && value.trim())
     .map(value => value.trim())
     .join('\n');
@@ -174,7 +203,7 @@ async function checkPublishedText(openid, fields) {
     }
     return { passed: true, unavailable: false };
   } catch (err) {
-    console.warn('[使用说明] 文本安全检查失败:', err.errCode || err.message || '未知错误');
+    await recordServerError(scope, 'setPublished', err);
     return { passed: false, unavailable: true };
   }
 }
@@ -188,7 +217,7 @@ exports.main = async (event) => {
 
   try {
     if (!(await canUseTestData(db, OPENID, scope))) {
-      return failure('仅超级管理员可使用测试环境');
+      return { ...failure('仅超级管理员可使用测试环境'), code: 'TEST_ACCESS_DENIED' };
     }
     if (action === 'listPublished') {
       const res = await db.collection(collectionName)
@@ -197,9 +226,36 @@ exports.main = async (event) => {
       const published = sortArticles(res.data.filter(article => article.is_published === true));
       return success(published.map(article => publicArticle(article, scope)));
     }
+    if (action === 'getImageAccess') {
+      if (!OPENID) return { success: false, code: 'UNAUTHENTICATED', message: '无法确认用户身份' };
+      if (!Array.isArray(event.fileIDs) || !event.fileIDs.length || event.fileIDs.length > 10 ||
+          !event.fileIDs.every(fileID => isHelpFile(fileID, scope))) {
+        return { success: false, code: 'INVALID_IMAGE_REQUEST', message: '图片请求无效' };
+      }
+      const fileIDs = Array.from(new Set(event.fileIDs));
+      const res = await db.collection(collectionName).limit(100).get();
+      const published = new Set(res.data.filter(article => article.is_published === true)
+        .flatMap(article => publicArticle(article, scope).images));
+      if (!fileIDs.every(fileID => published.has(fileID))) {
+        return { success: false, code: 'IMAGE_NOT_AVAILABLE', message: '图片已下架或不可访问' };
+      }
+      const issuedAt = Date.now();
+      const signed = await cloud.getTempFileURL({ fileList: fileIDs.map(fileID => ({ fileID, maxAge: IMAGE_URL_MAX_AGE })) });
+      const files = fileIDs.map(fileID => {
+        const item = (signed.fileList || []).find(file => file.fileID === fileID);
+        // 旧服务端SDK可能不回传maxAge，使用本次实际传给平台的固定有效期。
+        const maxAge = item && item.maxAge === undefined ? IMAGE_URL_MAX_AGE : item && item.maxAge;
+        if (!item || item.status !== 0 || typeof item.tempFileURL !== 'string' || !/^https:\/\/[^\s]+$/.test(item.tempFileURL) ||
+            !Number.isInteger(maxAge) || maxAge <= 0 || maxAge > IMAGE_URL_MAX_AGE) {
+          throw new Error('IMAGE_URL_UNAVAILABLE');
+        }
+        return { fileID, url: item.tempFileURL, maxAge, expiresAt: issuedAt + maxAge * 1000 };
+      });
+      return success({ files });
+    }
 
     if (!await requireSuperAdmin(OPENID, usersCollection)) {
-      return failure('仅超级管理员可执行此操作');
+      return { ...failure('仅超级管理员可执行此操作'), code: 'FORBIDDEN' };
     }
 
     if (action === 'listAll') {
@@ -270,7 +326,7 @@ exports.main = async (event) => {
     if (action === 'verifyUploadedImage') {
       const fileID = normalizeText(event.fileID, 1024, true);
       if (!fileID || !isHelpFile(fileID, scope)) return failure('图片路径无效');
-      const validation = await validateUploadedImages([fileID]);
+      const validation = await validateUploadedImages([fileID], scope);
       if (!validation.passed) {
         await deleteHelpFiles([fileID], scope);
         return failure(validation.message);
@@ -299,11 +355,11 @@ exports.main = async (event) => {
       const isPublished = Boolean(event.isPublished);
       // 新图片文件校验与文本内容安全检查相互独立，可以并行。
       const [imageValidation, safety] = await Promise.all([
-        validateUploadedImages(newImageIDs),
+        validateUploadedImages(newImageIDs, scope),
         isPublished
           ? (scope.testMode
             ? Promise.resolve({ passed: true, unavailable: false })
-            : checkPublishedText(OPENID, [title, summary, content]))
+            : checkPublishedText(OPENID, [title, summary, content], scope))
           : Promise.resolve({ passed: true, unavailable: false })
       ]);
       if (!imageValidation.passed) {
@@ -356,7 +412,7 @@ exports.main = async (event) => {
         const article = articleRes.data;
         const safety = scope.testMode
           ? { passed: true, unavailable: false }
-          : await checkPublishedText(OPENID, [article.title, article.summary, article.content]);
+          : await checkPublishedText(OPENID, [article.title, article.summary, article.content], scope);
         if (safety.unavailable) return failure('内容安全检查暂不可用，请稍后再试');
         if (!safety.passed) return failure('说明内容可能包含不适宜信息，请修改后重试');
       }
@@ -402,7 +458,7 @@ exports.main = async (event) => {
 
     return failure('不支持的操作');
   } catch (err) {
-    console.warn('[使用说明] 操作失败:', err.message || '未知错误');
-    return failure('操作失败，请稍后重试');
+    await recordServerError(scope, action, err);
+    return { ...failure('操作失败，请稍后重试'), code: 'BACKEND_UNAVAILABLE' };
   }
 };

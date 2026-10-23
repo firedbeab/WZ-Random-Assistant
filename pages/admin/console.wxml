@@ -8,7 +8,9 @@
 
   <block wx:if="{{mode === 'submissions'}}">
     <view class="toolbar">
-      <input class="field compact" value="{{weekKey}}" bindinput="onWeekInput" placeholder="YYYY-MM-DD" placeholder-class="form-placeholder" />
+      <picker class="week-picker-wrap" range="{{weekOptions}}" range-key="label" value="{{weekIndex}}" bindchange="onWeekChange">
+        <view class="picker week-picker">{{weekOptions[weekIndex].label}}</view>
+      </picker>
       <picker range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
         <view class="picker">{{statusOptions[statusIndex].label}}</view>
       </picker>

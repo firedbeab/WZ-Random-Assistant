@@ -23,6 +23,9 @@ const ACTION_LABELS = {
   'schedule.withdraw': '撤回排期',
   'schedule.update_note': '修改特殊备注',
   'schedule.mark_exception': '标记排期异常',
+  'schedule.remove_items': '删除排期曲目（不补位）',
+  'schedule.mark_items_for_removal': '标记待删除曲目',
+  'schedule.restore_items': '撤销待删除曲目',
   'schedule.skip_day': '跳过整日排期',
   'counter.set': '手动调整计数器',
   'counter.recalculate': '重新计算计数器',
@@ -55,6 +58,27 @@ function getWeekKey() {
   const sun = new Date(bj.getTime());
   sun.setUTCDate(bj.getUTCDate() + ((7 - bj.getUTCDay()) % 7));
   return sun.toISOString().split('T')[0];
+}
+
+function getWeekOptions(centerWeekKey, pastCount = 16, futureCount = 8) {
+  const center = new Date(`${centerWeekKey}T00:00:00.000Z`);
+  const options = [];
+  for (let offset = -futureCount; offset <= pastCount; offset += 1) {
+    const sunday = new Date(center.getTime());
+    sunday.setUTCDate(center.getUTCDate() - offset * 7);
+    const monday = new Date(sunday.getTime());
+    monday.setUTCDate(sunday.getUTCDate() - 6);
+    const thursday = new Date(monday.getTime());
+    thursday.setUTCDate(monday.getUTCDate() + 3);
+    const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+    const weekNumber = Math.ceil((((thursday - yearStart) / 86400000) + 1) / 7);
+    const format = date => `${String(date.getUTCMonth() + 1).padStart(2, '0')}/${String(date.getUTCDate()).padStart(2, '0')}`;
+    options.push({
+      value: sunday.toISOString().split('T')[0],
+      label: `${thursday.getUTCFullYear()} 年第 ${weekNumber} 周（${format(monday)}–${format(sunday)}）`
+    });
+  }
+  return options;
 }
 
 function formatTime(value) {
@@ -103,6 +127,8 @@ Page({
     subtitle: MODE_SUBTITLES.submissions,
     loading: false,
     weekKey: getWeekKey(),
+    weekOptions: getWeekOptions(getWeekKey()),
+    weekIndex: 8,
     keyword: '',
     statusOptions: STATUS_OPTIONS,
     statusIndex: 0,
@@ -159,7 +185,13 @@ Page({
     }
   },
 
-  onWeekInput(e) { this.setData({ weekKey: e.detail.value }); },
+  onWeekChange(e) {
+    const weekIndex = Number(e.detail.value);
+    const option = this.data.weekOptions[weekIndex];
+    if (!option) return;
+    this.setData({ weekIndex, weekKey: option.value, selectedIds: [] });
+    this.loadSubmissions();
+  },
   onKeywordInput(e) { this.setData({ keyword: e.detail.value }); },
   onStatusChange(e) {
     this.setData({ statusIndex: Number(e.detail.value), selectedIds: [] });

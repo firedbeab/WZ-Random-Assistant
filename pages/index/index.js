@@ -1,11 +1,14 @@
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 
 const LAST_SUBMISSION_KEY = storageKey('last_submission');
+const { unlockTapCount } = require('../../utils/dice-easter-egg');
+const eggPhotos = require('../../utils/easter-egg-photos');
 
 Page({
   data: {
     isTestMode: isTestMode(),
     userInfo: null,
+    diceShakeStyle: '',
     weeklyCode: '',
     title: '',
     remark: '',
@@ -169,6 +172,11 @@ Page({
     },
 
     async onLoad() {
+      this._diceTapTarget = unlockTapCount(this.data.isTestMode);
+      this._diceTapCount = 0;
+      this._diceUnlocked = false;
+      this._diceUnlocking = false;
+      eggPhotos.warm();
       this._loading = true;
       await this.checkUserStatus(); // 先等用户信息加载完成（含通道状态）
       await Promise.all([
@@ -189,9 +197,11 @@ Page({
 
     onHide() {
       this.clearStatusMessage();
+      this.cancelDiceShake();
     },
 
     onUnload() {
+      this.cancelDiceShake();
       if (this._statusMsgTimer) clearTimeout(this._statusMsgTimer);
       this._statusMsgTimer = null;
     },
@@ -296,6 +306,41 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  // 标题骰子的隐藏入口；本次首页实例解锁后可以反复打开。
+  onSecretDiceTap() {
+    if (this._diceUnlocking) return;
+    const dice = this.selectComponent('#easterDice');
+    if (this._diceUnlocked) { if (dice) dice.open(); return; }
+    if (!this._diceTapTarget) this._diceTapTarget = unlockTapCount(this.data.isTestMode);
+    this._diceTapCount = (this._diceTapCount || 0) + 1;
+    const finalTap = this._diceTapCount >= this._diceTapTarget;
+    const progress = Math.min(1, this._diceTapCount / this._diceTapTarget);
+    const name = this._diceTapCount % 2 ? 'a' : 'b';
+    this.setData({ diceShakeStyle: `--tilt:${4 + progress * 26}deg;--lift:${-1 - progress * 5}rpx;animation:secret-wiggle-${name} ${finalTap ? '.11s linear 14' : `${.3 - progress * .12}s ease-in-out 2`};` });
+    if (!finalTap) return;
+    this._diceUnlocking = true;
+    this._diceUnlockTimer = setTimeout(() => {
+      this._diceUnlockTimer = null; this._diceUnlocking = false; this._diceUnlocked = true;
+      this.setData({ diceShakeStyle: '' });
+      if (dice) dice.open();
+    }, 1540);
+  },
+
+  cancelDiceShake() {
+    if (this._diceUnlockTimer) clearTimeout(this._diceUnlockTimer);
+    this._diceUnlockTimer = null;
+    if (this._diceUnlocking) this._diceTapCount = Math.max(0, this._diceTapTarget - 1);
+    this._diceUnlocking = false;
+    this.setData({ diceShakeStyle: '' });
+  },
+
+  onResetDiceGate(e) {
+    if (!this.data.isTestMode || !this.data.userInfo || this.data.userInfo.role !== 'superadmin') return;
+    this.cancelDiceShake(); this._diceUnlocked = false; this._diceTapCount = 0;
+    this._diceTapTarget = unlockTapCount(!e.detail.normal);
+    wx.showToast({ title: e.detail.normal ? '已重置随机5–20次入口' : '已重置5次入口', icon: 'none' });
   },
 
   // 跳转排期页

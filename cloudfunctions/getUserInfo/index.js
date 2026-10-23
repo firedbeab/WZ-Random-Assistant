@@ -8,7 +8,7 @@ cloud.init({
 
 const db = cloud.database();
 
-exports.main = async (event, context) => {
+exports.main = async (event = {}, context) => {
   const { OPENID } = cloud.getWXContext();
   const scope = createDataScope(event);
   const usersCollection = scope.collection('users');
@@ -17,13 +17,28 @@ exports.main = async (event, context) => {
   const submissionsCollection = scope.collection('submissions');
   const countersCollection = scope.collection('submission_counters');
 
+  if (!OPENID) return { success: false, code: 'UNAUTHENTICATED', message: '无法确认用户身份' };
+
   try {
     let testSuperadmin = false;
     if (scope.testMode) {
       testSuperadmin = await isProductionSuperadmin(db, OPENID);
       if (!testSuperadmin) {
-        return { success: false, message: '测试数据仅限超级管理员访问' };
+        return { success: false, code: 'TEST_ACCESS_DENIED', message: '测试数据仅限超级管理员访问' };
       }
+    }
+
+    // 身份只取云端上下文，不接受客户端传来的用户ID；只读最近一条，不查找更早的合格记录。
+    if (event.action === 'getLatestSubmission') {
+      if (!OPENID) return { success: false, message: '无法确认用户身份' };
+      const result = await db.collection(submissionsCollection)
+        .where({ user_id: OPENID }).orderBy('submit_time', 'desc')
+        .field({ _id: false, song_name: true, singer: true, status: true }).limit(1).get();
+      const latest = result.data[0];
+      return { success: true, data: latest && latest.status !== 'removed' ? {
+        song_name: typeof latest.song_name === 'string' ? latest.song_name : '',
+        singer: typeof latest.singer === 'string' ? latest.singer : ''
+      } : null };
     }
 
     // 测试版不直接开放数据库集合读取权限；这些只读操作统一经云函数鉴权。
@@ -56,12 +71,11 @@ exports.main = async (event, context) => {
         ? event.weekKey
         : '';
       if (!weekKey) return { success: false, message: '周标识无效' };
-      try {
-        const result = await db.collection(countersCollection).doc(weekKey).get();
-        return { success: true, data: Number(result.data.count) || 0 };
-      } catch (err) {
-        return { success: true, data: 0 };
-      }
+      // 缺少记录正常返回0；数据库故障交由外层catch报告，不能混为“本周无人提交”。
+      const result = await db.collection(countersCollection).where({ _id: weekKey }).limit(1).get();
+      const count = result.data.length ? result.data[0].count : 0;
+      if (!Number.isInteger(count) || count < 0) throw new Error('INVALID_SUBMIT_COUNT');
+      return { success: true, data: count };
     }
 
     // 用户资料与通道状态互不依赖，并行读取以降低首页等待时间。
@@ -125,9 +139,14 @@ exports.main = async (event, context) => {
       };
     }
   } catch (err) {
-    console.warn('[用户信息] 获取失败:', err.message || '未知错误');
+    const action = ['getLatestSubmission', 'getPublishedSchedule', 'getMySubmission', 'getSubmitCount'].includes(event.action)
+      ? event.action : 'getUserInfo';
+    console.warn('[用户信息] 后端异常', { source: 'server', module: 'getUserInfo', action,
+      data_scope: scope.testMode ? 'test' : 'production',
+      error: Number.isInteger(err && err.errCode) ? `SDK_${err.errCode}` : 'BACKEND_UNAVAILABLE' });
     return {
       success: false,
+      code: 'BACKEND_UNAVAILABLE',
       message: '获取用户信息失败，请稍后重试'
     };
   }

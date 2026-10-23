@@ -37,6 +37,11 @@ page {
   margin-bottom: 24rpx;
 }
 
+.secret-dice { display: inline-block; padding: 8rpx; margin: -8rpx; }
+.secret-dice:active { transform: rotate(-12deg) scale(.92); }
+@keyframes secret-wiggle-a { 0%, 100% { transform: rotate(0); } 25% { transform: translateY(var(--lift)) rotate(var(--tilt)) scale(1.06); } 75% { transform: translateY(var(--lift)) rotate(calc(var(--tilt) * -1)) scale(1.06); } }
+@keyframes secret-wiggle-b { 0%, 100% { transform: rotate(0); } 25% { transform: translateY(var(--lift)) rotate(var(--tilt)) scale(1.06); } 75% { transform: translateY(var(--lift)) rotate(calc(var(--tilt) * -1)) scale(1.06); } }
+
 .status-badge {
   display: inline-flex;
   align-items: center;

@@ -10,8 +10,15 @@ const _ = db.command;
 const CLEANUP_TOKEN_TTL_MS = 2 * 60 * 1000;
 const CLEANUP_CONFIRMATIONS = {
   week: '清空本周',
-  subscriptions: '清空订阅'
+  subscriptions: '清空订阅',
+  all: '清空全部测试数据'
 };
+
+const ALL_CLEANUP_BASE_COLLECTIONS = [
+  'submissions', 'schedules', 'weekly_codes', 'schedule_exceptions',
+  'submission_counters', 'configs', 'admin_passcodes', 'login_attempts',
+  'message_subscriptions', 'help_articles', 'system_events', 'users'
+];
 
 function getWeekKey(bjTime) {
   const day = bjTime.getUTCDay();
@@ -93,6 +100,19 @@ async function getWeekCleanupPreview(weekKey, dataScope) {
 async function getSubscriptionsCleanupPreview(dataScope) {
   const total = await countMatching(dataScope.collection('message_subscriptions'), {});
   return { message_subscriptions: total, total };
+}
+
+async function getAllCleanupPreview(dataScope, currentOpenid) {
+  const entries = await Promise.all(ALL_CLEANUP_BASE_COLLECTIONS.map(async baseName => [
+    baseName,
+    await countMatching(
+      dataScope.collection(baseName),
+      baseName === 'users' ? { openid: _.neq(currentOpenid) } : {}
+    )
+  ]));
+  const preview = Object.fromEntries(entries);
+  preview.total = entries.reduce((sum, entry) => sum + entry[1], 0);
+  return preview;
 }
 
 // 审计日志暂存于现有 configs 集合，保留最近 50 条，避免新增集合后还需人工建表。
@@ -241,7 +261,7 @@ exports.main = async (event) => {
   const weekKey = getWeekKey(bjTime);
   const TEST_ONLY_ACTIONS = new Set([
     'generateRequests', 'generateCodes', 'simulateSubmitted', 'generateCarryover', 'runDraw',
-    'clearWeek', 'generatePublished', 'generateAllPublished'
+    'clearWeek', 'clearSubscriptions', 'clearAll', 'generatePublished', 'generateAllPublished'
   ]);
   if (TEST_ONLY_ACTIONS.has(action) && !dataScope.testMode) {
     return { success: false, blocked: true, message: '该测试操作只能在测试版中执行' };
@@ -251,33 +271,20 @@ exports.main = async (event) => {
   if (action === 'previewCleanup') {
     const { scope } = event;
 
-    // 当前项目只有正式云环境，全量清空在服务端永久禁用。
-    if (scope === 'all') {
-      try {
-        await appendCleanupAudit({
-          action: 'clearAll',
-          status: 'blocked',
-          operator_openid: OPENID,
-          reason: 'production_guard'
-        }, dataScope);
-      } catch (e) {
-        console.error('[testTool] 记录拦截日志失败:', e.message);
-      }
-      return {
-        success: false,
-        blocked: true,
-        message: '正式云环境已永久禁用“清空所有数据”'
-      };
-    }
-
     if (!Object.prototype.hasOwnProperty.call(CLEANUP_CONFIRMATIONS, scope)) {
       return { success: false, message: '不支持的清理范围' };
+    }
+    // 预览也会写确认令牌；正式域所有测试清理预览均须在写入前拒绝。
+    if (!dataScope.testMode) {
+      return { success: false, blocked: true, message: '正式环境禁止测试清理操作' };
     }
 
     try {
       const preview = scope === 'week'
         ? await getWeekCleanupPreview(weekKey, dataScope)
-        : await getSubscriptionsCleanupPreview(dataScope);
+        : (scope === 'all'
+          ? await getAllCleanupPreview(dataScope, OPENID)
+          : await getSubscriptionsCleanupPreview(dataScope));
       const tokenInfo = await createCleanupToken(scope, OPENID, weekKey, preview, dataScope);
       return {
         success: true,
@@ -492,19 +499,52 @@ exports.main = async (event) => {
     }
   }
 
-  // 6. 正式环境永久禁止全量清空，即使旧版前端直接调用也会被服务端拦截。
+  // 6. 清空全部测试数据。正式数据域始终硬拦截。
   if (action === 'clearAll') {
+    if (!dataScope.testMode) {
+      return { success: false, blocked: true, message: '正式环境禁止清空全部数据' };
+    }
+    const guard = await verifyCleanupToken(
+      'all', OPENID, weekKey, event.confirmationToken, event.confirmationText, dataScope
+    );
+    if (!guard.success) return guard;
+
     try {
       await appendCleanupAudit({
         action: 'clearAll',
-        status: 'blocked',
+        status: 'started',
         operator_openid: OPENID,
-        reason: 'production_guard'
+        preview: guard.preview
       }, dataScope);
-    } catch (e) {
-      console.error('[testTool] 记录拦截日志失败:', e.message);
+
+      const details = {};
+      for (const baseName of ALL_CLEANUP_BASE_COLLECTIONS) {
+        if (baseName === 'users') {
+          // 保留当前执行清理的测试超管，避免全量清理中途失败后失去测试入口。
+          details[baseName] = await removeAll(usersCollection, { openid: _.neq(OPENID) });
+          continue;
+        }
+        details[baseName] = await removeAll(dataScope.collection(baseName), {});
+      }
+
+      await db.collection(usersCollection).where({ openid: OPENID }).update({ data: {
+        role: 'superadmin',
+        last_admin_verify: db.serverDate(),
+        preserved_after_test_cleanup: true
+      }});
+      details.users_preserved = 1;
+
+      await appendCleanupAudit({
+        action: 'clearAll',
+        status: 'success',
+        operator_openid: OPENID,
+        details
+      }, dataScope);
+      return { success: true, message: '全部测试数据已清空，当前测试超管身份已保留', details };
+    } catch (err) {
+      console.error('[testTool] 清空全部测试数据失败:', err.message);
+      return { success: false, message: '清空未完整完成，请检查云函数日志和测试集合' };
     }
-    return { success: false, blocked: true, message: '正式云环境已永久禁用“清空所有数据”' };
   }
 
   // 7. 生成已发布排期（支持 offset 参数：0=本周, 1=上周, 2=上上周）
@@ -651,14 +691,18 @@ exports.main = async (event) => {
         'message_subscriptions', 'users', 'system_events'
       ];
       // 所有统计互不依赖，并行执行，避免十余次数据库请求串行累加延迟。
-      const [collectionCounts, weekReq, weekSch, selectedCount, consumedSub, unconsumedSub] = await Promise.all([
+      const [collectionCounts, weekReq, weekSch, selectedCount, consumedSub, unconsumedSub, weekCounter] = await Promise.all([
         Promise.all(collections.map(col => db.collection(dataScope.collection(col)).count())),
         db.collection(submissionsCollection).where({ week_key: weekKey }).count(),
         db.collection(schedulesCollection).where({ week_key: weekKey }).count(),
         db.collection(submissionsCollection).where({ status: 'selected' }).count(),
         db.collection(subscriptionsCollection).where({ consumed: true }).count(),
-        db.collection(subscriptionsCollection).where({ consumed: false }).count()
+        db.collection(subscriptionsCollection).where({ consumed: false }).count(),
+        // 查询空数组表示尚无计数器；查询异常不得伪装为0。
+        db.collection(countersCollection).where({ _id: weekKey }).limit(1).get()
       ]);
+      const submitCount = weekCounter.data.length ? weekCounter.data[0].count : 0;
+      if (!Number.isInteger(submitCount) || submitCount < 0) throw new Error('本周计数器数据无效');
 
       const stats = {};
       collections.forEach((col, index) => {
@@ -672,12 +716,14 @@ exports.main = async (event) => {
         success: true,
         data: {
           total: stats,
-          thisWeek: { submissions: weekReq.total, schedules: weekSch.total }
+          thisWeek: { submissions: weekReq.total, schedules: weekSch.total, submitCount },
+          weekKey
         }
       };
     } catch (err) {
-      console.warn('[testTool] 统计失败:', err.message || '未知错误');
-      return { success: false, message: '统计失败，请检查云函数日志' };
+      console.warn('[testTool] 统计失败', { action: 'stats', data_scope: dataScope.testMode ? 'test' : 'production',
+        error: Number.isInteger(err && err.errCode) ? `SDK_${err.errCode}` : 'BACKEND_UNAVAILABLE' });
+      return { success: false, code: 'BACKEND_UNAVAILABLE', message: '统计失败，请检查云函数日志' };
     }
   }
 

@@ -24,7 +24,7 @@ function getSongKey(item) {
 }
 
 function toScheduleItem(item) {
-  return {
+  const normalized = {
     submission_id: getSubmissionId(item),
     song_name: item.song_name,
     song_key: getSongKey(item),
@@ -32,6 +32,11 @@ function toScheduleItem(item) {
     special_note: item.special_note || '',
     is_repeat: item.is_repeat === true
   };
+  if (item.audit_state === 'pending_remove') {
+    normalized.audit_state = 'pending_remove';
+    normalized.removal_reason = item.removal_reason || '';
+  }
+  return normalized;
 }
 
 function isValidDocId(value) {
@@ -46,8 +51,15 @@ function isValidSongIndex(value) {
   return Number.isInteger(value) && value >= 0 && value <= 99;
 }
 
+function countScheduleItems(schedule) {
+  return ['day1', 'day2', 'day3', 'day4', 'day5']
+    .reduce((total, day) => total + (Array.isArray(schedule[day])
+      ? schedule[day].filter(item => item.audit_state !== 'pending_remove').length
+      : 0), 0);
+}
+
 function safeOperationMessage(err, fallback) {
-  const allowed = new Set(['排期状态已变更', '该日无项目', '项目索引无效']);
+  const allowed = new Set(['排期状态已变更', '页面数据已过期，请刷新后重试', '该日无项目', '项目索引无效']);
   return err && allowed.has(err.message) ? err.message : fallback;
 }
 
@@ -189,7 +201,127 @@ exports.main = async (event, context) => {
     }
   }
 
-  // 2. 标记异常并自动替补
+  // 2. 将当天选中的项目标记为待删除；发布前可随时撤销。
+  if (action === 'removeItems') {
+    const songIndexes = Array.isArray(event.songIndexes)
+      ? Array.from(new Set(event.songIndexes.map(Number))).filter(isValidSongIndex).slice(0, 20)
+      : [];
+    if (!isValidDocId(playlistId) || !isValidDayIndex(dayIndex) || songIndexes.length === 0) {
+      return { success: false, message: '操作参数无效' };
+    }
+    if (reason !== undefined && (typeof reason !== 'string' || reason.length > 50)) {
+      return { success: false, message: '原因不能超过50个字符' };
+    }
+
+    const tx = await db.startTransaction();
+    try {
+      const schedule = (await tx.collection(schedulesCollection).doc(playlistId).get()).data;
+      if (schedule.status !== 'pending') throw new Error('排期状态已变更');
+      const currentRevision = Number(schedule.revision) || 1;
+      if ((Number(event.revision) || 1) !== currentRevision) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
+
+      const dayKey = `day${dayIndex + 1}`;
+      const originalDay = Array.isArray(schedule[dayKey]) ? schedule[dayKey] : [];
+      const beforeDay = originalDay.map(toScheduleItem);
+      if (originalDay.length === 0) throw new Error('该日无项目');
+      if (songIndexes.some(index => index >= originalDay.length)) throw new Error('项目索引无效');
+
+      const selectedSet = new Set(songIndexes);
+      const markedAt = new Date();
+      const markedItems = [];
+      const updatedDay = originalDay.map((item, index) => {
+        if (!selectedSet.has(index) || item.audit_state === 'pending_remove') return item;
+        markedItems.push(toScheduleItem(item));
+        return Object.assign({}, item, {
+          audit_state: 'pending_remove',
+          removal_reason: reason || '当天安排调整',
+          removal_marked_at: markedAt,
+          removal_marked_by: OPENID
+        });
+      });
+      if (markedItems.length === 0) throw new Error('项目索引无效');
+      schedule[dayKey] = updatedDay;
+
+      await tx.collection(schedulesCollection).doc(playlistId).update({
+        data: {
+          [dayKey]: updatedDay,
+          total_count: countScheduleItems(schedule),
+          revision: currentRevision + 1,
+          updated_at: db.serverDate()
+        }
+      });
+
+      await tx.commit();
+      await appendSystemEvent(scope, {
+        action: 'schedule.mark_items_for_removal', operator_openid: OPENID,
+        target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
+        before: { [dayKey]: beforeDay }, after: { [dayKey]: updatedDay.map(toScheduleItem) },
+        reason: reason || '当天安排调整'
+      });
+      return { success: true, message: `已将 ${markedItems.length} 首标记为待删除` };
+    } catch (e) {
+      await tx.rollback();
+      console.warn('[审核] 标记待删除失败:', e.message || '未知错误');
+      return { success: false, message: safeOperationMessage(e, '操作失败，请稍后重试') };
+    }
+  }
+
+  // 3. 撤销待删除标记。
+  if (action === 'restoreItems') {
+    const songIndexes = Array.isArray(event.songIndexes)
+      ? Array.from(new Set(event.songIndexes.map(Number))).filter(isValidSongIndex).slice(0, 20)
+      : [];
+    if (!isValidDocId(playlistId) || !isValidDayIndex(dayIndex) || songIndexes.length === 0) {
+      return { success: false, message: '操作参数无效' };
+    }
+    const tx = await db.startTransaction();
+    try {
+      const schedule = (await tx.collection(schedulesCollection).doc(playlistId).get()).data;
+      if (schedule.status !== 'pending') throw new Error('排期状态已变更');
+      const currentRevision = Number(schedule.revision) || 1;
+      if ((Number(event.revision) || 1) !== currentRevision) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
+      const dayKey = `day${dayIndex + 1}`;
+      const originalDay = Array.isArray(schedule[dayKey]) ? schedule[dayKey] : [];
+      if (songIndexes.some(index => index >= originalDay.length)) throw new Error('项目索引无效');
+      const selectedSet = new Set(songIndexes);
+      let restored = 0;
+      const updatedDay = originalDay.map((item, index) => {
+        if (!selectedSet.has(index) || item.audit_state !== 'pending_remove') return item;
+        restored += 1;
+        const next = Object.assign({}, item);
+        delete next.audit_state;
+        delete next.removal_reason;
+        delete next.removal_marked_at;
+        delete next.removal_marked_by;
+        return next;
+      });
+      if (restored === 0) throw new Error('项目索引无效');
+      schedule[dayKey] = updatedDay;
+      await tx.collection(schedulesCollection).doc(playlistId).update({ data: {
+        [dayKey]: updatedDay,
+        total_count: countScheduleItems(schedule),
+        revision: currentRevision + 1,
+        updated_at: db.serverDate()
+      }});
+      await tx.commit();
+      await appendSystemEvent(scope, {
+        action: 'schedule.restore_items', operator_openid: OPENID,
+        target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
+        after: { day: dayKey, restored_count: restored }
+      });
+      return { success: true, message: `已撤销 ${restored} 首的删除状态` };
+    } catch (e) {
+      await tx.rollback();
+      console.warn('[审核] 撤销待删除失败:', e.message || '未知错误');
+      return { success: false, message: safeOperationMessage(e, '撤销失败，请稍后重试') };
+    }
+  }
+
+  // 4. 标记异常并自动替补
   if (action === 'markException') {
     if (!isValidDocId(playlistId) || !isValidDayIndex(dayIndex) || !isValidSongIndex(songIndex)) {
       return { success: false, message: '操作参数无效' };
@@ -213,6 +345,9 @@ exports.main = async (event, context) => {
         throw new Error('该日无项目');
       }
       if (songIndex < 0 || songIndex >= schedule[dayKey].length) {
+        throw new Error('项目索引无效');
+      }
+      if (schedule[dayKey][songIndex].audit_state === 'pending_remove') {
         throw new Error('项目索引无效');
       }
       const removedItem = schedule[dayKey].splice(songIndex, 1)[0];
@@ -292,6 +427,7 @@ exports.main = async (event, context) => {
       await tx.collection(schedulesCollection).doc(playlistId).update({
         data: {
           [dayKey]: schedule[dayKey],
+          total_count: countScheduleItems(schedule),
           revision: (Number(schedule.revision) || 1) + 1,
           updated_at: db.serverDate()
         }
@@ -313,7 +449,7 @@ exports.main = async (event, context) => {
     }
   }
 
-  // 3. 跳过某一天（清空该日所有项目）
+  // 5. 跳过某一天（清空该日所有项目）
   if (action === 'skipDay') {
     if (!isValidDocId(playlistId) || !isValidDayIndex(dayIndex)) {
       return { success: false, message: '操作参数无效' };
@@ -327,11 +463,13 @@ exports.main = async (event, context) => {
       const dayKey = `day${dayIndex + 1}`;
       const removedItems = schedule[dayKey] || [];
       const removedSubmissionIds = removedItems.map(getSubmissionId).filter(Boolean);
+      schedule[dayKey] = [];
 
       // 清空该日项目
       await tx.collection(schedulesCollection).doc(playlistId).update({
         data: {
           [dayKey]: [],
+          total_count: countScheduleItems(schedule),
           revision: (Number(schedule.revision) || 1) + 1,
           updated_at: db.serverDate()
         }
@@ -376,7 +514,7 @@ exports.main = async (event, context) => {
     }
   }
 
-  // 4. 确认发布
+  // 6. 确认发布，并最终移除审核阶段标记为待删除的项目。
   if (action === 'publish') {
     const { note } = event;
     if (!isValidDocId(playlistId)) {
@@ -401,21 +539,46 @@ exports.main = async (event, context) => {
 
       weekKey = schedule.week_key;
 
+      const finalDays = {};
+      const finalizedItems = [];
+      ['day1', 'day2', 'day3', 'day4', 'day5'].forEach(day => {
+        const source = Array.isArray(schedule[day]) ? schedule[day] : [];
+        finalizedItems.push(...source.filter(item => item.audit_state === 'pending_remove'));
+        finalDays[day] = source.filter(item => item.audit_state !== 'pending_remove');
+      });
+      const finalizedSubmissionIds = finalizedItems.map(getSubmissionId).filter(isValidDocId);
+
       await tx.collection(schedulesCollection).doc(playlistId).update({
-        data: {
+        data: Object.assign({}, finalDays, {
           status: 'published',
           admin_note: note || '',
+          total_count: Object.values(finalDays).reduce((sum, items) => sum + items.length, 0),
           revision: (Number(schedule.revision) || 1) + 1,
           publish_time: db.serverDate()
-        }
+        })
       });
+
+      if (finalizedSubmissionIds.length > 0) {
+        await tx.collection(submissionsCollection)
+          .where({ _id: _.in(finalizedSubmissionIds) })
+          .update({ data: { status: 'rejected', rejected_at: db.serverDate() } });
+        await tx.collection(exceptionsCollection).add({ data: {
+          schedule_id: playlistId,
+          week_key: schedule.week_key,
+          operation: 'remove_items',
+          original_item: { count: finalizedItems.length, items: finalizedItems.map(toScheduleItem) },
+          reason: '发布时确认删除待移除项目',
+          operator: OPENID,
+          created_at: db.serverDate()
+        }});
+      }
 
       await tx.commit();
       await appendSystemEvent(scope, {
         action: 'schedule.publish', operator_openid: OPENID,
         target_type: 'schedule', target_id: playlistId, week_key: schedule.week_key,
         before: { status: schedule.status, admin_note: schedule.admin_note || '' },
-        after: { status: 'published', admin_note: note || '' }
+        after: { status: 'published', admin_note: note || '', removed_count: finalizedItems.length }
       });
     } catch (e) {
       await tx.rollback();
@@ -464,7 +627,7 @@ exports.main = async (event, context) => {
     return { success: true, message: '发布成功' };
   }
 
-  // 5. 更新单个项目的特殊备注
+  // 7. 更新单个项目的特殊备注
   if (action === 'updateNote') {
     const { songIndex, note } = event;
     if (!isValidDocId(playlistId) || !isValidDayIndex(dayIndex) || !isValidSongIndex(songIndex)) {
@@ -500,6 +663,9 @@ exports.main = async (event, context) => {
       const dayKey = `day${dayIndex + 1}`;
       if (!Array.isArray(schedule[dayKey]) || songIndex < 0 || songIndex >= schedule[dayKey].length) {
         return { success: false, message: '项目不存在' };
+      }
+      if (schedule[dayKey][songIndex].audit_state === 'pending_remove') {
+        return { success: false, message: '待删除项目请先撤销删除状态' };
       }
 
       const savedNote = (note || '').substring(0, 50);

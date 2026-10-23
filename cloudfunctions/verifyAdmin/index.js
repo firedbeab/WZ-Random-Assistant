@@ -17,26 +17,29 @@ const LOCK_DURATION_MS = 15 * 60 * 1000; // 锁定时长：15 分钟
  * 返回 { locked: true/false, remainingSeconds: 剩余秒数 }
  */
 async function checkLock(openid, attemptsCollection) {
-  try {
-    const res = await db.collection(attemptsCollection).doc(openid).get();
-    const doc = res.data;
-    if (doc.locked_until) {
-      const now = Date.now();
-      const lockUntil = new Date(doc.locked_until).getTime();
-      if (now < lockUntil) {
-        const remainingSeconds = Math.ceil((lockUntil - now) / 1000);
-        return { locked: true, remainingSeconds };
-      }
-      // 锁定已过期，自动解锁
-      await db.collection(attemptsCollection).doc(openid).update({
-        data: { fail_count: 0, locked_until: null }
-      });
+  // 空查询表示从未尝试；查询/更新故障必须阻断本次认证，不能当作未锁定。
+  const res = await db.collection(attemptsCollection).where({ _id: openid }).limit(1).get();
+  const doc = res.data[0];
+  if (!doc) return { locked: false };
+  if (!Number.isInteger(doc.fail_count) || doc.fail_count < 0) throw new Error('INVALID_AUTH_COUNTER');
+  if (doc.locked_until) {
+    const now = Date.now();
+    const lockUntil = new Date(doc.locked_until).getTime();
+    if (!Number.isFinite(lockUntil)) throw new Error('INVALID_AUTH_LOCK');
+    if (now < lockUntil) {
+      return { locked: true, remainingSeconds: Math.ceil((lockUntil - now) / 1000) };
     }
-    return { locked: false };
-  } catch (err) {
-    // 文档不存在 → 从未尝试过，不锁定
-    return { locked: false };
+    await db.collection(attemptsCollection).doc(openid).update({
+      data: { fail_count: 0, locked_until: null }
+    });
+  } else if (doc.fail_count >= MAX_FAIL_COUNT) {
+    // 上次计数到达阈值但设置锁定时间失败：本次先补锁，不给予绕过机会。
+    await db.collection(attemptsCollection).doc(openid).update({
+      data: { locked_until: new Date(Date.now() + LOCK_DURATION_MS) }
+    });
+    return { locked: true, remainingSeconds: LOCK_DURATION_MS / 1000 };
   }
+  return { locked: false };
 }
 
 /**
@@ -45,64 +48,41 @@ async function checkLock(openid, attemptsCollection) {
  */
 async function recordFailure(openid, attemptsCollection) {
   const now = new Date();
-  try {
-    // 原子递增（关键：_.inc 是数据库级别的原子操作，并发安全）
-    await db.collection(attemptsCollection).doc(openid).update({
-      data: {
-        fail_count: _.inc(1),
-        last_attempt: now
-      }
-    });
-    // 递增后读取实际计数，判断是否达到锁定阈值
-    const res = await db.collection(attemptsCollection).doc(openid).get();
-    if (res.data.fail_count >= MAX_FAIL_COUNT) {
-      const lockUntil = new Date(now.getTime() + LOCK_DURATION_MS);
-      await db.collection(attemptsCollection).doc(openid).update({
-        data: { locked_until: lockUntil }
-      });
-      return { locked: true };
-    }
-    return { locked: false, failCount: res.data.fail_count };
-  } catch (err) {
-    // 文档不存在，创建并初始化为1
+  const ref = db.collection(attemptsCollection).doc(openid);
+  const increment = () => ref.update({ data: { fail_count: _.inc(1), last_attempt: now } });
+  const updated = await increment();
+  if (!updated.stats || !Number.isInteger(updated.stats.updated)) throw new Error('AUTH_COUNTER_UPDATE_FAILED');
+  if (updated.stats.updated === 0) {
+    // 只有明确“更新0条”才创建，网络/权限异常不应被当作记录不存在。
     try {
       await db.collection(attemptsCollection).add({
         data: { _id: openid, fail_count: 1, locked_until: null, last_attempt: now }
       });
-      return { locked: false, failCount: 1 };
-    } catch (e) {
-      // 并发创建（duplicate），重试递增
-      try {
-        await db.collection(attemptsCollection).doc(openid).update({
-          data: { fail_count: _.inc(1), last_attempt: now }
-        });
-        const res = await db.collection(attemptsCollection).doc(openid).get();
-        if (res.data.fail_count >= MAX_FAIL_COUNT) {
-          const lockUntil = new Date(now.getTime() + LOCK_DURATION_MS);
-          await db.collection(attemptsCollection).doc(openid).update({
-            data: { locked_until: lockUntil }
-          });
-          return { locked: true };
-        }
-        return { locked: false, failCount: res.data.fail_count };
-      } catch (retryErr) {
-        return { locked: false, failCount: 1 };
-      }
+    } catch (err) {
+      const detail = String(err && (err.errMsg || err.message) || '');
+      if (!/duplicate|E11000|already exists?/i.test(detail)) throw err;
+      const retry = await increment();
+      if (!retry.stats || retry.stats.updated !== 1) throw new Error('AUTH_COUNTER_UPDATE_FAILED');
     }
   }
+  const res = await ref.get();
+  const failCount = res.data && res.data.fail_count;
+  if (!Number.isInteger(failCount) || failCount < 1) throw new Error('INVALID_AUTH_COUNTER');
+  if (failCount >= MAX_FAIL_COUNT) {
+    await ref.update({ data: { locked_until: new Date(now.getTime() + LOCK_DURATION_MS) } });
+    return { locked: true, failCount };
+  }
+  return { locked: false, failCount };
 }
 
 /**
  * 验证成功时清除失败记录
  */
 async function clearAttempts(openid, attemptsCollection) {
-  try {
-    await db.collection(attemptsCollection).doc(openid).update({
-      data: { fail_count: 0, locked_until: null }
-    });
-  } catch (err) {
-    // 文档不存在，无需清除
-  }
+  // 不存在时update返回0；真实数据库异常不能在赋权前静默忽略。
+  await db.collection(attemptsCollection).doc(openid).update({
+    data: { fail_count: 0, locked_until: null }
+  });
 }
 
 async function recordSecurityEvent(scope, entry) {
@@ -113,11 +93,11 @@ async function recordSecurityEvent(scope, entry) {
       }, entry)
     });
   } catch (err) {
-    console.warn('[管理员验证] 安全事件写入失败:', err.message || '未知错误');
+    console.warn('[管理员验证] 安全事件写入失败');
   }
 }
 
-exports.main = async (event, context) => {
+exports.main = async (event = {}, context) => {
   const { OPENID } = cloud.getWXContext();
   const { adminCode, action } = event;
   const scope = createDataScope(event);
@@ -125,8 +105,14 @@ exports.main = async (event, context) => {
   const passcodesCollection = scope.collection('admin_passcodes');
   const usersCollection = scope.collection('users');
 
-  if (!(await canUseTestData(db, OPENID, scope))) {
-    return { success: false, message: '仅超级管理员可使用测试环境' };
+  if (!OPENID) return { success: false, code: 'UNAUTHENTICATED', message: '无法确认用户身份' };
+  try {
+    if (!(await canUseTestData(db, OPENID, scope))) {
+      return { success: false, message: '仅超级管理员可使用测试环境' };
+    }
+  } catch (_) {
+    console.warn('[管理员验证] 测试身份查询失败');
+    return { success: false, code: 'AUTH_STORAGE_UNAVAILABLE', message: '管理员验证暂不可用，请稍后重试' };
   }
 
   // 1. 验证通行码并赋权
@@ -219,13 +205,13 @@ exports.main = async (event, context) => {
       });
       return { success: true, message: '验证成功', role: role };
     } catch (err) {
-      console.warn('[管理员验证] 系统异常:', err.message || '未知错误');
+      const error = Number.isInteger(err && err.errCode) ? `SDK_${err.errCode}` : 'AUTH_STORAGE_UNAVAILABLE';
+      console.warn('[管理员验证] 后端异常', { action: 'admin_verify.error', error });
       await recordSecurityEvent(scope, {
         category: 'system_error', action: 'admin_verify.error',
-        operator_openid: OPENID, severity: 'error',
-        error: String(err.message || '未知错误').slice(0, 500)
+        source: 'server', module: 'verifyAdmin', severity: 'error', error
       });
-      return { success: false, message: '系统繁忙，请稍后重试' };
+      return { success: false, code: 'AUTH_STORAGE_UNAVAILABLE', message: '管理员验证暂不可用，请稍后重试' };
     }
   }
 

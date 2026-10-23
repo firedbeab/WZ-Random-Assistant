@@ -91,8 +91,15 @@ page { background: #f0f2f5; }
 
 .song-list {}
 .song-item {
-  display: flex; justify-content: space-between; align-items: center;
+  display: grid; grid-template-columns: 48rpx minmax(0, 1fr) 112rpx;
+  align-items: start; column-gap: 12rpx;
   padding: 24rpx 0; border-bottom: 1rpx dashed #eee;
+}
+.song-select { width: 48rpx; margin-top: 2rpx; transform: scale(.82); transform-origin: left top; }
+.song-select-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  width: 36rpx; height: 36rpx; margin-top: 3rpx; border-radius: 6rpx;
+  background: #e4e7eb; color: #9aa0a6; font-size: 24rpx; line-height: 36rpx;
 }
 .song-item:last-child { border-bottom: none; }
 .song-info { flex: 1; min-width: 0; }
@@ -107,16 +114,39 @@ page { background: #f0f2f5; }
 .copy-hint { font-size: 20rpx; color: #ccc; flex-shrink: 0; margin-left: 10rpx; }
 .copy-tip-bar { font-size: 24rpx; color: #999; text-align: center; padding: 16rpx 0; margin-bottom: 20rpx; }
 .btn-exception {
-  background: #fff3e0; color: #f57c00; border: none;
-  font-size: 22rpx; padding: 10rpx 24rpx; border-radius: 20rpx;
-  margin: 0; flex-shrink: 0;
+  background: #fff3e0; color: #f57c00;
 }
 .btn-note {
-  background: #e3f2fd; color: #1976d2; border: none;
-  font-size: 22rpx; padding: 10rpx 24rpx; border-radius: 20rpx;
-  margin: 0; flex-shrink: 0;
+  background: #e3f2fd; color: #1976d2;
 }
-.song-actions { display: flex; gap: 12rpx; flex-shrink: 0; margin-left: 10rpx; }
+.pending-remove { background: #f5f6f7; opacity: .78; }
+.pending-remove .song-name,.pending-remove .song-singer { color: #969ca3; text-decoration: line-through; }
+.pending-remove-note {
+  display: inline-block; margin-top: 10rpx; padding: 5rpx 10rpx;
+  border-radius: 6rpx; background: #e4e7eb; color: #686f77; font-size: 20rpx; line-height: 1.4;
+}
+.pending-remove-tag { background: #e4e7eb; color: #747b83; }
+.btn-restore { background: #e8f5e9; color: #18864b; }
+.song-actions { display: grid; grid-template-rows: repeat(2, 44rpx); row-gap: 10rpx; width: 112rpx; }
+.song-action-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 112rpx; height: 44rpx; box-sizing: border-box;
+  padding: 0; border: none; border-radius: 8rpx;
+  font-size: 22rpx; line-height: 1; text-align: center; white-space: nowrap;
+}
+.song-action-btn text,.btn-remove-selected text,.admin-role-tag text,.btn-revoke text { line-height: 1; }
+button::after { border: none; }
+.day-bulk-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 16rpx;
+  margin-top: 14rpx; padding: 14rpx 18rpx; border-radius: 12rpx;
+  background: #fff5f5; color: #c62828; font-size: 23rpx;
+}
+.btn-remove-selected {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 250rpx; height: 62rpx; box-sizing: border-box; padding: 0 20rpx;
+  border-radius: 10rpx; background: #e53e3e; color: #fff;
+  font-size: 22rpx; line-height: 1; text-align: center; white-space: nowrap;
+}
 
 /* 备注弹窗输入框 */
 .note-modal-input {
@@ -279,10 +309,13 @@ page { background: #f0f2f5; }
 }
 
 /* 数据统计 */
-.stats-row { display: flex; justify-content: space-between; }
-.stat-item { text-align: center; flex: 1; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12rpx; }
+.stat-item {
+  min-width: 0; box-sizing: border-box; text-align: center;
+  padding: 14rpx 6rpx; border-radius: 14rpx;
+  background: #f7f8fa; border: 1rpx solid #edf0f3;
+}
 .stat-item.clickable {
-  margin: 6rpx; padding: 14rpx 6rpx; border-radius: 14rpx;
   background: #f7fbff; border: 1rpx solid #e4f0fb;
 }
 .stat-item.clickable:active { background: #e3f2fd; }
@@ -345,23 +378,29 @@ page { background: #f0f2f5; }
 /* 管理员列表 */
 .admin-list {}
 .admin-item {
-  display: flex; justify-content: space-between; align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 24rpx;
   padding: 24rpx 0; border-bottom: 1rpx dashed #eee;
 }
 .admin-item:last-child { border-bottom: none; }
-.admin-info { flex: 1; display: flex; align-items: center; gap: 12rpx; }
+.admin-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10rpx; }
 .admin-openid {
-  font-size: 24rpx; color: #666; font-family: 'Courier New', monospace;
+  max-width: 100%; font-size: 27rpx; color: #444; font-weight: 600; line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .admin-role-tag {
-  font-size: 20rpx; padding: 4rpx 12rpx; border-radius: 8rpx; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  min-width: 132rpx; height: 46rpx; box-sizing: border-box;
+  padding: 0 14rpx; border-radius: 8rpx; font-size: 20rpx; line-height: 1; font-weight: 500;
 }
 .role-super { background: #fce4ec; color: #c62828; }
 .role-admin { background: #e3f2fd; color: #1976d2; }
-.admin-date { font-size: 22rpx; color: #bbb; }
+.admin-date { display: block; font-size: 22rpx; color: #999; }
+.admin-side { display: flex; flex-direction: column; align-items: stretch; gap: 12rpx; }
 .btn-revoke {
-  color: #e53e3e; font-size: 24rpx; padding: 10rpx 24rpx;
-  background: #ffebee; border-radius: 12rpx; font-weight: 500; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  min-width: 132rpx; height: 46rpx; box-sizing: border-box;
+  color: #e53e3e; font-size: 22rpx; line-height: 1; padding: 0 14rpx;
+  background: #ffebee; border-radius: 8rpx; font-weight: 500;
 }
 
 /* 空状态 */

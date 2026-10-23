@@ -10,7 +10,7 @@
 
 <!-- 顶部状态区 -->
 <view class="header-section">
-  <text class="app-title">🎲 WZ随机助手</text>
+  <view class="app-title"><text class="secret-dice" style="{{diceShakeStyle}}" bindtap="onSecretDiceTap">🎲</text><text> WZ随机助手</text></view>
   <text class="app-desc">每周日 8:00-20:00 开放提交</text>
 
   <view class="status-badge {{canSubmit ? 'open' : 'closed'}}">
@@ -121,3 +121,4 @@
 
 <!-- 隐私协议弹窗 -->
 <privacy-popup id="privacyPopup"></privacy-popup>
+<easter-dice id="easterDice" test-mode="{{isTestMode}}" superadmin="{{userInfo.role === 'superadmin'}}" bind:resetgate="onResetDiceGate"></easter-dice>

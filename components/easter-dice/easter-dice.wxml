@@ -1,0 +1,74 @@
+<view wx:if="{{visible}}" class="egg-mask">
+  <view class="egg-backdrop" catchtap="close" catchtouchmove="noop"></view>
+  <view class="egg-card {{stage === 'photo' ? 'photo-card' : ''}}" catchtap="noop">
+    <view class="egg-close" catchtap="close" aria-label="关闭彩蛋" role="button">×</view>
+    <scroll-view class="egg-scroll" style="height:{{scrollHeight}}px;" scroll-y="{{true}}" enhanced="{{true}}" bounces="{{false}}" scroll-top="{{panelScrollTop}}" bindscroll="onPanelScroll" catchtouchmove="noop">
+    <view class="egg-content">
+    <block wx:if="{{stage === 'dice' || stage === 'celebrate'}}">
+      <text class="egg-title">🐱 来玩骰子吧</text>
+      <view class="dice-arena {{rolling ? 'is-rolling' : ''}} {{stage === 'celebrate' ? 'is-winning' : ''}}"
+        catchtap="onDiceTap" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd" aria-label="投掷骰子" role="button">
+        <view class="dice-halo"></view><view class="dice-shadow"></view>
+        <view class="dice-lift"><view class="dice-cube" style="{{cubeStyle}}">
+          <view wx:for="{{faces}}" wx:for-item="faceItem" wx:key="value" class="dice-face face-{{faceItem.value}}">
+            <view wx:for="{{faceItem.dots}}" wx:key="slot" class="dice-pip {{item.visible ? 'pip-visible' : ''}}"></view>
+          </view>
+        </view></view>
+        <view class="meow-layer"><text class="floating-meow" wx:for="{{meows}}" wx:key="id" style="{{item.style}}">{{item.text}}</text></view>
+      </view>
+      <view class="streak-numbers"><text wx:for="{{streakNumbers}}" wx:key="id" class="streak-number">{{item.face}}</text></view>
+      <text class="play-hint">点几下试试手气</text>
+      <view class="progress-dots {{dotPulse ? 'dot-pulse' : ''}}">
+        <view class="progress-dot" wx:for="{{dots}}" wx:key="*this"></view>
+      </view>
+    </block>
+    <block wx:elif="{{stage === 'ask'}}">
+      <view class="cat-paw">🐾</view>
+      <text class="egg-title ask-title">你想看小猫吗？</text>
+      <text class="egg-subtitle invitation-meow">{{invitation}}</text>
+      <view class="ask-actions"><view class="ask-later" catchtap="close" role="button">下次吧</view><view class="ask-yes" catchtap="showCat" role="button">想！</view></view>
+    </block>
+    <block wx:elif="{{stage === 'photo' || stage === 'ascii' || stage === 'loading'}}">
+      <text class="egg-title photo-title">{{topText}}</text>
+      <view class="cat-photo-wrap" wx:if="{{stage !== 'ascii'}}">
+        <image wx:if="{{stage === 'photo'}}" class="cat-photo {{photoReady ? 'photo-ready' : ''}}" src="{{photoSrc}}" data-photo-id="{{_photoId}}" mode="aspectFit" bindload="onPhotoLoad" binderror="onPhotoError" catchtap="previewCat" />
+        <view class="photo-placeholder" wx:if="{{stage === 'loading' || !photoReady}}"><text class="loading-paw">🐾</text><text>小猫正在探头…</text></view>
+      </view>
+      <view wx:else class="ascii-scene">
+        <view class="ascii-glow"></view>
+        <view class="ascii-cat cat-wrap-{{asciiCat.motion}}"><view class="cat-shape cat-{{asciiCat.motion}}">
+          <block wx:for="{{asciiCat.lines}}" wx:key="*this">
+            <view wx:if="{{asciiCat.motion === 'wink' && index === 1}}" class="wink-face"><text class="wink-open">{{item}}</text><text class="wink-closed">{{asciiCat.winkFace}}</text></view>
+            <text wx:else class="ascii-line">{{item}}</text>
+          </block>
+          <text wx:if="{{asciiCat.motion === 'sleep'}}" class="sleep-z">z Z</text>
+        </view></view>
+        <text class="ascii-spark spark-left">✧</text><text class="ascii-spark spark-right">✦</text>
+      </view>
+      <text class="photo-caption">{{bottomText}}</text>
+      <text class="encounter-hint" wx:if="{{stage === 'ascii' || (stage === 'photo' && photoReady)}}">已发现的{{stage === 'ascii' ? '文字喵' : '小猫照片'}} {{encounterSeen}}/{{encounterTotal}}</text>
+      <text class="gesture-hint" wx:if="{{stage === 'photo'}}">点击照片可以看大图</text>
+      <view class="photo-done" catchtap="close" role="button">返回喵</view>
+    </block>
+    <view wx:if="{{testMode && superadmin}}" class="test-tools">
+      <view class="test-toggle" catchtap="toggleTest">{{testExpanded ? '收起测试场景 ▴' : '测试场景 ▾'}}</view>
+      <view wx:if="{{testExpanded}}" class="test-panel">
+        <picker range="{{scenarios}}" range-key="label" value="{{scenarioIndex}}" bindchange="onTestOption" data-field="scenarioIndex"><view class="test-option">投掷：{{scenarios[scenarioIndex].label}}</view></picker>
+        <picker range="{{pities}}" value="{{pityIndex}}" bindchange="onTestOption" data-field="pityIndex"><view class="test-option">保底：{{pities[pityIndex]}}</view></picker>
+        <picker range="{{rewards}}" value="{{rewardIndex}}" bindchange="onTestOption" data-field="rewardIndex"><view class="test-option">奖励：{{rewards[rewardIndex]}}</view></picker>
+        <picker range="{{networks}}" value="{{networkIndex}}" bindchange="onTestOption" data-field="networkIndex"><view class="test-option">图片：{{networks[networkIndex]}}</view></picker>
+        <picker range="{{cats}}" range-key="name" value="{{catIndex}}" bindchange="onTestOption" data-field="catIndex"><view class="test-option">文字猫：{{cats[catIndex].name}}</view></picker>
+        <picker range="{{invitations}}" value="{{invitationIndex}}" bindchange="onTestOption" data-field="invitationIndex"><view class="test-option">邀请：{{invitations[invitationIndex]}}</view></picker>
+        <picker range="{{replyModes}}" value="{{replyModeIndex}}" bindchange="onTestOption" data-field="replyModeIndex"><view class="test-option">回复：{{replyModes[replyModeIndex]}}</view></picker>
+        <picker wx:if="{{replyModeIndex === 2 || replyModeIndex === 3}}" range="{{replyTemplates}}" value="{{replyTemplateIndex}}" bindchange="onTestOption" data-field="replyTemplateIndex"><view class="test-option">句式 {{replyTemplateIndex + 1}}：{{replyTemplates[replyTemplateIndex]}}</view></picker>
+        <text class="test-diagnostics">{{diagnostics}}</text>
+        <text class="test-note">面板展开时上滑用于滚动，点击骰子仍可投掷。切换投掷/保底会重置本轮；快速场景仅验证四连。缓存演示只读已缓存云照片，慢加载延迟1.6秒，失败/无条目展示文字猫。文字猫预览不增加遇见记录。</text>
+        <view class="test-actions"><view catchtap="testReset">重置本轮</view><view catchtap="testAscii">预览文字猫</view><view catchtap="testInvitation">预览邀请</view></view>
+        <view class="test-actions"><view catchtap="testGate" data-normal="{{false}}">重试5次入口</view><view catchtap="testGate" data-normal="{{true}}">重试随机入口</view></view>
+      </view>
+    </view>
+    </view>
+    </scroll-view>
+  </view>
+</view>
+<view class="confetti-layer" wx:if="{{visible && celebrating}}"><view class="confetti-piece {{item.round ? 'confetti-round' : ''}}" wx:for="{{confetti}}" wx:key="id" style="{{item.style}}"></view></view>

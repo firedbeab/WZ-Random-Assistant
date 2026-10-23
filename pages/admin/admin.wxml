@@ -24,19 +24,19 @@
   <text class="notice-title">🔴 审核须知</text>
   <view class="notice-item">
     <text class="notice-dot">•</text>
-    <text class="notice-text">请检查各天是否有重复项目，筛选算法尚未完全自动化</text>
+    <text class="notice-text">请检查各天是否有重复曲目，筛选算法尚未完全自动化</text>
   </view>
   <view class="notice-item">
     <text class="notice-dot">•</text>
-    <text class="notice-text">请检查每项内容是否可正常访问和展示</text>
+    <text class="notice-text">请检查每项曲目是否可正常播放</text>
   </view>
   <view class="notice-item">
     <text class="notice-dot">•</text>
-    <text class="notice-text">请检查每项内容名称是否无意义或有敏感词汇</text>
+    <text class="notice-text">请检查歌名和歌手是否无意义或有敏感词汇</text>
   </view>
   <view class="notice-item">
     <text class="notice-dot">•</text>
-    <text class="notice-text">管理员身份已绑定当前微信账号，换设备无需重复验证</text>
+    <text class="notice-text">可通过勾选歌曲单独删除以应对特殊安排调整（可在发布前撤销）</text>
   </view>
 </view>
 
@@ -50,7 +50,7 @@
     验证码管理
   </view>
   <view class="tab-item {{currentTab === 'test' ? 'active' : ''}}" bindtap="switchTab" data-tab="test" wx:if="{{isTestEnv}}">
-    测试工具
+    控制台
   </view>
   <view class="tab-item {{currentTab === 'admins' ? 'active' : ''}}" bindtap="switchTab" data-tab="admins" wx:if="{{isSuperAdmin}}">
     管理员
@@ -58,6 +58,7 @@
   <view class="tab-item {{currentTab === 'help' ? 'active' : ''}}" bindtap="switchTab" data-tab="help" wx:if="{{isSuperAdmin}}">
     说明管理
   </view>
+  <view class="tab-item" bindtap="goEasterEggs" wx:if="{{isSuperAdmin}}">彩蛋管理</view>
 </view>
 </scroll-view>
 
@@ -75,14 +76,16 @@
         <view class="day-header">
           <text class="day-title">{{item}}</text>
           <view class="day-actions">
-            <text class="day-count">{{schedule['day'+(dayIdx+1)].length}}项</text>
+            <text class="day-count">{{dayCounts[dayIdx].active}}项<text wx:if="{{dayCounts[dayIdx].pending > 0}}"> · {{dayCounts[dayIdx].pending}}项待删除</text></text>
             <text class="btn-skip-day" bindtap="onSkipDay" data-day="{{dayIdx}}">跳过此日</text>
           </view>
         </view>
 
-        <view class="song-list">
-          <block wx:for="{{schedule['day'+(dayIdx+1)]}}" wx:key="_id" wx:for-index="songIdx">
-            <view class="song-item">
+        <checkbox-group class="song-list" bindchange="onAuditSelectionChange" data-day="{{dayIdx}}">
+          <block wx:for="{{schedule['day'+(dayIdx+1)]}}" wx:key="submission_id" wx:for-index="songIdx">
+            <view class="song-item {{item.audit_state === 'pending_remove' ? 'pending-remove' : ''}}">
+              <checkbox class="song-select" wx:if="{{item.audit_state !== 'pending_remove'}}" value="{{songIdx}}" />
+              <view class="song-select-placeholder" wx:else>−</view>
               <view
                 class="song-info"
                 bindlongpress="onCopySong"
@@ -93,17 +96,24 @@
                 <text class="song-name">{{item.song_name}}</text>
                 <text class="song-singer">{{item.singer}}</text>
                 <text class="song-special" wx:if="{{item.special_note}}">📌 {{item.special_note}}</text>
+                <text class="pending-remove-note" wx:if="{{item.audit_state === 'pending_remove'}}">待删除 · {{item.removal_reason || '当天安排调整'}}</text>
               </view>
               <view class="song-actions">
-                <button class="btn-note" size="mini" bindtap="onOpenNote" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}">
-                  {{item.special_note ? '备注' : '+备注'}}
-                </button>
-                <button class="btn-exception" size="mini" bindtap="onException" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}">
-                  异常
-                </button>
+                <block wx:if="{{item.audit_state === 'pending_remove'}}">
+                  <view class="song-action-btn pending-remove-tag"><text>待删除</text></view>
+                  <view class="song-action-btn btn-restore" bindtap="onRestoreRemoval" data-day="{{dayIdx}}" data-song-index="{{songIdx}}"><text>撤销</text></view>
+                </block>
+                <block wx:else>
+                  <view class="song-action-btn btn-note" bindtap="onOpenNote" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}"><text>{{item.special_note ? '备注' : '+备注'}}</text></view>
+                  <view class="song-action-btn btn-exception" bindtap="onException" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}"><text>异常</text></view>
+                </block>
               </view>
             </view>
           </block>
+        </checkbox-group>
+        <view class="day-bulk-actions" wx:if="{{auditSelections['day'+dayIdx].length > 0}}">
+          <text>已选 {{auditSelections['day'+dayIdx].length}} 首</text>
+          <view class="btn-remove-selected" bindtap="onRemoveSelectedFromDay" data-day="{{dayIdx}}"><text>标记删除，不补位</text></view>
         </view>
       </view>
     </block>
@@ -187,8 +197,7 @@
   <!-- 数据统计 -->
   <view class="test-section">
     <view class="test-section-title">数据统计</view>
-    <view wx:if="{{testStats}}">
-      <view class="stats-row">
+    <view wx:if="{{testStats}}" class="stats-grid">
         <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="submissions">
           <text class="stat-num">{{testStats.total.submissions}}</text>
           <text class="stat-label">提交请求</text>
@@ -205,8 +214,6 @@
           <text class="stat-num">{{(testStats.total.schedule_exceptions || 0) + (testStats.total.system_events || 0)}}</text>
           <text class="stat-label">异常记录</text>
         </view>
-      </view>
-      <view class="stats-row">
         <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="counters">
           <text class="stat-num">{{testStats.total.submission_counters}}</text>
           <text class="stat-label">计数器</text>
@@ -219,7 +226,6 @@
           <text class="stat-num">{{testStats.total.users}}</text>
           <text class="stat-label">用户</text>
         </view>
-      </view>
     </view>
   </view>
 
@@ -267,7 +273,7 @@
     <view class="test-grid">
       <view class="test-btn orange" bindtap="onTestClearWeek">清空本周</view>
       <view class="test-btn orange" bindtap="onTestClearSubscriptions">清空订阅记录</view>
-      <view class="test-btn disabled" bindtap="onTestClearAll">全部清空（已禁用）</view>
+      <view class="test-btn red" bindtap="onTestClearAll">清空全部测试数据</view>
     </view>
   </view>
 </view>
@@ -310,12 +316,12 @@
       <view class="admin-item" wx:for="{{adminList}}" wx:key="openid">
         <view class="admin-info">
           <text class="admin-openid">{{item.admin_label}}</text>
-          <text class="admin-role-tag {{item.role === 'superadmin' ? 'role-super' : 'role-admin'}}">
-            {{item.role === 'superadmin' ? '超管' : '管理'}}
-          </text>
           <text class="admin-date">{{item.last_verify_date}}</text>
         </view>
-        <text class="btn-revoke" wx:if="{{item.role !== 'superadmin'}}" bindtap="onRevokeAdmin" data-openid="{{item.openid}}">撤销</text>
+        <view class="admin-side">
+          <view class="admin-role-tag {{item.role === 'superadmin' ? 'role-super' : 'role-admin'}}"><text>{{item.role === 'superadmin' ? '超级管理员' : '管理员'}}</text></view>
+          <view class="btn-revoke" wx:if="{{item.role !== 'superadmin'}}" bindtap="onRevokeAdmin" data-openid="{{item.openid}}"><text>撤销</text></view>
+        </view>
       </view>
     </view>
 

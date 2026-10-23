@@ -50,6 +50,9 @@ Page({
     noteSongIndex: null,
     noteText: '',
     noteSaving: false,
+    auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
+    pendingRemovalCount: 0,
+    dayCounts: [],
   },
 
   onLoad() {
@@ -69,6 +72,10 @@ Page({
     if (this.data.currentTab === 'help' && this.data.isSuperAdmin) {
       this.loadHelpArticles(false);
     }
+  },
+
+  goEasterEggs() {
+    if (this.data.isSuperAdmin) wx.navigateTo({ url: '/pages/admin/easter-eggs' });
   },
 
   async checkPermissionFromCloud() {
@@ -200,7 +207,21 @@ Page({
         data: { action: 'getPending' }
       });
       if (res.result.success) {
-        this.setData({ schedule: res.result.data });
+        const schedule = res.result.data;
+        const pendingRemovalCount = ['day1', 'day2', 'day3', 'day4', 'day5']
+          .reduce((count, day) => count + (schedule[day] || [])
+            .filter(item => item.audit_state === 'pending_remove').length, 0);
+        const dayCounts = ['day1', 'day2', 'day3', 'day4', 'day5'].map(day => {
+          const items = schedule[day] || [];
+          const pending = items.filter(item => item.audit_state === 'pending_remove').length;
+          return { active: items.length - pending, pending };
+        });
+        this.setData({
+          schedule,
+          pendingRemovalCount,
+          dayCounts,
+          auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] }
+        });
       } else {
         wx.showToast({ title: res.result.message, icon: 'none' });
       }
@@ -261,6 +282,76 @@ Page({
     });
   },
 
+  onAuditSelectionChange(e) {
+    const dayIndex = Number(e.currentTarget.dataset.day);
+    this.setData({ [`auditSelections.day${dayIndex}`]: e.detail.value || [] });
+  },
+
+  onRemoveSelectedFromDay(e) {
+    const dayIndex = Number(e.currentTarget.dataset.day);
+    const selected = this.data.auditSelections[`day${dayIndex}`] || [];
+    if (!selected.length) {
+      wx.showToast({ title: '请先选择要删除的曲目', icon: 'none' });
+      return;
+    }
+    const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
+    wx.showModal({
+      title: `标记${dayLabel}所选曲目`,
+      content: ``,
+      editable: true,
+      placeholderText: '可填写调整原因（选填）',
+      confirmText: '标记删除',
+      confirmColor: '#e53e3e',
+      success: async res => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中' });
+        try {
+          const ret = await cloudCall({
+            name: 'adminAuditPlaylist',
+            data: {
+              action: 'removeItems',
+              playlistId: this.data.schedule._id,
+              dayIndex,
+              songIndexes: selected.map(Number),
+              revision: this.data.schedule.revision,
+              reason: (res.content || '').trim() || '当天安排调整'
+            }
+          });
+          if (!ret.result.success) throw new Error(ret.result.message || '删除失败');
+          this.setData({ [`auditSelections.day${dayIndex}`]: [] });
+          await this.loadPlaylist(false);
+          wx.showToast({ title: ret.result.message, icon: 'success' });
+        } catch (err) {
+          wx.showToast({ title: err.message || '删除失败', icon: 'none' });
+        } finally {
+          wx.hideLoading();
+        }
+      }
+    });
+  },
+
+  onRestoreRemoval(e) {
+    const dayIndex = Number(e.currentTarget.dataset.day);
+    const songIndex = Number(e.currentTarget.dataset.songIndex);
+    wx.showLoading({ title: '撤销中' });
+    cloudCall({
+      name: 'adminAuditPlaylist',
+      data: {
+        action: 'restoreItems',
+        playlistId: this.data.schedule._id,
+        dayIndex,
+        songIndexes: [songIndex],
+        revision: this.data.schedule.revision
+      }
+    }).then(async ret => {
+      if (!ret.result.success) throw new Error(ret.result.message || '撤销失败');
+      await this.loadPlaylist(false);
+      wx.showToast({ title: ret.result.message, icon: 'success' });
+    }).catch(err => {
+      wx.showToast({ title: err.message || '撤销失败', icon: 'none' });
+    }).finally(() => wx.hideLoading());
+  },
+
   async confirmException() {
     const { schedule, modalDay, modalSongIndex, selectedReason, customReason } = this.data;
     const reason = customReason || selectedReason || '管理员移除';
@@ -295,12 +386,14 @@ Page({
   },
 
   async onPublish() {
-    const { schedule, note } = this.data;
+    const { schedule, note, pendingRemovalCount } = this.data;
     if (!schedule) return;
 
     wx.showModal({
       title: '确认发布',
-      content: '发布后列表将对用户可见，且不可修改。是否确认？',
+      content: pendingRemovalCount > 0
+        ? `发布后列表将对用户可见，并最终移除 ${pendingRemovalCount} 首待删除曲目。是否确认？`
+        : '发布后列表将对用户可见，且不可修改。是否确认？',
       success: async (res) => {
         if (res.confirm) {
           this.setData({ publishing: true });
@@ -854,13 +947,16 @@ Page({
 
     const preview = previewResult.preview || {};
     const isWeek = scope === 'week';
+    const isAll = scope === 'all';
     const detail = isWeek
       ? `提交 ${preview.submissions || 0}、排期 ${preview.schedules || 0}、验证码 ${preview.weekly_codes || 0}、异常 ${preview.schedule_exceptions || 0}、计数器 ${preview.submission_counters || 0}、订阅 ${preview.message_subscriptions || 0}`
-      : `订阅记录 ${preview.message_subscriptions || 0}`;
+      : (isAll
+        ? `12 个 test_ 集合中的测试记录（当前测试超管身份会保留）`
+        : `订阅记录 ${preview.message_subscriptions || 0}`);
     const confirmationText = previewResult.confirmationText;
 
     wx.showModal({
-      title: isWeek ? '确认清空本周数据' : '确认清空订阅记录',
+      title: isWeek ? '确认清空本周数据' : (isAll ? '确认清空全部测试数据' : '确认清空订阅记录'),
       content: `即将删除：${detail}，共 ${preview.total || 0} 条。\n请输入“${confirmationText}”确认，令牌两分钟内有效。`,
       editable: true,
       placeholderText: `输入“${confirmationText}”`,
@@ -876,7 +972,7 @@ Page({
           const ret = await cloudCall({
             name: 'testTool',
             data: {
-              action: isWeek ? 'clearWeek' : 'clearSubscriptions',
+              action: isWeek ? 'clearWeek' : (isAll ? 'clearAll' : 'clearSubscriptions'),
               confirmationToken: previewResult.confirmationToken,
               confirmationText
             }
@@ -910,11 +1006,7 @@ Page({
   },
 
   onTestClearAll() {
-    wx.showModal({
-      title: '生产保护已开启',
-      content: '正式云环境已从服务端永久禁用“清空所有数据”。如需清理，请使用范围明确的“清空本周”或“清空订阅记录”。',
-      showCancel: false
-    });
+    this.requestCleanupConfirmation('all');
   },
 
   // ========== 管理员管理相关方法 ==========
@@ -944,8 +1036,8 @@ Page({
       });
       if (res.result.success) {
         const list = res.result.data.map(u => Object.assign({}, u, {
-          admin_label: u.admin_label || '未标记',
-          last_verify_date: u.last_admin_verify ? new Date(u.last_admin_verify).toLocaleDateString() : '-'
+          admin_label: u.admin_label || (u.role === 'superadmin' ? '系统预设账号' : '未设置来源标签'),
+          last_verify_date: u.last_admin_verify ? `最近验证：${new Date(u.last_admin_verify).toLocaleDateString()}` : '暂无验证记录'
         }));
         this.setData({ adminList: list });
       }

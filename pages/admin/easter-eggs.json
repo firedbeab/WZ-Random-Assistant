@@ -1,0 +1,5 @@
+{
+  "navigationBarTitleText": "彩蛋管理",
+  "enablePullDownRefresh": true,
+  "usingComponents": { "privacy-popup": "/components/privacy-popup/privacy-popup" }
+}

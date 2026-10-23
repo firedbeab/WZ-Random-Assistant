@@ -88,7 +88,7 @@ async function checkText(openid, content, testMode) {
 }
 
 function toScheduleItem(item) {
-  return {
+  const normalized = {
     submission_id: item.submission_id || item._id || '',
     song_name: sanitize(item.song_name, 50),
     song_key: normalizeSongName(item.song_name),
@@ -97,6 +97,13 @@ function toScheduleItem(item) {
     is_repeat: item.is_repeat === true,
     source_week_key: typeof item.source_week_key === 'string' ? item.source_week_key : ''
   };
+  if (item.audit_state === 'pending_remove') {
+    normalized.audit_state = 'pending_remove';
+    normalized.removal_reason = sanitize(item.removal_reason || '', 50);
+    normalized.removal_marked_at = item.removal_marked_at || null;
+    normalized.removal_marked_by = typeof item.removal_marked_by === 'string' ? item.removal_marked_by : '';
+  }
+  return normalized;
 }
 
 function validateDays(rawDays) {
@@ -111,7 +118,7 @@ function validateDays(rawDays) {
     days[day].forEach(item => {
       if (names.has(item.song_key)) throw new Error('排期中存在重复内容');
       names.add(item.song_key);
-      total += 1;
+      if (item.audit_state !== 'pending_remove') total += 1;
     });
   });
   if (total === 0) throw new Error('排期至少需要保留一个项目');
@@ -328,7 +335,9 @@ exports.main = async event => {
       ]);
       const normalizedExceptions = exceptionRows.map(item => Object.assign({}, item, {
         category: 'schedule_exception', severity: 'warning',
-        action: item.reason === '管理员跳过该日' ? 'schedule.skip_day' : 'schedule.mark_exception',
+        action: item.operation === 'remove_items'
+          ? 'schedule.remove_items'
+          : (item.reason === '管理员跳过该日' ? 'schedule.skip_day' : 'schedule.mark_exception'),
         target_type: 'schedule', target_id: item.schedule_id,
         before: item.original_item, operator_openid: item.operator
       }));
