@@ -8,6 +8,9 @@ const FACE_PIPS = [[4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2,
 const FACE_ROTATIONS = [[0, 0], [0, -90], [-90, 0], [90, 0], [0, 90], [0, 180]];
 // 原生预览标记的兜底存活时间：超过该时长仍未收到页面 show，就当作标记泄漏并清除。
 const PREVIEW_FLAG_TTL = 5 * 60 * 1000;
+// 领奖时等待照片的总预算。首次冷路径实测约 4.5 秒（两次云调用 + 下载 90KB），
+// 原先 2.5 秒会在网络稍慢时必然回退文字猫。
+const PHOTO_WAIT_MS = 5000;
 const SCENARIOS = [
   { value: 'quick', label: '快速四连（10次内）' }, { value: 'pairs', label: '8次二连累计（16次投掷）' },
   { value: 'triples', label: '2次三连累计（6次投掷）' }, { value: 'mixed', label: '混合计数（验证小点不相加）' },
@@ -94,9 +97,22 @@ Component({
     },
     preloadPhoto() {
       // 预加载失败必须清掉任务，否则领奖时会一直复用一个已经失败的任务。
-      this._photoTask = photos.manifest(true)
-        .then(() => photos.prepare(this._lastPhotoId))
-        .catch(err => { this._photoTask = null; diagnostics.record('easter_photo', 'preload', err); return null; });
+      // 首次冷路径要等两次云调用和一次下载，任何一步抖动都可能在开窗阶段失败，因此在后台自动重试一次。
+      const token = this._token;
+      const attempt = () => photos.manifest(true).then(() => photos.prepare(this._lastPhotoId));
+      this._photoTask = attempt()
+        .catch(err => {
+          diagnostics.record('easter_photo', 'preload', err);
+          return new Promise(resolve => setTimeout(resolve, 800)).then(() => {
+            if (this._detached || token !== this._token) return null;
+            return attempt();
+          });
+        })
+        .catch(err => {
+          diagnostics.record('easter_photo', 'preload_retry', err);
+          this._photoTask = null;
+          return null;
+        });
     },
     preloadReply() {
       const request = this._replyRequest = (this._replyRequest || 0) + 1;
@@ -232,12 +248,12 @@ Component({
         });
         if (token !== this._token || !this.data.visible) return;
         let photo = network === 1
-          ? await photos.withTimeout(photos.prepareCached(this._lastPhotoId)).catch(() => null)
-          : await photos.withTimeout(this._photoTask || photos.prepare(this._lastPhotoId)).catch(() => null);
+          ? await photos.withTimeout(photos.prepareCached(this._lastPhotoId), PHOTO_WAIT_MS).catch(() => null)
+          : await photos.withTimeout(this._photoTask || photos.prepare(this._lastPhotoId), PHOTO_WAIT_MS).catch(() => null);
         if (token !== this._token || !this.data.visible) return;
         // 预加载失败时允许在领奖时有限重试一次；不重抽20%文字概率、不改通关规则。
         if (!photo && network !== 1) {
-          photo = await photos.withTimeout(photos.prepare(this._lastPhotoId)).catch(err => {
+          photo = await photos.withTimeout(photos.prepare(this._lastPhotoId), PHOTO_WAIT_MS).catch(err => {
             diagnostics.record('easter_photo', 'reward_retry', err);
             return null;
           });
