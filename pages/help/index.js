@@ -29,6 +29,8 @@ Page({
     expandedId: '',
     loading: true,
     loadFailed: false,
+    loadErrorTitle: '暂时无法加载使用说明',
+    loadErrorText: '请检查网络后重试',
     imageSrcs: {},
     imageErrors: {}
   },
@@ -57,7 +59,10 @@ Page({
         data: { action: 'listPublished' }
       });
       if (!res.result || !res.result.success) {
-        throw new Error('load failed');
+        // 区分“没有权限”和“网络/其它失败”，避免把权限拒绝说成网络问题误导排查。
+        const error = new Error((res.result && res.result.message) || 'load failed');
+        error.code = (res.result && res.result.code) || '';
+        throw error;
       }
       const articles = Array.isArray(res.result.data) ? res.result.data : [];
       const openedIds = new Set(
@@ -74,7 +79,14 @@ Page({
       const opened = displayArticles.filter(article => article._opened && Array.isArray(article.images) && article.images.length > 0);
       opened.forEach(article => this.prepareImages(article.images));
     } catch (err) {
-      this.setData({ loading: false, loadFailed: this.data.articles.length === 0 });
+      const code = (err && err.code) || '';
+      const denied = code === 'TEST_ACCESS_DENIED' || code === 'FORBIDDEN' || /权限/.test((err && err.message) || '');
+      this.setData({
+        loading: false,
+        loadFailed: this.data.articles.length === 0,
+        loadErrorTitle: denied ? '暂时无法查看说明' : '加载失败',
+        loadErrorText: denied ? '当前账号没有查看该内容的权限' : '请检查网络后重试'
+      });
     }
   },
 

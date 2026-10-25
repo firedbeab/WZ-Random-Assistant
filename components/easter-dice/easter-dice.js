@@ -22,13 +22,31 @@ function confetti() {
     style: `left:${id % 2 ? 95 : 5}%;--travel:${(id % 2 ? -1 : 1) * (50 + Math.random() * 260)}px;--rise:${-130 - Math.random() * 250}px;--spin:${Math.floor(Math.random() * 1000 + 360)}deg;background:${colors[id % colors.length]};animation-delay:${Math.random() * 180}ms;animation-duration:${1700 + Math.random() * 500}ms;`
   }));
 }
+// 照片展示框的高度：按图片真实比例算，夹在 320–620rpx 之间。
+// 比例与框一致时 aspectFill 等于不裁剪，因此不会再出现左右白边；
+// 特别竖长的图会被夹到上限并轻微裁掉上下边缘。
+const PHOTO_BOX_MIN = 320;
+const PHOTO_BOX_MAX = 620;
+const PHOTO_BOX_DEFAULT = 500;
+// 与 .photo-card .egg-content 的左右 padding（24rpx × 2）保持一致。
+const PHOTO_BOX_WIDTH = 750 - 48;
+
+function photoBoxHeightFor(detail) {
+  const width = detail && Number(detail.width) > 0 ? Number(detail.width) : 0;
+  const height = detail && Number(detail.height) > 0 ? Number(detail.height) : 0;
+  if (!width || !height) return PHOTO_BOX_DEFAULT;
+  const scaled = Math.round(PHOTO_BOX_WIDTH * (height / width));
+  if (!Number.isFinite(scaled) || scaled <= 0) return PHOTO_BOX_DEFAULT;
+  return Math.max(PHOTO_BOX_MIN, Math.min(PHOTO_BOX_MAX, scaled));
+}
+
 Component({
   properties: { testMode: { type: Boolean, value: false }, superadmin: { type: Boolean, value: false } },
   data: {
     visible: false, stage: 'dice', rolling: false, face: 0, streak: 0, streakNumbers: [], dots: [], dotPulse: false,
     faces: FACE_PIPS.map((pips, i) => ({ value: i + 1, dots: Array.from({ length: 9 }, (_, slot) => ({ slot, visible: pips.includes(slot) })) })),
     cubeStyle: 'transform:rotateX(-18deg) rotateY(-26deg);', celebrating: false, confetti: [], meows: [],
-    invitation: '', photoSrc: '', photoReady: false, _photoId: '', topText: '', bottomText: '', asciiCat: cats[0],
+    invitation: '', photoSrc: '', photoReady: false, photoBoxHeight: PHOTO_BOX_DEFAULT, _photoId: '', topText: '', bottomText: '', asciiCat: cats[0],
     encounterSeen: 0, encounterTotal: 0, scrollHeight: 400, panelScrollTop: 0,
     testExpanded: false, scenarios: SCENARIOS, scenarioIndex: 0,
     rewards: ['正常概率', '指定云端照片', '指定颜文字猫'], rewardIndex: 0,
@@ -39,7 +57,7 @@ Component({
     replyTemplates: replies.singerTemplates, replyTemplateIndex: 0
   },
   observers: {
-    'visible, stage, testExpanded, topText, bottomText'() { this.refreshLayout(); }
+    'visible, stage, testExpanded, topText, bottomText, photoReady'() { this.refreshLayout(); }
   },
   lifetimes: {
     attached() { this._timers = []; this._token = 0; this._rotation = [-18, -26]; this.resetRound(); },
@@ -162,6 +180,7 @@ Component({
       this._currentPhoto = null;
       this._personalReply = undefined;
       this.setData({ stage: 'dice', rolling: false, face: 0, streak: 0, streakNumbers: [], dots: [], meows: [], confetti: [], celebrating: false, dotPulse: false,
+        photoBoxHeight: PHOTO_BOX_DEFAULT,
         cubeStyle: 'transform:rotateX(-18deg) rotateY(-26deg);', diagnostics: this.diagnostics() });
     },
     diagnostics() {
@@ -263,7 +282,8 @@ Component({
         if (network === 3) { this.later(() => { if (token === this._token) this.showAscii(); }, 400); return; }
         this._currentPhoto = photo;
         this.setData({ stage: 'photo', _photoId: photo.id, photoSrc: photo.path, topText: photo.topText,
-          bottomText: this.rewardCaption(photo.bottomText, photo.hasCustomBottom !== false), photoReady: false });
+          bottomText: this.rewardCaption(photo.bottomText, photo.hasCustomBottom !== false), photoReady: false,
+          photoBoxHeight: PHOTO_BOX_DEFAULT });
         // 文件存在但解码/渲染迟迟不成功时也及时给出文字猫。
         this.later(() => { if (token === this._token && this.data.stage === 'photo' && !this.data.photoReady) this.showAscii(); }, 2500);
       } catch (_) { if (token === this._token && this.data.visible) this.showAscii(); }
@@ -274,8 +294,19 @@ Component({
       const photo = this._currentPhoto;
       this._lastPhotoId = photo.id;
       const progress = encounters.record('photo', photo.id, photo.catalogIds || [photo.id]);
-      this.setData({ photoReady: true, encounterSeen: progress.seen, encounterTotal: progress.total });
+      // 按图片真实宽高比决定展示框高度，避免比例不符时露底色；测量异常时退回默认值。
+      const boxHeight = photoBoxHeightFor(e && e.detail);
+      this.setData({
+        photoReady: true,
+        photoBoxHeight: boxHeight,
+        encounterSeen: progress.seen,
+        encounterTotal: progress.total
+      });
+      // 图片真正完成布局后再校准一次弹窗高度，避免"刚出现时还能滚动、点过大图才适配"。
+      this.scheduleRelayout();
     },
+    // 单独抽出来，方便测试替换为惰性实现（真实测量依赖 wx）。
+    scheduleRelayout() { this.later(() => this.refreshLayout(), 50); },
     onPhotoError(e) {
       if (!this.data.visible || this.data.stage !== 'photo') return;
       if (e && e.currentTarget && this._currentPhoto && e.currentTarget.dataset.photoId !== this._currentPhoto.id) return;

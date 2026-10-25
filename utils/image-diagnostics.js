@@ -1,6 +1,8 @@
 // 轻量、脱敏的图片诊断记录：只保留模块、阶段、错误码和时间。
 // 不记录 openid、投稿内容、图片地址或签名链接，最多保留最近 30 条。
-const STORAGE_KEY = 'img_diag_v1';
+const { storageKey } = require('./runtime');
+// 与其他缓存一致按数据域隔离，避免测试域与正式域的诊断记录混在一起。
+const STORAGE_KEY = storageKey('image_diag_v1');
 const LIMIT = 30;
 
 function codeOf(error) {

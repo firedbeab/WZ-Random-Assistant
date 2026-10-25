@@ -77,6 +77,8 @@ Page({
 
     // 每次进入页面实时判断：时间窗口 + 通道开关 + 是否已提交
     async checkTimeAndSubmission() {
+      // 并发令牌：只采纳最后一次状态检查的结果，迟到的旧响应直接丢弃。
+      const token = (this._statusToken = (this._statusToken || 0) + 1);
       try {
         this.clearStatusMessage();
 
@@ -120,6 +122,7 @@ Page({
           if (publishedSchedule) {
             // 排期已发布 → 清除已提交状态和本地缓存
             wx.removeStorageSync(LAST_SUBMISSION_KEY);
+            if (token !== this._statusToken) return;
             this.setData({ hasSubmitted: false, submittedInfo: '', schedulePublished: true });
             return;
           }
@@ -128,11 +131,13 @@ Page({
         }
 
         // 本周排期尚未发布
+        if (token !== this._statusToken) return;
         this.setData({ schedulePublished: false });
 
         // 4. 先查本地缓存（优先读缓存，避免重复查询数据库）
         const cached = wx.getStorageSync(LAST_SUBMISSION_KEY);
         if (cached && cached.week_key === currentWeekKey && cached.song_name) {
+          if (token !== this._statusToken) return;
           this.setData({
             hasSubmitted: true,
             submittedInfo: `《${cached.song_name}》- ${cached.remark}`
@@ -159,11 +164,13 @@ Page({
           : res.data[0];
 
         if (song) {
+          if (token !== this._statusToken) return;
           this.setData({
             hasSubmitted: true,
             submittedInfo: `《${song.song_name}》- ${song.singer}`
           });
         } else {
+          if (token !== this._statusToken) return;
           this.setData({ hasSubmitted: false });
         }
       } catch (e) {
@@ -287,6 +294,8 @@ Page({
           song_name: title,
           remark: remark
         });
+        // 提交成功：作废可能还在途中的旧状态检查，避免把“已提交”又改回未提交。
+        this._statusToken = (this._statusToken || 0) + 1;
         this.setData({
           weeklyCode: '',
           title: '',

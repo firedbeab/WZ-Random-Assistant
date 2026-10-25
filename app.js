@@ -42,9 +42,13 @@ App({
           confirmText: '同意',
           cancelText: '拒绝',
           success(res) {
-            if (res.confirm) {
-              resolve({ buttonId: 'modal-agree', event: 'agree' });
-            }
+            // 同意与拒绝都必须回调，否则隐私授权会一直处于 pending，相关接口后续直接挂住。
+            resolve(res.confirm
+              ? { buttonId: 'modal-agree', event: 'agree' }
+              : { buttonId: 'modal-disagree', event: 'disagree' });
+          },
+          fail() {
+            resolve({ event: 'disagree' });
           }
         });
       });

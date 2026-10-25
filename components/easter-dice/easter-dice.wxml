@@ -30,8 +30,8 @@
     </block>
     <block wx:elif="{{stage === 'photo' || stage === 'ascii' || stage === 'loading'}}">
       <text class="egg-title photo-title">{{topText}}</text>
-      <view class="cat-photo-wrap" wx:if="{{stage !== 'ascii'}}">
-        <image wx:if="{{stage === 'photo'}}" class="cat-photo {{photoReady ? 'photo-ready' : ''}}" src="{{photoSrc}}" data-photo-id="{{_photoId}}" mode="aspectFit" bindload="onPhotoLoad" binderror="onPhotoError" catchtap="previewCat" />
+      <view class="cat-photo-wrap" wx:if="{{stage !== 'ascii'}}" style="height:{{photoBoxHeight}}rpx">
+        <image wx:if="{{stage === 'photo'}}" class="cat-photo {{photoReady ? 'photo-ready' : ''}}" src="{{photoSrc}}" data-photo-id="{{_photoId}}" mode="aspectFill" bindload="onPhotoLoad" binderror="onPhotoError" catchtap="previewCat" />
         <view class="photo-placeholder" wx:if="{{stage === 'loading' || !photoReady}}"><text class="loading-paw">🐾</text><text>小猫正在探头…</text></view>
       </view>
       <view wx:else class="ascii-scene">

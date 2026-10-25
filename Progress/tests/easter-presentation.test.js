@@ -53,7 +53,9 @@ function instance(reason) {
   return {
     ...component.methods, data: { stage: 'ask', visible: true, meows: [] }, _round: { winReason: reason }, _token: 0,
     setData(value, callback) { Object.assign(this.data, value); if (callback) callback(); }, testAllowed: () => false,
-    later(fn, ms) { if (ms < 1000) fn(); }
+    later(fn, ms) { if (ms < 1000) fn(); },
+    // 照片加载后的重新测量依赖 wx，测试里换成惰性实现；真实 refreshLayout 仍保留供后面的用例验证。
+    scheduleRelayout() {}
   };
 }
 (async () => {
@@ -71,6 +73,19 @@ function instance(reason) {
   four.onPhotoLoad({ currentTarget: { dataset: { photoId: 'cat' } } });
   assert.equal(four.data.encounterSeen, 1); assert.equal(four.data.encounterTotal, 1);
   four.onPhotoLoad(); assert.equal(encounters.summary('photo', ['cat']).seen, 1);
+  // 展示框高度按图片真实比例计算：横图变矮、超竖图夹到上限、拿不到尺寸时退回默认值。
+  const wide = instance('four');
+  wide.data.stage = 'photo'; wide.data.photoReady = false; wide._currentPhoto = { id: 'cat', catalogIds: ['cat'] };
+  wide.onPhotoLoad({ currentTarget: { dataset: { photoId: 'cat' } }, detail: { width: 1000, height: 500 } });
+  assert.equal(wide.data.photoBoxHeight, 351);
+  const tall = instance('four');
+  tall.data.stage = 'photo'; tall.data.photoReady = false; tall._currentPhoto = { id: 'cat', catalogIds: ['cat'] };
+  tall.onPhotoLoad({ currentTarget: { dataset: { photoId: 'cat' } }, detail: { width: 500, height: 2000 } });
+  assert.equal(tall.data.photoBoxHeight, 620);
+  const unknown = instance('four');
+  unknown.data.stage = 'photo'; unknown.data.photoReady = false; unknown._currentPhoto = { id: 'cat', catalogIds: ['cat'] };
+  unknown.onPhotoLoad({ currentTarget: { dataset: { photoId: 'cat' } } });
+  assert.equal(unknown.data.photoBoxHeight, 500);
   const preview = instance('pairs'), before = encounters.summary('cat', cats.map(cat => cat.id)).seen;
   preview.showAscii(7, true); assert.equal(encounters.summary('cat', cats.map(cat => cat.id)).seen, before);
   const alreadySeen = encounters.summary('cat', [cats[7].id]).seen;

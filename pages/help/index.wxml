@@ -10,8 +10,8 @@
   </view>
 
   <view class="error-card" wx:elif="{{loadFailed}}">
-    <text class="error-title">暂时无法加载使用说明</text>
-    <text class="error-desc">请检查网络后重试</text>
+    <text class="error-title">{{loadErrorTitle}}</text>
+    <text class="error-desc">{{loadErrorText}}</text>
     <button class="retry-btn" bindtap="retryLoad">重新加载</button>
   </view>
 

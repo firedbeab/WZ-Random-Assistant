@@ -4,6 +4,14 @@ const { cloudCall, collectionName, isTestMode, storageKey } = require('../../uti
 // 订阅消息模板 ID（管理员：参与活动提醒）
 const ADMIN_TPL_ID = 'G9y63KY2Q0mPOS-ML_PtxVu9wqE5xKqVnnNgEFtPC_8';
 
+// showToast 与 showLoading 共用同一层：在 finally 里关掉 loading 会把刚弹出的提示一起抹掉。
+// 统一延后一帧再弹，保证提示一定看得见；用户无感知（0ms）。
+function toastLater(options) {
+  setTimeout(() => {
+    try { toastLater(options); } catch (_) { /* 页面已卸载时忽略 */ }
+  }, 0);
+}
+
 Page({
   data: {
     isTestMode: isTestMode(),
@@ -109,7 +117,7 @@ Page({
       }
     } catch (err) {
       console.warn('身份验证失败');
-      wx.showToast({ title: '网络异常', icon: 'none' });
+      toastLater({ title: '网络异常', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1500);
     } finally {
       wx.hideLoading();
@@ -134,7 +142,7 @@ Page({
   },
 
   showNoPermission() {
-    wx.showToast({ title: '无权限访问', icon: 'none' });
+    toastLater({ title: '无权限访问', icon: 'none' });
     setTimeout(() => wx.navigateBack(), 1500);
   },
 
@@ -165,7 +173,7 @@ Page({
   async onEnableNotification() {
     if (this.data.isTestMode) {
       this.setData({ subscribed: true });
-      wx.showToast({ title: '测试环境已模拟订阅', icon: 'none' });
+      toastLater({ title: '测试环境已模拟订阅', icon: 'none' });
       return;
     }
     try {
@@ -190,7 +198,7 @@ Page({
           });
         }
         this.setData({ subscribed: true });
-        wx.showToast({ title: '已开启通知', icon: 'success' });
+        toastLater({ title: '已开启通知', icon: 'success' });
       }
     } catch (err) {
       console.warn('订阅失败:', err);
@@ -223,7 +231,7 @@ Page({
           auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] }
         });
       } else {
-        wx.showToast({ title: res.result.message, icon: 'none' });
+        toastLater({ title: res.result.message, icon: 'none' });
       }
     } catch (err) {
       console.warn('加载排期失败');
@@ -267,13 +275,13 @@ Page({
               }
             });
             if (ret.result.success) {
-              wx.showToast({ title: ret.result.message, icon: 'success' });
+              toastLater({ title: ret.result.message, icon: 'success' });
               this.loadPlaylist();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.showToast({ title: '操作失败', icon: 'none' });
+            toastLater({ title: '操作失败', icon: 'none' });
           } finally {
             wx.hideLoading();
           }
@@ -291,7 +299,7 @@ Page({
     const dayIndex = Number(e.currentTarget.dataset.day);
     const selected = this.data.auditSelections[`day${dayIndex}`] || [];
     if (!selected.length) {
-      wx.showToast({ title: '请先选择要删除的曲目', icon: 'none' });
+      toastLater({ title: '请先选择要删除的曲目', icon: 'none' });
       return;
     }
     const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
@@ -320,9 +328,9 @@ Page({
           if (!ret.result.success) throw new Error(ret.result.message || '删除失败');
           this.setData({ [`auditSelections.day${dayIndex}`]: [] });
           await this.loadPlaylist(false);
-          wx.showToast({ title: ret.result.message, icon: 'success' });
+          toastLater({ title: ret.result.message, icon: 'success' });
         } catch (err) {
-          wx.showToast({ title: err.message || '删除失败', icon: 'none' });
+          toastLater({ title: err.message || '删除失败', icon: 'none' });
         } finally {
           wx.hideLoading();
         }
@@ -346,9 +354,9 @@ Page({
     }).then(async ret => {
       if (!ret.result.success) throw new Error(ret.result.message || '撤销失败');
       await this.loadPlaylist(false);
-      wx.showToast({ title: ret.result.message, icon: 'success' });
+      toastLater({ title: ret.result.message, icon: 'success' });
     }).catch(err => {
-      wx.showToast({ title: err.message || '撤销失败', icon: 'none' });
+      toastLater({ title: err.message || '撤销失败', icon: 'none' });
     }).finally(() => wx.hideLoading());
   },
 
@@ -372,14 +380,14 @@ Page({
       });
 
       if (res.result.success) {
-        wx.showToast({ title: res.result.message, icon: 'success' });
+        toastLater({ title: res.result.message, icon: 'success' });
         this.loadPlaylist();
         this.closeModal();
       } else {
-        wx.showToast({ title: res.result.message, icon: 'none' });
+        toastLater({ title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '操作失败', icon: 'none' });
+      toastLater({ title: '操作失败', icon: 'none' });
     } finally {
       wx.hideLoading();
     }
@@ -407,13 +415,13 @@ Page({
               }
             });
             if (ret.result.success) {
-              wx.showToast({ title: '发布成功', icon: 'success' });
+              toastLater({ title: '发布成功', icon: 'success' });
               this.setData({ schedule: null });
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.showToast({ title: '发布失败', icon: 'none' });
+            toastLater({ title: '发布失败', icon: 'none' });
           } finally {
             this.setData({ publishing: false });
           }
@@ -475,7 +483,10 @@ Page({
         const updatedDay = currentDay.map((item, index) => index === songIndex
           ? Object.assign({}, item, { special_note: savedNote })
           : item);
-        const updatedSchedule = Object.assign({}, this.data.schedule, { [dayKey]: updatedDay });
+        // 服务端保存备注后会 revision+1，但只返回 special_note；这里同步加一，
+        // 否则后续「标记删除 / 撤销删除」会因本地版本号落后而必然报“页面数据已过期”。
+        const nextRevision = (Number(this.data.schedule.revision) || 1) + 1;
+        const updatedSchedule = Object.assign({}, this.data.schedule, { [dayKey]: updatedDay, revision: nextRevision });
 
         this.setData({
           schedule: updatedSchedule,
@@ -484,12 +495,12 @@ Page({
           noteText: '',
           noteSaving: false
         });
-        wx.showToast({ title: successMessage, icon: 'success' });
+        toastLater({ title: successMessage, icon: 'success' });
       } else {
-        wx.showToast({ title: res.result.message, icon: 'none' });
+        toastLater({ title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      toastLater({ title: '保存失败', icon: 'none' });
     } finally {
       if (this.data.noteSaving) this.setData({ noteSaving: false });
     }
@@ -526,10 +537,10 @@ Page({
       : `${name} - ${singer}`;
     wx.setClipboardData({
       data: song,
-      success: () => wx.showToast({ title: '已复制', icon: 'success' }),
+      success: () => toastLater({ title: '已复制', icon: 'success' }),
       fail(err) {
         console.warn('复制失败:', err);
-        wx.showToast({ title: '复制失败', icon: 'none' });
+        toastLater({ title: '复制失败', icon: 'none' });
       }
     });
   },
@@ -539,10 +550,10 @@ Page({
     if (code && code !== '******') {
       wx.setClipboardData({
         data: code,
-        success() { wx.showToast({ title: '已复制', icon: 'success' }); },
+        success() { toastLater({ title: '已复制', icon: 'success' }); },
         fail(err) {
           console.warn('复制失败:', err);
-          wx.showToast({ title: '复制失败', icon: 'none' });
+          toastLater({ title: '复制失败', icon: 'none' });
         }
       });
     }
@@ -557,7 +568,7 @@ Page({
       if (res.result.success) {
         this.setData({ codeList: res.result.data });
       } else {
-        wx.showToast({ title: res.result.message, icon: 'none' });
+        toastLater({ title: res.result.message, icon: 'none' });
       }
     } catch (err) {
       console.warn('加载验证码列表失败');
@@ -577,14 +588,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: '生成成功', icon: 'success' });
+              toastLater({ title: '生成成功', icon: 'success' });
               this.loadCodeList();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '生成失败', icon: 'none' });
+            toastLater({ title: '生成失败', icon: 'none' });
           }
         }
       }
@@ -625,11 +636,11 @@ Page({
   async confirmSaveCode() {
     const { newCode, newExpireDate, editingCodeId } = this.data;
     if (!newCode || newCode.length < 4) {
-      wx.showToast({ title: '验证码至少4位', icon: 'none' });
+      toastLater({ title: '验证码至少4位', icon: 'none' });
       return;
     }
     if (!newExpireDate) {
-      wx.showToast({ title: '请选择过期日期', icon: 'none' });
+      toastLater({ title: '请选择过期日期', icon: 'none' });
       return;
     }
 
@@ -646,15 +657,15 @@ Page({
       });
       wx.hideLoading();
       if (ret.result.success) {
-        wx.showToast({ title: editingCodeId ? '保存成功' : '添加成功', icon: 'success' });
+        toastLater({ title: editingCodeId ? '保存成功' : '添加成功', icon: 'success' });
         this.closeCodeModal();
         this.loadCodeList();
       } else {
-        wx.showToast({ title: ret.result.message, icon: 'none' });
+        toastLater({ title: ret.result.message, icon: 'none' });
       }
     } catch (err) {
       wx.hideLoading();
-      wx.showToast({ title: '操作失败', icon: 'none' });
+      toastLater({ title: '操作失败', icon: 'none' });
     }
   },
 
@@ -673,14 +684,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: '发布成功', icon: 'success' });
+              toastLater({ title: '发布成功', icon: 'success' });
               this.loadCodeList();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '发布失败', icon: 'none' });
+            toastLater({ title: '发布失败', icon: 'none' });
           }
         }
       }
@@ -702,14 +713,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: '删除成功', icon: 'success' });
+              toastLater({ title: '删除成功', icon: 'success' });
               this.loadCodeList();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '删除失败', icon: 'none' });
+            toastLater({ title: '删除失败', icon: 'none' });
           }
         }
       }
@@ -739,7 +750,7 @@ Page({
 
   goConsoleDetail(e) {
     if (!this.data.isSuperAdmin) {
-      wx.showToast({ title: '仅超级管理员可查看', icon: 'none' });
+      toastLater({ title: '仅超级管理员可查看', icon: 'none' });
       return;
     }
     const mode = e.currentTarget.dataset.mode;
@@ -772,13 +783,13 @@ Page({
         data: { action: 'toggleChannel', mode }
       });
       if (ret.result.success) {
-        wx.showToast({ title: ret.result.message, icon: 'success' });
+        toastLater({ title: ret.result.message, icon: 'success' });
         this.loadChannelStatus();
       } else {
-        wx.showToast({ title: ret.result.message || '操作失败', icon: 'none' });
+        toastLater({ title: ret.result.message || '操作失败', icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '调用失败：' + (err.message || '网络错误'), icon: 'none' });
+      toastLater({ title: '调用失败：' + (err.message || '网络错误'), icon: 'none' });
     }
   },
 
@@ -797,14 +808,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: ret.result.message, icon: 'success' });
+              toastLater({ title: ret.result.message, icon: 'success' });
               this.loadTestStats();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '生成失败', icon: 'none' });
+            toastLater({ title: '生成失败', icon: 'none' });
           }
         }
       }
@@ -825,14 +836,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: ret.result.message, icon: 'success' });
+              toastLater({ title: ret.result.message, icon: 'success' });
               this.loadTestStats();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '生成失败', icon: 'none' });
+            toastLater({ title: '生成失败', icon: 'none' });
           }
         }
       }
@@ -859,14 +870,14 @@ Page({
           });
           wx.hideLoading();
           if (ret.result.success) {
-            wx.showToast({ title: ret.result.message, icon: 'success' });
+            toastLater({ title: ret.result.message, icon: 'success' });
             this.loadTestStats();
           } else {
-            wx.showToast({ title: ret.result.message, icon: 'none' });
+            toastLater({ title: ret.result.message, icon: 'none' });
           }
         } catch (err) {
           wx.hideLoading();
-          wx.showToast({ title: '生成失败', icon: 'none' });
+          toastLater({ title: '生成失败', icon: 'none' });
         }
       }
     });
@@ -886,14 +897,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: ret.result.message || '抽取完成', icon: 'success' });
+              toastLater({ title: ret.result.message || '抽取完成', icon: 'success' });
               this.loadTestStats();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '抽取失败', icon: 'none' });
+            toastLater({ title: '抽取失败', icon: 'none' });
           }
         }
       }
@@ -909,14 +920,14 @@ Page({
       });
       wx.hideLoading();
       if (ret.result.success) {
-        wx.showToast({ title: ret.result.message, icon: 'success' });
+        toastLater({ title: ret.result.message, icon: 'success' });
         this.loadTestStats();
       } else {
-        wx.showToast({ title: ret.result.message, icon: 'none' });
+        toastLater({ title: ret.result.message, icon: 'none' });
       }
     } catch (err) {
       wx.hideLoading();
-      wx.showToast({ title: '操作失败', icon: 'none' });
+      toastLater({ title: '操作失败', icon: 'none' });
     }
   },
 
@@ -931,7 +942,7 @@ Page({
       previewResult = ret.result;
     } catch (err) {
       wx.hideLoading();
-      wx.showToast({ title: '无法获取清理预览', icon: 'none' });
+      toastLater({ title: '无法获取清理预览', icon: 'none' });
       return;
     }
     wx.hideLoading();
@@ -963,7 +974,7 @@ Page({
       success: async (res) => {
         if (!res.confirm) return;
         if (res.content !== confirmationText) {
-          wx.showToast({ title: '输入不匹配，已取消', icon: 'none' });
+          toastLater({ title: '输入不匹配，已取消', icon: 'none' });
           return;
         }
 
@@ -979,7 +990,7 @@ Page({
           });
           wx.hideLoading();
           if (ret.result.success) {
-            wx.showToast({ title: '清理完成', icon: 'success' });
+            toastLater({ title: '清理完成', icon: 'success' });
             this.setData({ testStats: null });
             this.loadTestStats();
           } else {
@@ -991,7 +1002,7 @@ Page({
           }
         } catch (err) {
           wx.hideLoading();
-          wx.showToast({ title: '清空失败', icon: 'none' });
+          toastLater({ title: '清空失败', icon: 'none' });
         }
       }
     });
@@ -1064,7 +1075,7 @@ Page({
   async confirmAddPasscode() {
     const { newPasscodeLabel } = this.data;
     if (!newPasscodeLabel || !newPasscodeLabel.trim()) {
-      wx.showToast({ title: '请输入描述标签', icon: 'none' });
+      toastLater({ title: '请输入描述标签', icon: 'none' });
       return;
     }
 
@@ -1084,11 +1095,11 @@ Page({
         });
         this.loadPasscodeList();
       } else {
-        wx.showToast({ title: ret.result.message, icon: 'none' });
+        toastLater({ title: ret.result.message, icon: 'none' });
       }
     } catch (err) {
       wx.hideLoading();
-      wx.showToast({ title: '生成失败', icon: 'none' });
+      toastLater({ title: '生成失败', icon: 'none' });
     }
   },
 
@@ -1101,10 +1112,10 @@ Page({
     if (code) {
       wx.setClipboardData({
         data: code,
-        success() { wx.showToast({ title: '已复制', icon: 'success' }); },
+        success() { toastLater({ title: '已复制', icon: 'success' }); },
         fail(err) {
           console.warn('复制失败:', err);
-          wx.showToast({ title: '复制失败', icon: 'none' });
+          toastLater({ title: '复制失败', icon: 'none' });
         }
       });
     }
@@ -1125,14 +1136,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: '已删除', icon: 'success' });
+              toastLater({ title: '已删除', icon: 'success' });
               this.loadPasscodeList();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '删除失败', icon: 'none' });
+            toastLater({ title: '删除失败', icon: 'none' });
           }
         }
       }
@@ -1156,14 +1167,14 @@ Page({
             });
             wx.hideLoading();
             if (ret.result.success) {
-              wx.showToast({ title: '已撤销', icon: 'success' });
+              toastLater({ title: '已撤销', icon: 'success' });
               this.loadAdminList();
             } else {
-              wx.showToast({ title: ret.result.message, icon: 'none' });
+              toastLater({ title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
             wx.hideLoading();
-            wx.showToast({ title: '撤销失败', icon: 'none' });
+            toastLater({ title: '撤销失败', icon: 'none' });
           }
         }
       }
@@ -1183,10 +1194,10 @@ Page({
       if (res.result && res.result.success) {
         this.setData({ helpArticleList: res.result.data || [] });
       } else {
-        wx.showToast({ title: (res.result && res.result.message) || '加载失败', icon: 'none' });
+        toastLater({ title: (res.result && res.result.message) || '加载失败', icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '说明列表加载失败', icon: 'none' });
+      toastLater({ title: '说明列表加载失败', icon: 'none' });
     } finally {
       this.setData({ helpLoading: false });
     }
@@ -1210,13 +1221,13 @@ Page({
             data: { action: 'initializeDefaults' }
           });
           if (res.result && res.result.success) {
-            wx.showToast({ title: '已生成', icon: 'success' });
+            toastLater({ title: '已生成', icon: 'success' });
             this.loadHelpArticles(false);
           } else {
-            wx.showToast({ title: (res.result && res.result.message) || '生成失败', icon: 'none' });
+            toastLater({ title: (res.result && res.result.message) || '生成失败', icon: 'none' });
           }
         } catch (err) {
-          wx.showToast({ title: '生成失败', icon: 'none' });
+          toastLater({ title: '生成失败', icon: 'none' });
         } finally {
           wx.hideLoading();
         }
@@ -1239,10 +1250,10 @@ Page({
       if (res.result && res.result.success) {
         this.loadHelpArticles(false);
       } else {
-        wx.showToast({ title: (res.result && res.result.message) || '排序失败', icon: 'none' });
+        toastLater({ title: (res.result && res.result.message) || '排序失败', icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '排序失败', icon: 'none' });
+      toastLater({ title: '排序失败', icon: 'none' });
     }
   },
 
@@ -1262,13 +1273,13 @@ Page({
             data: { action: 'setPublished', articleId: id, isPublished: nextPublished }
           });
           if (res.result && res.result.success) {
-            wx.showToast({ title: nextPublished ? '已发布' : '已隐藏', icon: 'success' });
+            toastLater({ title: nextPublished ? '已发布' : '已隐藏', icon: 'success' });
             this.loadHelpArticles(false);
           } else {
-            wx.showToast({ title: (res.result && res.result.message) || '操作失败', icon: 'none' });
+            toastLater({ title: (res.result && res.result.message) || '操作失败', icon: 'none' });
           }
         } catch (err) {
-          wx.showToast({ title: '操作失败', icon: 'none' });
+          toastLater({ title: '操作失败', icon: 'none' });
         }
       }
     });
@@ -1289,13 +1300,13 @@ Page({
             data: { action: 'delete', articleId: id }
           });
           if (res.result && res.result.success) {
-            wx.showToast({ title: '已删除', icon: 'success' });
+            toastLater({ title: '已删除', icon: 'success' });
             this.loadHelpArticles(false);
           } else {
-            wx.showToast({ title: (res.result && res.result.message) || '删除失败', icon: 'none' });
+            toastLater({ title: (res.result && res.result.message) || '删除失败', icon: 'none' });
           }
         } catch (err) {
-          wx.showToast({ title: '删除失败', icon: 'none' });
+          toastLater({ title: '删除失败', icon: 'none' });
         }
       }
     });
