@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>样张 B · 本周歌单（浅色）</title>
+<style>
+  :root{
+    --bg:#f4f2ef; --surface:#ffffff; --surface2:#edebe7;
+    --t1:#1b1b1d; --t2:#5f6066; --t3:#9a9ba1;
+    --accent:#2d8057; --accent-weak:#e8f2ec;
+    --r-md:7px; --r-lg:10px; --r-pill:999px;
+    --shadow-sm:0 2px 8px rgba(60,50,40,.05);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    width:375px;height:812px;background:var(--bg);color:var(--t1);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    overflow:hidden;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  .head{
+    height:150px;padding:58px 24px 0;
+    background:linear-gradient(170deg,#dcebe1 0%,#eef0e9 62%,#f4f2ef 100%);
+  }
+  .week{font-size:11px;letter-spacing:.6px;color:#6f8378}
+  .title{margin-top:10px;font-size:25px;font-weight:600;letter-spacing:-.2px}
+  .meta{margin-top:6px;font-size:12px;color:var(--t2)}
+
+  .list{padding:0 16px}
+  .card{
+    background:var(--surface);border-radius:var(--r-lg);
+    box-shadow:var(--shadow-sm);padding:14px 16px 6px;margin-bottom:12px;
+  }
+  .card-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding-bottom:10px;
+  }
+  .day{font-size:11.5px;color:var(--t3);letter-spacing:.3px}
+  .count{font-size:11px;color:var(--t3)}
+  .row{display:flex;align-items:center;gap:11px;padding:9px 0}
+  .idx{
+    flex:none;width:21px;height:21px;border-radius:50%;
+    background:var(--accent-weak);color:var(--accent);
+    font-size:10.5px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .song{flex:1;min-width:0}
+  .name{font-size:14.5px;font-weight:500;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .singer{font-size:11.5px;color:var(--t2);margin-top:2px}
+  .note{font-size:11px;color:var(--accent);margin-top:2px}
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="week num">第 44 期 · 2026.10.25</div>
+    <div class="title">本周歌单</div>
+    <div class="meta num">5 天 · 18 首 · 10 月 27 日开始播出</div>
+  </div>
+
+  <div class="list">
+    <div class="card">
+      <div class="card-head"><span class="day num">周一 · 10 月 27 日</span><span class="count num">4 首</span></div>
+      <div class="row"><span class="idx num">1</span><div class="song"><div class="name">晴天</div><div class="singer">周杰伦</div></div></div>
+      <div class="row"><span class="idx num">2</span><div class="song"><div class="name">稻香</div><div class="singer">周杰伦</div><div class="note">备注：给高三的我们</div></div></div>
+      <div class="row"><span class="idx num">3</span><div class="song"><div class="name">海阔天空</div><div class="singer">Beyond</div></div></div>
+      <div class="row"><span class="idx num">4</span><div class="song"><div class="name">平凡之路</div><div class="singer">朴树</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="day num">周二 · 10 月 28 日</span><span class="count num">3 首</span></div>
+      <div class="row"><span class="idx num">1</span><div class="song"><div class="name">夜曲</div><div class="singer">周杰伦</div></div></div>
+      <div class="row"><span class="idx num">2</span><div class="song"><div class="name">起风了</div><div class="singer">买辣椒也用券</div></div></div>
+      <div class="row"><span class="idx num">3</span><div class="song"><div class="name">像我这样的人</div><div class="singer">毛不易</div></div></div>
+    </div>
+  </div>
+<script>
+  // 让 375px 设计稿在任何视口宽度下铺满，截图对比时比例不失真
+  (function () {
+    var apply = function () {
+      var z = window.innerWidth / 375;
+      document.documentElement.style.zoom = String(z);
+      // 缩放后让内容高度正好等于视口高度，避免底部被裁掉
+      document.body.style.height = (window.innerHeight / z) + 'px';
+    };
+    apply();
+    window.addEventListener('resize', apply);
+  })();
+</script>
+</body>
+</html>
