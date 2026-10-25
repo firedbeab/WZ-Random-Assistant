@@ -15,6 +15,8 @@ Page({
     specialNote: '',
     loading: false,
     canSubmit: true, // 是否允许提交
+    nextOpenText: '', // 下次开放时间文案（关闭态展示）
+    hoursLeftText: '', // 开放态剩余小时文案
     statusMsg: '',
     hasSubmitted: false,
     submittedInfo: '',
@@ -57,6 +59,27 @@ Page({
       return sun.toISOString().split('T')[0];
     },
 
+    // 关闭时展示的下次开放时间（北京时间，周日 8:00 起）
+    computeNextOpenText(bjTime) {
+      const day = bjTime.getUTCDay();
+      const hours = bjTime.getUTCHours();
+      // 正处于时间窗口内却被关闭，说明是管理员强制关闭，不承诺具体时间
+      if (day === 0 && hours >= 8 && hours < 20) return '待管理员开启';
+      let ahead = (7 - day) % 7;
+      if (day === 0 && hours >= 20) ahead = 7;
+      const target = new Date(bjTime.getTime());
+      target.setUTCDate(bjTime.getUTCDate() + ahead);
+      return `${target.getUTCMonth() + 1} 月 ${target.getUTCDate()} 日 周日 8:00`;
+    },
+
+    // 开放时展示的剩余小时数
+    computeHoursLeft(bjTime) {
+      if (bjTime.getUTCDay() !== 0) return '';
+      const hours = bjTime.getUTCHours();
+      if (hours < 8 || hours >= 20) return '';
+      return `还剩 ${20 - hours} 小时`;
+    },
+
     // 底部提交结果只作为本次操作的短暂反馈，不参与提交状态判断。
     showStatusMessage(message) {
       if (this._statusMsgTimer) clearTimeout(this._statusMsgTimer);
@@ -96,7 +119,11 @@ Page({
           channelOpen = true;  // 强制开放
         }
 
-        this.setData({ canSubmit: channelOpen });
+        this.setData({
+          canSubmit: channelOpen,
+          nextOpenText: this.computeNextOpenText(bjTime),
+          hoursLeftText: channelOpen ? this.computeHoursLeft(bjTime) : ''
+        });
 
         const currentWeekKey = this.getWeekKey();
         // 通道开放时检查当前提交周期；关闭后检查列表页的“最新一期”，
