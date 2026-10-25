@@ -339,6 +339,11 @@ exports.main = async (event, context) => {
         : [];
       if (schedule.status !== 'pending') throw new Error('排期状态已变更');
 
+      // 版本校验：这里按 songIndex 定位曲目，别人刚删过一条就会错位，必须先比对版本号。
+      if (event.revision !== undefined && (Number(event.revision) || 1) !== (Number(schedule.revision) || 1)) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
+
       // B. 移除异常项目
       const dayKey = `day${dayIndex + 1}`;
       if (!Array.isArray(schedule[dayKey]) || schedule[dayKey].length === 0) {
@@ -460,6 +465,11 @@ exports.main = async (event, context) => {
       const schedule = plRes.data;
       if (schedule.status !== 'pending') throw new Error('排期状态已变更');
 
+      // 版本校验：与 removeItems 保持一致，避免按过期快照清空错误的日期。
+      if (event.revision !== undefined && (Number(event.revision) || 1) !== (Number(schedule.revision) || 1)) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
+
       const dayKey = `day${dayIndex + 1}`;
       const removedItems = schedule[dayKey] || [];
       const removedSubmissionIds = removedItems.map(getSubmissionId).filter(Boolean);
@@ -492,9 +502,11 @@ exports.main = async (event, context) => {
 
 
       if (removedSubmissionIds.length > 0) {
+        // 跳过某一天只是当天停播，曲目本身仍然有效：转回候补池，下周还有机会被抽到，
+        // 不能打成 rejected（rejected 永不参与抽取，等于把学生的投稿永久作废）。
         await tx.collection(submissionsCollection)
           .where({ _id: _.in(removedSubmissionIds) })
-          .update({ data: { status: 'rejected', rejected_at: db.serverDate() } });
+          .update({ data: { status: 'carryover', carryover_at: db.serverDate() } });
       }
 
       await tx.commit();
@@ -537,6 +549,12 @@ exports.main = async (event, context) => {
         return { success: false, message: '该排期已发布或状态已变更' };
       }
 
+      // 版本校验：页面停留期间别人改过排期时拒绝，避免用旧数据覆盖新数据。
+      if (event.revision !== undefined && (Number(event.revision) || 1) !== (Number(schedule.revision) || 1)) {
+        await tx.rollback();
+        return { success: false, message: '页面数据已过期，请刷新后重试' };
+      }
+
       weekKey = schedule.week_key;
 
       const finalDays = {};
@@ -547,12 +565,19 @@ exports.main = async (event, context) => {
         finalDays[day] = source.filter(item => item.audit_state !== 'pending_remove');
       });
       const finalizedSubmissionIds = finalizedItems.map(getSubmissionId).filter(isValidDocId);
+      const finalCount = Object.values(finalDays).reduce((sum, items) => sum + items.length, 0);
+
+      // 空列表发布必须填写说明备注：否则学生端会看到“本期已发布但列表空白”，也没有任何解释。
+      if (finalCount === 0 && !(typeof note === 'string' && note.trim())) {
+        await tx.rollback();
+        return { success: false, code: 'EMPTY_NEEDS_NOTE', message: '本期列表为空，请先填写发布说明备注再发布' };
+      }
 
       await tx.collection(schedulesCollection).doc(playlistId).update({
         data: Object.assign({}, finalDays, {
           status: 'published',
           admin_note: note || '',
-          total_count: Object.values(finalDays).reduce((sum, items) => sum + items.length, 0),
+          total_count: finalCount,
           revision: (Number(schedule.revision) || 1) + 1,
           publish_time: db.serverDate()
         })

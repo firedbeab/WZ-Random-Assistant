@@ -474,3 +474,6 @@ button::after { border: none; }
   font-size: 24rpx; color: #999; display: block;
   margin-top: 20rpx; text-align: center; line-height: 1.6;
 }
+/* 审核页：排期周次与跨周提示 */
+.header-week { display: block; margin-top: 6rpx; color: #7d8f83; font-size: 22rpx; letter-spacing: .5rpx; }
+.week-warning { margin: 16rpx 24rpx 0; padding: 18rpx 22rpx; border-radius: 14rpx; background: #fff4e5; color: #8a5a13; font-size: 23rpx; line-height: 1.6; }

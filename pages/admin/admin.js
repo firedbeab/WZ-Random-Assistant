@@ -8,14 +8,27 @@ const ADMIN_TPL_ID = 'G9y63KY2Q0mPOS-ML_PtxVu9wqE5xKqVnnNgEFtPC_8';
 // 统一延后一帧再弹，保证提示一定看得见；用户无感知（0ms）。
 function toastLater(options) {
   setTimeout(() => {
-    try { toastLater(options); } catch (_) { /* 页面已卸载时忽略 */ }
+    try { wx.showToast(options); } catch (_) { /* 页面已卸载时忽略 */ }
   }, 0);
+}
+
+// 北京时间“本周日”的周标识，与云函数里的算法保持一致（周日当天返回当天）。
+function currentWeekKey() {
+  const now = new Date();
+  const bj = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const diff = (7 - bj.getUTCDay()) % 7;
+  const sun = new Date(bj.getTime());
+  sun.setUTCDate(bj.getUTCDate() + diff);
+  return sun.toISOString().split('T')[0];
 }
 
 Page({
   data: {
     isTestMode: isTestMode(),
     // 审核相关
+    thisWeekKey: currentWeekKey(),
+    scheduleWeekKey: '',
+    scheduleIsCurrentWeek: true,
     schedule: null,
     note: '',
     publishing: false,
@@ -228,6 +241,10 @@ Page({
           schedule,
           pendingRemovalCount,
           dayCounts,
+          // 显示周次并标出是否本周，避免把遗留的旧排期当成本周列表误发。
+          scheduleWeekKey: schedule.week_key || '',
+          scheduleIsCurrentWeek: (schedule.week_key || '') === currentWeekKey(),
+          thisWeekKey: currentWeekKey(),
           auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] }
         });
       } else {
@@ -271,7 +288,8 @@ Page({
               data: {
                 action: 'skipDay',
                 playlistId: this.data.schedule._id,
-                dayIndex
+                dayIndex,
+                revision: this.data.schedule.revision
               }
             });
             if (ret.result.success) {
@@ -375,7 +393,8 @@ Page({
           playlistId: schedule._id,
           dayIndex: modalDay,
           songIndex: modalSongIndex,
-          reason
+          reason,
+          revision: schedule.revision
         }
       });
 
@@ -411,7 +430,8 @@ Page({
               data: {
                 action: 'publish',
                 playlistId: schedule._id,
-                note
+                note,
+                revision: schedule.revision
               }
             });
             if (ret.result.success) {
@@ -467,7 +487,8 @@ Page({
           playlistId: this.data.schedule._id,
           dayIndex,
           songIndex,
-          note: noteValue
+          note: noteValue,
+          revision: this.data.schedule.revision
         }
       });
       if (res.result.success) {

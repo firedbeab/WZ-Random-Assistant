@@ -127,13 +127,30 @@ function validateDays(rawDays) {
 
 async function adjustCounter(countersCollection, weekKey, delta) {
   if (!delta) return;
-  const ref = db.collection(countersCollection).doc(weekKey);
+  const collection = db.collection(countersCollection);
   try {
-    const current = await ref.get();
-    const next = Math.max(0, Number(current.data.count || 0) + delta);
-    await ref.update({ data: { count: next, updated_at: db.serverDate() } });
+    if (delta > 0) {
+      // 正增量：文档存在时原子 +N；不存在时创建（并发下若已被创建则退化为再 +N）。
+      const res = await collection.where({ _id: weekKey }).update({
+        data: { count: _.inc(delta), updated_at: db.serverDate() }
+      });
+      if (!res.stats || !res.stats.updated) {
+        try {
+          await collection.doc(weekKey).set({ data: { count: delta, updated_at: db.serverDate() } });
+        } catch (_) {
+          await collection.where({ _id: weekKey }).update({
+            data: { count: _.inc(delta), updated_at: db.serverDate() }
+          });
+        }
+      }
+    } else {
+      // 负增量：只在不会把计数减成负数时原子扣减，绝不整体覆盖已有数值。
+      await collection.where({ _id: weekKey, count: _.gte(-delta) }).update({
+        data: { count: _.inc(delta), updated_at: db.serverDate() }
+      });
+    }
   } catch (err) {
-    if (delta > 0) await ref.set({ data: { count: delta, updated_at: db.serverDate() } });
+    console.warn('[控制台] 计数器调整失败:', err.message || '未知错误');
   }
 }
 
@@ -285,7 +302,11 @@ exports.main = async event => {
         admin_note: adminNote, total_count: validated.total,
         revision: currentRevision + 1, updated_at: db.serverDate(), updated_by: OPENID
       });
-      await db.collection(schedules).doc(event.id).update({ data: afterData });
+      // 带版本号的条件更新：两人同时保存时，后到达的一方会失败并提示刷新，而不是静默覆盖。
+      const updateRes = await db.collection(schedules).where({ _id: event.id, revision: currentRevision }).update({ data: afterData });
+      if (!updateRes.stats || !updateRes.stats.updated) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
       await safeAudit(scope, {
         action: 'schedule.update', operator_openid: OPENID, target_type: 'schedule',
         target_id: event.id, week_key: before.week_key,
@@ -304,10 +325,13 @@ exports.main = async event => {
       const expectedRevision = Number(event.revision) || 1;
       const currentRevision = Number(before.revision) || 1;
       if (expectedRevision !== currentRevision) throw new Error('页面数据已过期，请刷新后重试');
-      await db.collection(schedules).doc(event.id).update({ data: {
+      const withdrawRes = await db.collection(schedules).where({ _id: event.id, revision: currentRevision, status: 'published' }).update({ data: {
         status: 'withdrawn', withdraw_reason: reason, withdrawn_at: db.serverDate(),
         withdrawn_by: OPENID, revision: currentRevision + 1
       }});
+      if (!withdrawRes.stats || !withdrawRes.stats.updated) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
       const selectedIds = DAYS.flatMap(day => before[day] || []).map(item => item.submission_id).filter(validId);
       if (selectedIds.length > 0) {
         await db.collection(submissions).where({ _id: _.in(selectedIds), status: 'selected' })

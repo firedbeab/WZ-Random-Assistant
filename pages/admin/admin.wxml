@@ -66,6 +66,10 @@
 <view class="tab-panel" wx:if="{{currentTab === 'audit'}}">
   <view class="header">
     <text class="title">列表审核</text>
+    <text class="header-week" wx:if="{{scheduleWeekKey}}">排期周次：{{scheduleWeekKey}}</text>
+  </view>
+  <view class="week-warning" wx:if="{{schedule && !scheduleIsCurrentWeek}}">
+    注意：这是 {{scheduleWeekKey}} 的排期，不是本周（{{thisWeekKey}}）。发布前请确认是否要发这一期。
   </view>
 
   <!-- 待审核排期 -->
