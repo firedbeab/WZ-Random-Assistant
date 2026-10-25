@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>样张 D · 首页（通道关闭）</title>
+<style>
+  :root{
+    --bg:#f4f2ef; --surface:#ffffff; --surface2:#edebe7;
+    --t1:#1b1b1d; --t2:#5f6066; --t3:#9a9ba1;
+    --accent:#2d8057; --accent-weak:#e8f2ec;
+    --warn:#b7791f; --warn-weak:#fdf3e3;
+    --hair:#eae7e1;
+    --r-lg:10px; --r-pill:999px;
+    --shadow-sm:0 2px 8px rgba(60,50,40,.05);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    width:375px;height:812px;background:var(--bg);color:var(--t1);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    overflow:hidden;position:relative;
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* 关闭态：渐变换成中性暖灰，不用绿色，避免"看起来仍开放" */
+  .head{
+    height:158px;padding:54px 24px 0;
+    background:linear-gradient(168deg,#eceae5 0%,#f0eeea 60%,#f4f2ef 100%);
+  }
+  .brandrow{display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:baseline;gap:7px}
+  .brand .dice{font-size:19px;line-height:1;opacity:.92}
+  .brand .name{font-size:17px;font-weight:600;letter-spacing:-.2px}
+  .gear{font-size:14px;color:#8d9a92;opacity:.8}
+  .status{margin-top:15px;display:flex;align-items:center;gap:7px;font-size:12.5px;color:#77716a}
+  .status .dot{width:6px;height:6px;border-radius:50%;background:#b8b2a9}
+  .next{margin-top:9px;font-size:12.5px;color:var(--t2)}
+  .next b{color:var(--t1);font-weight:600}
+
+  /* 主体：关闭时只有两件事可做——看本期、看往期 */
+  .panel{
+    margin:18px 16px 0;background:var(--surface);border-radius:var(--r-lg);
+    box-shadow:var(--shadow-sm);padding:16px;
+  }
+  .panel .row1{display:flex;align-items:center;justify-content:space-between}
+  .panel .cap{font-size:10.5px;color:var(--t3);letter-spacing:.3px}
+  .badge{
+    font-size:9.5px;color:#8a5a13;background:var(--warn-weak);
+    padding:2px 6px;border-radius:5px;font-weight:500;
+  }
+  .panel .title2{margin-top:6px;font-size:15px;font-weight:600}
+  .preview{margin-top:12px}
+  .prow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:var(--t2)}
+  .prow .i{
+    width:17px;height:17px;border-radius:50%;background:var(--surface2);
+    color:var(--t3);font-size:9.5px;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .more{margin-top:10px;font-size:12px;color:var(--accent)}
+
+  .panel2{
+    margin:12px 16px 0;background:var(--surface);border-radius:var(--r-lg);
+    box-shadow:var(--shadow-sm);padding:14px 16px;display:flex;align-items:center;gap:12px;
+  }
+  .panel2 .ico{
+    flex:none;width:32px;height:32px;border-radius:9px;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:14px;
+  }
+  .panel2 .txt{flex:1}
+  .panel2 .t{font-size:13.5px;font-weight:500}
+  .panel2 .s{margin-top:2px;font-size:11px;color:var(--t3)}
+  .panel2 .arrow{color:#c4c0b8;font-size:16px}
+
+  .tip{
+    margin:20px 24px 0;font-size:11.5px;color:var(--t3);line-height:1.8;
+  }
+
+  .foot{
+    position:absolute;left:24px;right:24px;bottom:26px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:var(--t3);
+  }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="brandrow">
+      <div class="brand"><span class="dice">🎲</span><span class="name">WZ随机助手</span></div>
+      <span class="gear">⚙️</span>
+    </div>
+    <div class="status"><span class="dot"></span>本周点歌已结束</div>
+    <div class="next num">下次开放：<b>11 月 1 日 周日 8:00</b></div>
+  </div>
+
+  <div class="panel">
+    <div class="row1">
+      <span class="cap num">第 44 期 · 2026.10.25</span>
+      <span class="badge">已发布</span>
+    </div>
+    <div class="title2">本期歌单</div>
+    <div class="preview num">
+      <div class="prow"><span class="i">1</span>晴天 · 周杰伦</div>
+      <div class="prow"><span class="i">2</span>稻香 · 周杰伦</div>
+      <div class="prow"><span class="i">3</span>海阔天空 · Beyond</div>
+    </div>
+    <div class="more num">查看全部 18 首 ›</div>
+  </div>
+
+  <div class="panel2">
+    <div class="ico">↩</div>
+    <div class="txt">
+      <div class="t">往期歌单</div>
+      <div class="s num">已归档 3 期</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="tip">通道每周日 8:00 – 20:00 开放。<br>可以提前准备好歌名，开放当天再来。</div>
+
+  <div class="foot"><span>关于 · 使用说明</span><span class="num">v2.0</span></div>
+</body>
+</html>

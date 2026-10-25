@@ -2,13 +2,15 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>样张 A · 首页（浅色）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>样张 A3 · 首页（开放中，功能等价改版）</title>
 <style>
   :root{
     --bg:#f4f2ef; --surface:#ffffff; --surface2:#edebe7;
     --t1:#1b1b1d; --t2:#5f6066; --t3:#9a9ba1;
     --accent:#2d8057; --accent-weak:#e8f2ec;
-    --r-md:7px; --r-lg:10px; --r-pill:999px;
+    --hair:#eae7e1;
+    --r-lg:10px; --r-pill:999px;
     --shadow-sm:0 2px 8px rgba(60,50,40,.05);
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
@@ -19,73 +21,104 @@
   }
   .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 
-  /* 每周渐变：0-356px，底部与页面底色融合 */
-  .hero{
-    position:absolute;inset:0 0 auto 0;height:356px;
-    background:linear-gradient(170deg,#dcebe1 0%,#eef0e9 55%,#f4f2ef 100%);
-    padding:58px 24px 0;
+  /* 头部：彩蛋在标题里，管理入口降级为右上小图标 */
+  .head{
+    height:158px;padding:54px 24px 0;
+    background:linear-gradient(168deg,#e2efe7 0%,#eef1ea 60%,#f4f2ef 100%);
   }
-  .week{font-size:11px;letter-spacing:.6px;color:#6f8378}
-  .title{margin-top:34px;font-size:30px;font-weight:600;letter-spacing:-.3px;line-height:1.25}
-  .sub{margin-top:8px;font-size:13px;color:var(--t2);line-height:1.5}
-  .cta{
-    margin-top:30px;height:52px;border-radius:var(--r-pill);
+  .brandrow{display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:baseline;gap:7px}
+  .brand .dice{font-size:19px;line-height:1;opacity:.92}
+  .brand .name{font-size:17px;font-weight:600;letter-spacing:-.2px}
+  .gear{font-size:14px;color:#8d9a92;opacity:.8}
+  .status{margin-top:15px;display:flex;align-items:center;gap:7px;font-size:12.5px;color:#3f6b53}
+  .status .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .status b{font-weight:600}
+
+  /* 表单：开放即在此，无需再点一次 */
+  .form{padding:10px 24px 0}
+  .field{padding:11px 0 8px;border-bottom:1px solid var(--hair)}
+  .field .label{font-size:10.5px;color:var(--t3);letter-spacing:.3px}
+  .field .val{margin-top:4px;font-size:17px;color:var(--t1);min-height:23px;line-height:1.35}
+  .field .ph{margin-top:4px;font-size:17px;color:#b9b6b0;min-height:23px;line-height:1.35}
+  .field.focus{border-bottom-color:var(--accent);box-shadow:0 2px 0 -1px rgba(45,128,87,.16)}
+
+  .submit{
+    margin:24px 24px 0;height:52px;border-radius:var(--r-pill);
     background:var(--accent);color:#fff;font-size:16px;font-weight:500;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 6px 16px rgba(45,128,87,.18);
+    box-shadow:0 6px 16px rgba(45,128,87,.16);
   }
-  .cta-sub{margin-top:14px;text-align:center;font-size:13px;color:var(--accent)}
+  .submit-note{margin-top:11px;text-align:center;font-size:11.5px;color:var(--t3)}
 
-  /* 下方内容区 */
-  .body{padding:356px 24px 0}
-  .stat{
-    margin-top:26px;display:flex;align-items:center;gap:8px;
-    font-size:13px;color:var(--t2);
+  /* 歌单入口：整块卡片 + 发布角标 */
+  .entry{
+    position:absolute;left:16px;right:16px;bottom:84px;
+    background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);
+    padding:14px 16px;display:flex;align-items:center;gap:12px;
   }
-  .stat .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.85}
-  .stat b{font-weight:600;color:var(--t1);font-size:15px}
+  .entry .ico{
+    flex:none;width:34px;height:34px;border-radius:9px;background:var(--accent-weak);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:15px;
+  }
+  .entry .txt{flex:1;min-width:0}
+  .entry .t{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}
+  .entry .badge{
+    font-size:9.5px;color:#8a5a13;background:#fdf3e3;
+    padding:2px 6px;border-radius:5px;font-weight:500;
+  }
+  .entry .s{margin-top:2px;font-size:11px;color:var(--t3)}
+  .entry .arrow{color:#c4c0b8;font-size:16px}
 
-  .tips{margin-top:22px;font-size:12px;color:var(--t3);line-height:1.75}
-
-  /* 底部入口 */
   .foot{
-    position:absolute;left:24px;right:24px;bottom:34px;
+    position:absolute;left:24px;right:24px;bottom:26px;
     display:flex;justify-content:space-between;align-items:center;
-    font-size:12.5px;color:var(--t3);
+    font-size:12px;color:var(--t3);
   }
-  .foot .group{display:flex;gap:20px}
 </style>
 </head>
 <body>
-  <div class="hero">
-    <div class="week num">第 44 周 · 2026.10.25</div>
-    <div class="title">现在可以点歌</div>
-    <div class="sub">周日 8:00 – 20:00 开放提交，本周还剩 <span class="num">6</span> 小时</div>
-    <div class="cta">点歌</div>
-    <div class="cta-sub">查看本期歌单</div>
+  <div class="head">
+    <div class="brandrow">
+      <div class="brand"><span class="dice">🎲</span><span class="name">WZ随机助手</span></div>
+      <span class="gear">⚙️</span>
+    </div>
+    <div class="status num"><span class="dot"></span>通道开放中 · 还剩 <b>6</b> 小时 · 已有 <b>12</b> 人提交</div>
   </div>
 
-  <div class="body">
-    <div class="stat num"><span class="dot"></span>本周已有 <b>12</b> 人提交，本期将抽取 20 首</div>
-    <div class="tips">提交后可在周日晚查看抽取结果。<br>每人每周一次机会，被抽中会收到通知。</div>
+  <div class="form">
+    <div class="field focus">
+      <div class="label">本周验证码</div>
+      <div class="val num">4821</div>
+    </div>
+    <div class="field">
+      <div class="label">内容名称</div>
+      <div class="ph">例：稻香</div>
+    </div>
+    <div class="field">
+      <div class="label">补充说明</div>
+      <div class="ph">例：周杰伦</div>
+    </div>
+    <div class="field">
+      <div class="label">特殊备注</div>
+      <div class="ph">选填，如要求特定版本</div>
+    </div>
   </div>
 
-  <div class="foot">
-    <div class="group"><span>我的</span><span>使用说明</span></div>
-    <span>v2.0</span>
+  <div class="submit">提交</div>
+  <div class="submit-note">每人每周一次，提交后不可修改</div>
+
+  <div class="entry">
+    <div class="ico">♪</div>
+    <div class="txt">
+      <div class="t">已发布歌单<span class="badge">新一期已发布</span></div>
+      <div class="s num">共 3 期 · 可查看往期</div>
+    </div>
+    <div class="arrow">›</div>
   </div>
-<script>
-  // 让 375px 设计稿在任何视口宽度下铺满，截图对比时比例不失真
-  (function () {
-    var apply = function () {
-      var z = window.innerWidth / 375;
-      document.documentElement.style.zoom = String(z);
-      // 缩放后让内容高度正好等于视口高度，避免底部被裁掉
-      document.body.style.height = (window.innerHeight / z) + 'px';
-    };
-    apply();
-    window.addEventListener('resize', apply);
-  })();
-</script>
+
+  <div class="foot"><span>关于 · 使用说明</span><span class="num">v2.0</span></div>
+
+
 </body>
 </html>
