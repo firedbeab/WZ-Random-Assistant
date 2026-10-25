@@ -186,6 +186,48 @@ async function notifyAdmins(weekKey, scope) {
   }
 }
 
+// 更早周次仍停在 pending 的排期：既不会被发布，又会挡住本周抽取，
+// 而它引用的投稿会永久卡在 selected（既不在抽取池也不再被审核）。
+// 抽取前统一作废，并把投稿放回候补池。
+async function voidStalePendingSchedules(schedulesCollection, submissionsCollection, weekKey) {
+  let stale = [];
+  try {
+    stale = await fetchAll(schedulesCollection, { status: 'pending', week_key: _.lt(weekKey) });
+  } catch (err) {
+    console.warn('[抽取] 查询遗留排期失败:', err.message || '未知错误');
+    return 0;
+  }
+  if (stale.length === 0) return 0;
+
+  let voided = 0;
+  for (const schedule of stale) {
+    const ids = ['day1', 'day2', 'day3', 'day4', 'day5']
+      .flatMap(day => (Array.isArray(schedule[day]) ? schedule[day] : [])
+        .map(item => (item && (item.submission_id || item._id)) || ''))
+      .filter(Boolean);
+    try {
+      await db.collection(schedulesCollection).doc(schedule._id).update({
+        data: {
+          status: 'withdrawn',
+          withdraw_reason: '系统自动作废：抽取时该周次已过期且未发布',
+          withdrawn_at: db.serverDate(),
+          auto_voided: true
+        }
+      });
+      if (ids.length > 0) {
+        await db.collection(submissionsCollection)
+          .where({ _id: _.in(ids), status: 'selected' })
+          .update({ data: { status: 'carryover', carryover_at: db.serverDate() } });
+      }
+      voided++;
+      console.log(`[抽取] 已自动作废遗留排期 ${schedule.week_key || schedule._id}`);
+    } catch (err) {
+      console.warn('[抽取] 作废遗留排期失败:', err.message || '未知错误');
+    }
+  }
+  return voided;
+}
+
 // ================= 主逻辑 =================
 
 exports.main = async (event, context) => {
@@ -237,6 +279,11 @@ exports.main = async (event, context) => {
 
     // 1. 本周候选与历史黑名单互不依赖，并行分页读取。
     const historyKeys = getHistoryKeys();
+
+    // 0. 先作废更早周次遗留的待审核排期，避免它挡住本周抽取、并把投稿永久卡在 selected。
+    const voidedCount = await voidStalePendingSchedules(schedulesCollection, submissionsCollection, weekKey);
+    if (voidedCount > 0) console.log(`[抽取] 已作废 ${voidedCount} 条遗留待审核排期`);
+
     const [allRequests, carryoverRequests, currentWeekUsers, allSchedules] = await Promise.all([
       fetchAll(
         submissionsCollection,
@@ -324,6 +371,8 @@ exports.main = async (event, context) => {
           status: 'pending',
           ...schedule,
           total_count: selectedIds.length,
+          // 本周没有任何新投稿、列表全部来自历史候补时标记出来，审核页会提示管理员。
+          carryover_only: allRequests.length === 0,
           revision: 1,
           generated_at: db.serverDate()
         }

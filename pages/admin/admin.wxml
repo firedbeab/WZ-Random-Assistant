@@ -71,6 +71,9 @@
   <view class="week-warning" wx:if="{{schedule && !scheduleIsCurrentWeek}}">
     注意：这是 {{scheduleWeekKey}} 的排期，不是本周（{{thisWeekKey}}）。发布前请确认是否要发这一期。
   </view>
+  <view class="week-warning" wx:if="{{schedule && schedule.carryover_only}}">
+    本周没有收到新的投稿，这份列表全部来自历史候补。
+  </view>
 
   <!-- 待审核排期 -->
   <view class="playlist-card" wx:if="{{schedule}}">
