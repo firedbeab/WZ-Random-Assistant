@@ -89,6 +89,14 @@ Page({
     this.checkPermissionFromCloud();
   },
 
+  // 下拉刷新：任何页面状态不对时，管理员可以自己拉一下，不必退出重进。
+  async onPullDownRefresh() {
+    await this.loadPlaylist(false);
+    if (this.data.currentTab === 'codes') await this.loadCodeList({ force: true });
+    if (this.data.currentTab === 'admins') await Promise.all([this.loadPasscodeList(), this.loadAdminList()]);
+    wx.stopPullDownRefresh();
+  },
+
   onShow() {
     if (this.data.currentTab === 'help' && this.data.isSuperAdmin) {
       this.loadHelpArticles(false);
@@ -125,6 +133,8 @@ Page({
           this.loadPlaylist(false),
           this.checkSubscriptionStatus()
         ]);
+        // 静默预取验证码列表：管理员多半会切到该页，提前拉一次可省掉首次切页的冷启动等待。
+        this.loadCodeList({ silent: true });
       } else {
         this.showNoPermission();
       }
@@ -170,7 +180,7 @@ Page({
     if (tab === this.data.currentTab) return;
     this.setData({ currentTab: tab });
     if (tab === 'codes') {
-      this.loadCodeList();
+      this.loadCodeList({ force: true });
     } else if (tab === 'test') {
       Promise.all([this.loadTestStats(), this.loadChannelStatus()]);
     } else if (tab === 'admins') {
@@ -219,6 +229,18 @@ Page({
   },
 
   // ========== 审核相关方法 ==========
+
+  // 写操作成功后：服务端必然把 revision +1，本地立即同步，避免紧接着的操作带着旧版本号提交。
+  bumpRevision() {
+    const schedule = this.data.schedule;
+    if (!schedule) return;
+    this.setData({ 'schedule.revision': (Number(schedule.revision) || 1) + 1 });
+  },
+  // 写成功后统一收尾：先本地校准版本号，再后台拉一次真实数据。
+  async refreshAfterWrite() {
+    this.bumpRevision();
+    await this.loadPlaylist(false);
+  },
 
   async loadPlaylist(showLoading = true) {
     if (showLoading) wx.showLoading({ title: '加载中' });
@@ -294,7 +316,7 @@ Page({
             });
             if (ret.result.success) {
               toastLater({ title: ret.result.message, icon: 'success' });
-              this.loadPlaylist();
+              await this.refreshAfterWrite();
             } else {
               toastLater({ title: ret.result.message, icon: 'none' });
             }
@@ -345,7 +367,7 @@ Page({
           });
           if (!ret.result.success) throw new Error(ret.result.message || '删除失败');
           this.setData({ [`auditSelections.day${dayIndex}`]: [] });
-          await this.loadPlaylist(false);
+          await this.refreshAfterWrite();
           toastLater({ title: ret.result.message, icon: 'success' });
         } catch (err) {
           toastLater({ title: err.message || '删除失败', icon: 'none' });
@@ -371,7 +393,7 @@ Page({
       }
     }).then(async ret => {
       if (!ret.result.success) throw new Error(ret.result.message || '撤销失败');
-      await this.loadPlaylist(false);
+      await this.refreshAfterWrite();
       toastLater({ title: ret.result.message, icon: 'success' });
     }).catch(err => {
       toastLater({ title: err.message || '撤销失败', icon: 'none' });
@@ -400,7 +422,7 @@ Page({
 
       if (res.result.success) {
         toastLater({ title: res.result.message, icon: 'success' });
-        this.loadPlaylist();
+        await this.refreshAfterWrite();
         this.closeModal();
       } else {
         toastLater({ title: res.result.message, icon: 'none' });
@@ -438,7 +460,10 @@ Page({
               toastLater({ title: '发布成功', icon: 'success' });
               this.setData({ schedule: null });
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              const message = ret.result.message || '';
+              toastLater({ title: message, icon: 'none' });
+              // 版本号过期时自动拉一次最新排期，省得管理员退出重进页面。
+              if (/过期/.test(message)) await this.loadPlaylist(false);
             }
           } catch (err) {
             toastLater({ title: '发布失败', icon: 'none' });
@@ -580,19 +605,36 @@ Page({
     }
   },
 
-  async loadCodeList() {
+  // 验证码列表：先用本地缓存秒开，再拉云端覆盖；30 秒内重复切换不重复请求。
+  async loadCodeList(options = {}) {
+    const { silent = false, force = false } = options;
+    const cacheKey = storageKey('admin_code_list_v1');
+    const now = Date.now();
+    if (!force && this._codeListAt && now - this._codeListAt < 30000 && this.data.codeList.length > 0) return;
+    if (!this.data.codeList.length) {
+      try {
+        const cached = wx.getStorageSync(cacheKey);
+        const fresh = cached && Number(cached.at) && now - Number(cached.at) < 10 * 60 * 1000;
+        if (fresh && Array.isArray(cached.list) && cached.list.length) {
+          this.setData({ codeList: cached.list });
+        }
+      } catch (_) { /* 缓存不可用就当没有 */ }
+    }
     try {
       const res = await cloudCall({
         name: 'manageWeeklyCode',
         data: { action: 'list' }
       });
       if (res.result.success) {
+        this._codeListAt = now;
         this.setData({ codeList: res.result.data });
-      } else {
+        try { wx.setStorageSync(cacheKey, { list: res.result.data, at: now }); } catch (_) { /* 忽略写缓存失败 */ }
+      } else if (!silent) {
         toastLater({ title: res.result.message, icon: 'none' });
       }
     } catch (err) {
       console.warn('加载验证码列表失败');
+      if (!silent && this.data.codeList.length === 0) toastLater({ title: '验证码加载失败', icon: 'none' });
     }
   },
 
@@ -610,7 +652,7 @@ Page({
             wx.hideLoading();
             if (ret.result.success) {
               toastLater({ title: '生成成功', icon: 'success' });
-              this.loadCodeList();
+              this.loadCodeList({ force: true });
             } else {
               toastLater({ title: ret.result.message, icon: 'none' });
             }
@@ -680,7 +722,7 @@ Page({
       if (ret.result.success) {
         toastLater({ title: editingCodeId ? '保存成功' : '添加成功', icon: 'success' });
         this.closeCodeModal();
-        this.loadCodeList();
+        this.loadCodeList({ force: true });
       } else {
         toastLater({ title: ret.result.message, icon: 'none' });
       }
@@ -706,7 +748,7 @@ Page({
             wx.hideLoading();
             if (ret.result.success) {
               toastLater({ title: '发布成功', icon: 'success' });
-              this.loadCodeList();
+              this.loadCodeList({ force: true });
             } else {
               toastLater({ title: ret.result.message, icon: 'none' });
             }
@@ -735,7 +777,7 @@ Page({
             wx.hideLoading();
             if (ret.result.success) {
               toastLater({ title: '删除成功', icon: 'success' });
-              this.loadCodeList();
+              this.loadCodeList({ force: true });
             } else {
               toastLater({ title: ret.result.message, icon: 'none' });
             }

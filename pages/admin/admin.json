@@ -1,5 +1,8 @@
 {
   "usingComponents": {
     "privacy-popup": "../../components/privacy-popup/privacy-popup"
-  }
+  },
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "backgroundColor": "#f5f6f4"
 }
