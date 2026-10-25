@@ -315,14 +315,31 @@ Component({
     },
     // 原生预览期间只挂起奖励：进入/返回都不结束本轮，照片、文案与遇见数保持原样。
     // 预览启动失败要立刻释放标记，否则之后真正离开页面时不再清理。
-    previewCat() {
+    async previewCat() {
       if (!this.data.visible || this.data.stage !== 'photo' || !this.data.photoReady || !this.data.photoSrc) return;
       if (this._previewing) return;
       this._previewing = true;
       this._previewStartedAt = Date.now();
+      let src = this.data.photoSrc;
+      // 展示用的可能是短期签名地址；预览前先换成本地文件，否则每次点开大图都要重新下载整张图（表现为一直转圈）。
+      if (/^https?:/i.test(src) && this._currentPhoto && this._currentPhoto.fileID) {
+        wx.showLoading({ title: '正在打开大图', mask: true });
+        const fileID = this._currentPhoto.fileID;
+        src = await photos.ensureLocal(fileID).catch(() => '');
+        if (!src) src = await photos.refreshSignedUrl(fileID).catch(() => '');
+        wx.hideLoading();
+        if (!src) {
+          this._previewing = false;
+          this._previewStartedAt = 0;
+          diagnostics.record('easter_photo', 'preview', 'local_unavailable');
+          wx.showToast({ title: '图片暂时无法打开', icon: 'none' });
+          return;
+        }
+        if (src !== this.data.photoSrc) this.setData({ photoSrc: src });
+      }
       wx.previewImage({
-        current: this.data.photoSrc,
-        urls: [this.data.photoSrc],
+        current: src,
+        urls: [src],
         fail: () => { if (!this._previewSuspended) { this._previewing = false; this._previewStartedAt = 0; } }
       });
     },

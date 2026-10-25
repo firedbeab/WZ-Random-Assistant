@@ -23,13 +23,13 @@ function load(testMode) {
     getStorageSync: key => structuredClone(storage.get(key)), setStorageSync: (key, value) => storage.set(key, structuredClone(value)),
     cloud: { async downloadFile({ fileID }) {
       downloads++; const tempFilePath = `wxfile://temp/${downloads}`;
-      disk.set(tempFilePath, fileID.includes('large') ? 3 * 1024 * 1024 : 2 * 1024 * 1024);
+      disk.set(tempFilePath, fileID.includes('large') ? 6 * 1024 * 1024 : 2 * 1024 * 1024);
       return { tempFilePath };
     } },
     // 私有桶下普通用户走服务端签发的短时地址下载，不再直接用 fileID。
     downloadFile({ url, success, fail }) {
       downloads++; const tempFilePath = `wxfile://temp/${downloads}`;
-      disk.set(tempFilePath, url.includes('large') ? 3 * 1024 * 1024 : 2 * 1024 * 1024);
+      disk.set(tempFilePath, url.includes('large') ? 6 * 1024 * 1024 : 2 * 1024 * 1024);
       if (success) success({ statusCode: 200, tempFilePath });
       else if (fail) fail({ errMsg: 'downloadFile:fail' });
     }

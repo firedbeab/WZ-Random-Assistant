@@ -79,7 +79,8 @@ function cacheImage(fileID) {
     if (path) return path;
     const download = await fetchImage(fileID);
     const info = await fsCall('getFileInfo', { filePath: download.tempFilePath });
-    if (!info.size || info.size > 2 * 1024 * 1024) throw new Error('image size');
+    // 单张上限放宽到 5MB：上限过小时大图只能退回签名地址，导致每次点开大图都要重新下载。
+    if (!info.size || info.size > 5 * 1024 * 1024) throw new Error('image size');
     // 下载并行，磁盘/索引提交串行，保证12MB上限及并发索引不丢失。
     const commit = commitQueue.catch(() => {}).then(async () => {
       try { await fsCall('mkdir', { dirPath: DIR, recursive: true }); }
@@ -136,4 +137,7 @@ function warm() { withTimeout(manifest(true)).then(entries => {
   const start = Math.floor(Math.random() * entries.length);
   return Promise.all(entries.slice(start, start + 2).map(entry => cacheImage(entry.fileID).catch(() => '')));
 }).catch(() => {}); }
-module.exports = { manifest, cacheImage, cachedPath, prepare, prepareCached, warm, withTimeout, DEFAULT_TOP, DEFAULT_BOTTOM };
+// 预览前确保拿到本地文件；落盘失败时退回刷新后的签名地址。
+function ensureLocal(fileID) { return cacheImage(fileID); }
+function refreshSignedUrl(fileID) { return imageAccess.resolve('manageEasterEggs', fileID); }
+module.exports = { manifest, cacheImage, cachedPath, prepare, prepareCached, warm, withTimeout, ensureLocal, refreshSignedUrl, DEFAULT_TOP, DEFAULT_BOTTOM };

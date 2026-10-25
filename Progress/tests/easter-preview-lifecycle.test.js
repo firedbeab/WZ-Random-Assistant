@@ -65,11 +65,12 @@ const hide = item => component.pageLifetimes.hide.call(item);
 const show = item => component.pageLifetimes.show.call(item);
 const reset = () => { previewCalls = []; failNextPreview = false; };
 
+(async () => {
 // 1) 预览期间页面 hide 只挂起，不能结束奖励或重置轮次。
 reset();
 let item = instance();
 const recordsBefore = records;
-item.previewCat();
+await item.previewCat();
 check(previewCalls.length, 1, 'previewImage 只调用一次');
 hide(item);
 check(item.data.visible, true, '预览中 hide 不能关闭弹窗');
@@ -106,7 +107,7 @@ check(item._resets, 1, '非预览状态 hide 仍会重置已中奖轮次');
 reset();
 item = instance();
 failNextPreview = true;
-item.previewCat();
+await item.previewCat();
 check(item._previewing, false, '预览启动失败后标记立即释放');
 hide(item);
 check(item.data.visible, false, '预览失败后离开页面可以正常关闭');
@@ -114,28 +115,28 @@ check(item.data.visible, false, '预览失败后离开页面可以正常关闭')
 // 6) 连点预览不应重复打开原生大图。
 reset();
 item = instance();
-item.previewCat();
-item.previewCat();
-item.previewCat();
+await item.previewCat();
+await item.previewCat();
+await item.previewCat();
 check(previewCalls.length, 1, '连点只打开一次原生大图');
 
 // 7) 照片未就绪或阶段不对时不触发预览。
 reset();
 item = instance();
 item.data.photoReady = false;
-item.previewCat();
+await item.previewCat();
 item.data.photoReady = true;
 item.data.stage = 'ascii';
-item.previewCat();
+await item.previewCat();
 item.data.stage = 'photo';
 item.data.visible = false;
-item.previewCat();
+await item.previewCat();
 check(previewCalls.length, 0, '照片未就绪、阶段不对或弹窗关闭时不预览');
 
 // 8) 反复预览与返回多次后状态不串。
 reset();
 item = instance();
-for (let i = 0; i < 3; i++) { item.previewCat(); hide(item); show(item); }
+for (let i = 0; i < 3; i++) { await item.previewCat(); hide(item); show(item); }
 check(item.data.visible, true, '多次预览往返后弹窗仍然打开');
 check(item.data.photoSrc, 'cached.jpg', '多次预览往返后照片不变');
 check(previewCalls.length, 3, '每次都只打开一次原生大图');
@@ -153,9 +154,10 @@ check(item.data.visible, false, '兜底清除后真正离开页面可以关闭')
 // 10) 组件卸载时清理预览状态。
 reset();
 item = instance();
-item.previewCat();
+await item.previewCat();
 component.lifetimes.detached.call(item);
 check(item._detached, true, '卸载标记已设置');
 check(item._previewing, false, '卸载后预览标记已清理');
 
 console.log(`PASS: ${checks} preview lifecycle assertions; hide-suspend, show-restore, real leave, preview start failure, rapid taps, repeated rounds, leak fallback and unmount cleanup`);
+})().catch(err => { console.error(err); process.exit(1); });
