@@ -1,6 +1,7 @@
 {
   "name": "super-admin-console",
   "version": "1.0.0",
+  "license": "MIT",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "latest"
