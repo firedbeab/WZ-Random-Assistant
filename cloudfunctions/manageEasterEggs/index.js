@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { createDataScope, canUseTestData, isProductionSuperadmin } = require('./dataScope');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
+const _ = db.command;
 const DOC = 'easter_eggs_v1';
 const MAX_BYTES = 2 * 1024 * 1024;
 const ok = (data) => ({ success: true, data });
@@ -144,7 +145,12 @@ exports.main = async (event = {}) => {
     const data = { entries, revision: event.revision + 1, updated_at: db.serverDate() };
     const configCollection = db.collection(scope.collection('configs'));
     if (before._id) {
-      const changed = await configCollection.where({ _id: DOC, revision: event.revision }).update({ data });
+      // 历史文档可能没有 revision 字段，此时按"字段不存在"匹配，
+      // 否则条件更新永远匹配不上，会误报"内容已更新，请刷新后再操作"。
+      const revisionMatch = (before.revision === undefined || before.revision === null)
+        ? _.exists(false)
+        : event.revision;
+      const changed = await configCollection.where({ _id: DOC, revision: revisionMatch }).update({ data });
       if (!changed.stats || changed.stats.updated !== 1) throw new Error('内容已更新，请刷新后再操作');
     } else {
       // add 指定文档ID而非 set：同时首次保存时只有一个请求能创建。

@@ -9,6 +9,13 @@ const EDITABLE_SUBMISSION_STATUSES = new Set(['pending', 'overflow', 'carryover'
 const RESTORABLE_STATUSES = new Set(['pending', 'overflow', 'carryover']);
 const DAYS = ['day1', 'day2', 'day3', 'day4', 'day5'];
 
+// 条件更新用的版本号匹配条件：文档没有 revision 字段时按"字段不存在"匹配，
+// 否则历史排期永远匹配不上，会误报"页面数据已过期"。
+function revisionGuard(storedRevision, expectedRevision) {
+  const hasField = storedRevision !== undefined && storedRevision !== null && storedRevision !== '';
+  return hasField ? { revision: expectedRevision } : { revision: _.exists(false) };
+}
+
 function getWeekKey() {
   const bj = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const sun = new Date(bj.getTime());
@@ -303,7 +310,10 @@ exports.main = async event => {
         revision: currentRevision + 1, updated_at: db.serverDate(), updated_by: OPENID
       });
       // 带版本号的条件更新：两人同时保存时，后到达的一方会失败并提示刷新，而不是静默覆盖。
-      const updateRes = await db.collection(schedules).where({ _id: event.id, revision: currentRevision }).update({ data: afterData });
+      // 历史排期可能没有 revision 字段，此时按"字段不存在"匹配，否则永远匹配不上、误报过期。
+      const updateRes = await db.collection(schedules)
+        .where(Object.assign({ _id: event.id }, revisionGuard(before.revision, currentRevision)))
+        .update({ data: afterData });
       if (!updateRes.stats || !updateRes.stats.updated) {
         throw new Error('页面数据已过期，请刷新后重试');
       }
@@ -325,10 +335,12 @@ exports.main = async event => {
       const expectedRevision = Number(event.revision) || 1;
       const currentRevision = Number(before.revision) || 1;
       if (expectedRevision !== currentRevision) throw new Error('页面数据已过期，请刷新后重试');
-      const withdrawRes = await db.collection(schedules).where({ _id: event.id, revision: currentRevision, status: 'published' }).update({ data: {
-        status: 'withdrawn', withdraw_reason: reason, withdrawn_at: db.serverDate(),
-        withdrawn_by: OPENID, revision: currentRevision + 1
-      }});
+      const withdrawRes = await db.collection(schedules)
+        .where(Object.assign({ _id: event.id, status: 'published' }, revisionGuard(before.revision, currentRevision)))
+        .update({ data: {
+          status: 'withdrawn', withdraw_reason: reason, withdrawn_at: db.serverDate(),
+          withdrawn_by: OPENID, revision: currentRevision + 1
+        }});
       if (!withdrawRes.stats || !withdrawRes.stats.updated) {
         throw new Error('页面数据已过期，请刷新后重试');
       }
