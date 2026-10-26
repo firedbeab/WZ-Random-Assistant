@@ -3,6 +3,7 @@ const { cloudCall, collectionName, isTestMode, storageKey } = require('../../uti
 const LAST_SUBMISSION_KEY = storageKey('last_submission');
 const { unlockTapCount } = require('../../utils/dice-easter-egg');
 const eggPhotos = require('../../utils/easter-egg-photos');
+const homePresentation = require('../../utils/home-presentation');
 
 Page({
   data: {
@@ -14,6 +15,16 @@ Page({
     remark: '',
     specialNote: '',
     loading: false,
+    statusReady: false,
+    statusError: false,
+    focusedField: '',
+    beforeOpening: false,
+    channelForceClosed: false,
+    scheduleLoadFailed: false,
+    previewSongs: [],
+    previewTotal: 0,
+    previewWeekText: '',
+    previewNote: '',
     canSubmit: true, // 是否允许提交
     nextOpenText: '', // 下次开放时间文案（关闭态展示）
     hoursLeftText: '', // 开放态剩余小时文案
@@ -61,23 +72,12 @@ Page({
 
     // 关闭时展示的下次开放时间（北京时间，周日 8:00 起）
     computeNextOpenText(bjTime) {
-      const day = bjTime.getUTCDay();
-      const hours = bjTime.getUTCHours();
-      // 正处于时间窗口内却被关闭，说明是管理员强制关闭，不承诺具体时间
-      if (day === 0 && hours >= 8 && hours < 20) return '待管理员开启';
-      let ahead = (7 - day) % 7;
-      if (day === 0 && hours >= 20) ahead = 7;
-      const target = new Date(bjTime.getTime());
-      target.setUTCDate(bjTime.getUTCDate() + ahead);
-      return `${target.getUTCMonth() + 1} 月 ${target.getUTCDate()} 日 周日 8:00`;
+      return homePresentation.nextOpenText(bjTime, !!(this.data.userInfo && this.data.userInfo.channelForceClose));
     },
 
     // 开放时展示的剩余小时数
     computeHoursLeft(bjTime) {
-      if (bjTime.getUTCDay() !== 0) return '';
-      const hours = bjTime.getUTCHours();
-      if (hours < 8 || hours >= 20) return '';
-      return `还剩 ${20 - hours} 小时`;
+      return homePresentation.hoursLeftText(bjTime);
     },
 
     // 底部提交结果只作为本次操作的短暂反馈，不参与提交状态判断。
@@ -121,6 +121,10 @@ Page({
 
         this.setData({
           canSubmit: channelOpen,
+          statusError: false,
+          scheduleLoadFailed: false,
+          beforeOpening: isSunday && bjTime.getUTCHours() < 8,
+          channelForceClosed: !!(this.data.userInfo && this.data.userInfo.channelForceClose),
           nextOpenText: this.computeNextOpenText(bjTime),
           hoursLeftText: channelOpen ? this.computeHoursLeft(bjTime) : ''
         });
@@ -143,6 +147,8 @@ Page({
               .where({ week_key: publishedWeekKey, status: 'published' })
               .limit(1)
               .get();
+          if (token !== this._statusToken) return;
+          if (this.data.isTestMode && (!pubRes.result || !pubRes.result.success)) throw new Error('SCHEDULE_READ_FAILED');
           const publishedSchedule = this.data.isTestMode
             ? (pubRes.result && pubRes.result.success ? pubRes.result.data : null)
             : pubRes.data[0];
@@ -150,16 +156,21 @@ Page({
             // 排期已发布 → 清除已提交状态和本地缓存
             wx.removeStorageSync(LAST_SUBMISSION_KEY);
             if (token !== this._statusToken) return;
-            this.setData({ hasSubmitted: false, submittedInfo: '', schedulePublished: true });
+            this.setData({
+              hasSubmitted: false, submittedInfo: '', schedulePublished: true,
+              ...homePresentation.schedulePreview(publishedSchedule)
+            });
             return;
           }
         } catch (pubErr) {
-          // 查询失败不阻塞后续逻辑
+          if (token !== this._statusToken) return;
+          // 读取失败不伪装成“尚未发布”，也不展示上次留存的预览。
+          this.setData({ scheduleLoadFailed: true });
         }
 
         // 本周排期尚未发布
         if (token !== this._statusToken) return;
-        this.setData({ schedulePublished: false });
+        this.setData({ schedulePublished: false, ...homePresentation.schedulePreview(null) });
 
         // 4. 先查本地缓存（优先读缓存，避免重复查询数据库）
         const cached = wx.getStorageSync(LAST_SUBMISSION_KEY);
@@ -202,6 +213,9 @@ Page({
         }
       } catch (e) {
         console.warn('状态检查失败');
+        if (token === this._statusToken) this.setData({ statusError: true });
+      } finally {
+        if (token === this._statusToken) this.setData({ statusReady: true });
       }
     },
 
@@ -230,6 +244,7 @@ Page({
     },
 
     onHide() {
+      this.setData({ focusedField: '' });
       this.clearStatusMessage();
       this.cancelDiceShake();
     },
@@ -286,14 +301,23 @@ Page({
     this.setData({ [field]: e.detail.value });
   },
 
+  onFieldFocus(e) {
+    this.setData({ focusedField: e.currentTarget.dataset.field });
+  },
+
+  onFieldBlur(e) {
+    if (this.data.focusedField === e.currentTarget.dataset.field) this.setData({ focusedField: '' });
+  },
+
   // 提交内容
   async submitRequest() {
+    if (this.data.loading) return;
     const { weeklyCode, title, remark, specialNote } = this.data;
 
     // 1. 前端基础校验
     if (!weeklyCode) return wx.showToast({ title: '请输入本周验证码', icon: 'none' });
-    if (!title) return wx.showToast({ title: '请输入内容名称', icon: 'none' });
-    if (!remark) return wx.showToast({ title: '请输入补充说明', icon: 'none' });
+    if (!title) return wx.showToast({ title: '请输入歌名', icon: 'none' });
+    if (!remark) return wx.showToast({ title: '请输入歌手或来源', icon: 'none' });
 
     this.setData({ loading: true });
 
@@ -329,6 +353,8 @@ Page({
           remark: '',
           specialNote: '',
           hasSubmitted: true,
+          statusReady: true,
+          focusedField: '',
           submittedInfo: `《${title}》- ${remark}`,
           schedulePublished: false,
           ...(typeof count === 'number' ? { totalSubmissions: count } : {})
@@ -382,6 +408,14 @@ Page({
   // 跳转排期页
   goPlaylist() {
     wx.navigateTo({ url: '/pages/playlist/index' });
+  },
+
+  goHistory() {
+    wx.navigateTo({ url: '/pages/playlist/index?tab=1' });
+  },
+
+  goHelp() {
+    wx.navigateTo({ url: '/pages/help/index' });
   },
 
   // 跳转关于页

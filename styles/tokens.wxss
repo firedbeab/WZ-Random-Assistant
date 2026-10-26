@@ -1,0 +1,44 @@
+/* 公共设计变量。逐页接入，不在这里覆盖旧页面布局。当前以浅色为主。 */
+page {
+  --bg: #f4f2ef;
+  --surface: #ffffff;
+  --surface-2: #edebe7;
+  --line: #e8e6e2;
+  --text-1: #1b1b1d;
+  --text-2: #5f6066;
+  --text-3: #777870;
+  --placeholder: #85867f;
+  --accent: #2d8057;
+  --accent-weak: #e8f2ec;
+  --accent-pressed: #246a48;
+  --accent-disabled: #8aab98;
+  --danger: #d64545;
+  --danger-weak: #fbeceb;
+  --warn: #946017;
+  --warn-weak: #fdf3e3;
+  --info: #2f6fb3;
+  --info-weak: #eaf1fa;
+  --on-accent: #ffffff;
+  --gradient-open: linear-gradient(160deg, #e2efe7 0%, #eef1ea 55%, #f4f2ef 100%);
+  --gradient-closed: linear-gradient(160deg, #eceae5 0%, #f0eeea 55%, #f4f2ef 100%);
+  --font-xs: 20rpx;
+  --font-sm: 24rpx;
+  --font-md: 28rpx;
+  --font-lg: 32rpx;
+  --font-xl: 38rpx;
+  --font-2xl: 46rpx;
+  --font-3xl: 64rpx;
+  --radius-sm: 8rpx;
+  --radius-md: 14rpx;
+  --radius-lg: 20rpx;
+  --radius-pill: 999rpx;
+  --space-1: 8rpx;
+  --space-2: 12rpx;
+  --space-3: 16rpx;
+  --space-4: 24rpx;
+  --space-5: 32rpx;
+  --space-6: 48rpx;
+  --shadow-sm: 0 2rpx 8rpx rgba(60, 50, 40, .05);
+  --shadow-md: 0 8rpx 24rpx rgba(60, 50, 40, .08);
+  --focus-ring: 0 0 0 4rpx rgba(45, 128, 87, .16), 0 0 0 8rpx rgba(45, 128, 87, .06);
+}

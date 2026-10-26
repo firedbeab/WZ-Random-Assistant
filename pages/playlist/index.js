@@ -17,8 +17,10 @@ Page({
     ]
   },
 
-  onLoad() {
-    this.loadWeekPlaylist(0, false);
+  onLoad(options = {}) {
+    const activeTab = ['1', '2'].includes(options.tab) ? Number(options.tab) : 0;
+    this.setData({ activeTab });
+    this.loadWeekPlaylist(activeTab, false);
     this.checkSubStatus();
   },
 
