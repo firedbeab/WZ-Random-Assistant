@@ -8,6 +8,22 @@ const root = path.resolve(__dirname, '../..');
 
 // 展示方法接收已偏移到北京时间的 Date，使用 UTC getter。
 const bj = value => new Date(`${value}Z`);
+test('圆点行只表达通道状态，已提交与发布结果不混入通道提示', () => {
+  const markup = fs.readFileSync(path.join(root, 'pages/index/index.wxml'), 'utf8');
+  const statusRow = markup.match(/<view class="status-row">([\s\S]*?)<\/view>/)[1];
+  const expression = statusRow.match(/<text>{{([\s\S]*?)}}<\/text>/)[1];
+  const dotExpression = statusRow.match(/class="status-dot {{([\s\S]*?)}}"/)[1];
+  for (const canSubmit of [false, true]) {
+    for (const hasSubmitted of [false, true]) {
+      for (const schedulePublished of [false, true]) {
+        const context = { canSubmit, hasSubmitted, schedulePublished };
+        const open = canSubmit && !schedulePublished;
+        assert.equal(vm.runInNewContext(expression, context), open ? '点歌通道开放中' : '点歌通道已关闭');
+        assert.equal(vm.runInNewContext(dotExpression, context), open ? 'is-active' : '');
+      }
+    }
+  }
+});
 test('下次开放跨周、跨年、开放前及强制关闭文案', () => {
   assert.equal(presentation.nextOpenText(bj('2026-10-25T07:59:00')), '10 月 25 日 周日 8:00');
   assert.equal(presentation.nextOpenText(bj('2026-10-25T20:00:00')), '11 月 1 日 周日 8:00');

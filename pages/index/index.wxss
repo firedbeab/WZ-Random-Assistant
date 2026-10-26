@@ -43,7 +43,7 @@ button::after { border: none; }
 .submitted-song { display: block; font-size: var(--font-xl); font-weight: 500; line-height: 1.5; margin-top: var(--space-3); overflow-wrap: break-word; word-break: break-all; }
 .card-description { display: block; margin-top: var(--space-2); font-size: var(--font-sm); color: var(--text-2); line-height: 1.7; }
 .submitted-card .card-description { margin-top: var(--space-4); }
-.published-badge { padding: var(--space-1) var(--space-2); color: var(--accent); background: var(--accent-weak); font-size: var(--font-xs); border-radius: var(--radius-sm); }
+.playlist-count { color: var(--text-2); font-size: var(--font-sm); }
 .preview-row { display: flex; align-items: center; gap: var(--space-3); padding-top: var(--space-4); }
 .song-number { display: flex; align-items: center; justify-content: center; flex: none; width: var(--space-6); height: var(--space-6); border-radius: var(--radius-pill); background: var(--accent-weak); color: var(--accent); font-size: var(--font-sm); }
 .preview-song { flex: 1; min-width: 0; }

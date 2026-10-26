@@ -11,11 +11,11 @@
     <block wx:if="{{statusReady && !statusError}}">
       <view class="status-row">
         <text class="status-dot {{canSubmit && !schedulePublished ? 'is-active' : ''}}"></text>
-        <text>{{schedulePublished ? '本期已发布' : (hasSubmitted ? '本周已提交' : (canSubmit ? '点歌开放中' : '点歌暂未开放'))}}</text>
+        <text>{{canSubmit && !schedulePublished ? '点歌通道开放中' : '点歌通道已关闭'}}</text>
         <text class="status-deadline num" wx:if="{{canSubmit && !schedulePublished}}">{{hoursLeftText || '管理员临时开放'}}</text>
       </view>
       <text class="hero-title">{{schedulePublished ? '本期歌单已发布' : (hasSubmitted ? '你的点歌，已收到' : (canSubmit ? '这周，想听什么？' : (channelForceClosed ? '点歌通道暂时关闭' : (beforeOpening ? '点歌即将开放' : '本周点歌已结束'))))}}</text>
-      <text class="hero-description" wx:if="{{hasSubmitted && !schedulePublished}}">提交已生效，周日晚随机抽取后由管理员审核发布。</text>
+      <text class="hero-description" wx:if="{{hasSubmitted && !schedulePublished}}">本周无需再次提交。</text>
       <text class="hero-description" wx:elif="{{canSubmit && !schedulePublished}}">每人每周一次，提交后不可修改。</text>
       <text class="hero-description" wx:elif="{{channelForceClosed}}">{{nextOpenText}}</text>
       <text class="hero-description" wx:else>下次开放：<text class="num">{{nextOpenText}}</text><text class="timezone">（北京时间）</text></text>
@@ -70,9 +70,9 @@
       <view class="playlist-preview" wx:if="{{schedulePublished}}">
         <view class="section-heading">
           <text class="section-title">本期歌单</text>
-          <text class="published-badge">已发布</text>
+          <text class="playlist-count num">共 {{previewTotal}} 首</text>
         </view>
-        <text class="card-description num" wx:if="{{previewWeekText}}">{{previewWeekText}} 期 · 共 {{previewTotal}} 首</text>
+        <text class="card-description num" wx:if="{{previewWeekText}}">{{previewWeekText}} 期</text>
         <view class="preview-row" wx:for="{{previewSongs}}" wx:key="key">
           <text class="song-number num">{{index + 1}}</text>
           <view class="preview-song">
