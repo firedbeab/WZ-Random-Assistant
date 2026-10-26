@@ -139,8 +139,8 @@ test('输入焦点竞争、说明/往期入口及原提交字段契约', async (
   assert.equal(page.data.focusedField, 'title');
   page.onFieldBlur({ currentTarget: { dataset: { field: 'title' } } });
   assert.equal(page.data.focusedField, '');
-  page.goHelp(); page.goHistory(); page.goPlaylist();
-  assert.deepEqual(routes, ['/pages/help/index', '/pages/playlist/index?tab=1', '/pages/playlist/index']);
+  page.goHelp(); page.goAbout(); page.goHistory(); page.goPlaylist();
+  assert.deepEqual(routes, ['/pages/help/index', '/pages/about/index', '/pages/playlist/index?tab=1', '/pages/playlist/index']);
   page.setData({ weeklyCode: 'fixture-code', title: '稻香', remark: '周杰伦', specialNote: '现场版' });
   await page.submitRequest();
   const sent = calls.find(c => c.name === 'checkWeeklyCode').data;
