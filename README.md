@@ -39,7 +39,7 @@
 当前架构、已完成改动、云端配置要求和待办见 [`Progress/广播站点歌小程序.md`](Progress/%E5%B9%BF%E6%92%AD%E7%AB%99%E7%82%B9%E6%AD%8C%E5%B0%8F%E7%A8%8B%E5%BA%8F.md)。
 
 - 当前界面约定：[DESIGN.md](DESIGN.md)。布局方向先讨论、再看 HTML 样稿、确认后才接入正式小程序。
-- 歌单连续列表示例：[E-playlist-flat.html](Progress/design/mockups/E-playlist-flat.html)。可直接用浏览器打开；支持三期、长文本和多种状态预览，使用固定示例数据，不连接业务云端。旧 B/C 样稿保留为历史对照。
+- 歌单连续列表示例：[E-playlist-flat.html](Progress/design/mockups/E-playlist-flat.html)（E.2）。日期信息去重、提醒位于内容区右上角，支持三期、长文本、多种状态及浅色/深色/跟随系统预览；使用固定示例数据，不连接业务云端。正式页面和深色适配尚未落地，旧 B/C 样稿保留为历史对照。
 - 备份约定：每轮改动前提交并推送备份到 `origin/main`；验证后提交并推送结果。网络失败要明确报告，不能用“本地已提交”代替“远端已备份”；只有用户明确允许时才先完成本地工作。
 
 ## 许可证

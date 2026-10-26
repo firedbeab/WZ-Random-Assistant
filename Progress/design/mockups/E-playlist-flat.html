@@ -8,8 +8,18 @@
   :root {
     color-scheme: light;
     --bg: #f4f2ef; --surface: #fff; --surface-2: #edebe7;
-    --text-1: #1b1b1d; --text-2: #5f6066; --text-3: #777870;
-    --accent: #2d8057; --accent-weak: #e8f2ec;
+    --text-1: #1b1b1d; --text-2: #5f6066; --text-3: #686b63;
+    --accent: #28764f; --accent-weak: #e8f2ec;
+    --line: #e8e6e2; --pressed: #f4f5f1; --note-edge: #b7cdbc;
+    --toast-bg: #30352f; --toast-text: #fff;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #141715; --surface: #1c201e; --surface-2: #252c27;
+    --text-1: #f0f2ed; --text-2: #bdc5bd; --text-3: #a0aaa0;
+    --accent: #8cd4a8; --accent-weak: #263d30;
+    --line: #353e37; --pressed: #29332c; --note-edge: #53735f;
+    --toast-bg: #dce9df; --toast-text: #19231c;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
@@ -19,7 +29,7 @@
   .workbench { min-height: 100vh; display: grid; grid-template-columns: 260px minmax(320px, 430px); align-items: start; justify-content: center; gap: 76px; padding: 42px 28px; }
   .design-notes { padding-top: 38px; }
   .eyebrow { display: block; color: var(--accent); font-size: 12px; letter-spacing: .08em; font-weight: 600; }
-  h1 { font-size: 29px; line-height: 1.3; margin: 14px 0 16px; font-weight: 600; letter-spacing: -.5px; }
+  .design-notes h1 { font-size: 29px; line-height: 1.3; margin: 14px 0 16px; font-weight: 600; letter-spacing: -.5px; }
   .intro { color: var(--text-2); font-size: 14px; line-height: 1.85; margin: 0; }
   .controls { margin-top: 32px; }
   .control-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin: 20px 0 9px; }
@@ -35,38 +45,41 @@
   .native-nav { min-height: 49px; flex: none; display: grid; grid-template-columns: 80px 1fr 80px; align-items: center; padding: 0 16px; background: var(--surface); }
   .nav-back { font-size: 28px; line-height: 1; font-family: sans-serif; }
   .nav-title { text-align: center; font-size: 15px; font-weight: 600; white-space: nowrap; }
-  .native-capsule { justify-self: end; width: 72px; height: 28px; border-radius: 18px; box-shadow: inset 0 0 0 1px #e8e6e2; display: flex; justify-content: space-evenly; align-items: center; font-size: 17px; }
+  .native-capsule { justify-self: end; width: 72px; height: 28px; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line); display: flex; justify-content: space-evenly; align-items: center; font-size: 17px; }
   .capsule-dot { width: 13px; height: 13px; border: 2px solid currentColor; border-radius: 50%; position: relative; }
   .capsule-dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: currentColor; }
-  .screen-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ddd9d1 transparent; }
-  .page-head { padding: 8px 24px 0; }
-  .week-tabs { display: flex; gap: 24px; }
+  .screen-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+  .page-head { padding: 14px 24px 0; }
+  .page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .page-title { margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -.7px; line-height: 1.4; }
+  .notify-action { display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; background: transparent; border: none; color: var(--accent); font-size: 12px; min-height: 44px; padding: 10px 0 10px 8px; white-space: nowrap; }
+  .notify-action svg { width: 15px; height: 15px; flex: none; }
+  .notify-action:disabled { color: var(--text-2); cursor: default; }
+  .week-tabs { display: flex; gap: 24px; margin-top: 13px; }
   .week-tab { position: relative; padding: 13px 0 14px; min-height: 44px; color: var(--text-2); background: transparent; border: none; font-size: 14px; white-space: nowrap; }
   .week-tab[aria-selected="true"] { color: var(--accent); font-weight: 600; }
   .week-tab[aria-selected="true"]::after { content: ""; position: absolute; height: 2px; left: 0; right: 0; bottom: 4px; border-radius: 2px; background: var(--accent); }
-  .period-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 18px; }
-  .period-range { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+  .period-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 12px; color: var(--text-2); }
+  .period-range { margin: 0; font-size: 12px; font-weight: 400; }
   .period-count { color: var(--text-2); font-size: 12px; white-space: nowrap; }
-  .period-year { display: block; font-size: 12px; color: var(--text-3); margin-top: 7px; }
-  .notify-row { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 13px; color: var(--text-2); }
-  .notify-action { background: transparent; border: none; color: var(--accent); font-size: 13px; min-height: 44px; padding: 10px 0 10px 16px; white-space: nowrap; }
-  .notify-action:disabled { color: var(--text-3); cursor: default; }
-  .copy-tip { color: var(--text-3); font-size: 11px; margin: 1px 0 0; line-height: 1.6; }
+  .copy-tip { color: var(--text-3); font-size: 11px; margin: 10px 0 0; line-height: 1.6; }
   .song-list { padding: 0 24px 36px; }
-  .day-section { padding-top: 28px; }
-  .day-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-  .day-title { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 15px; font-weight: 600; }
+  .day-section { padding-top: 26px; }
+  .day-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .day-heading::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+  .day-title { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 13px; font-weight: 700; color: var(--text-2); }
   .day-date { color: var(--text-3); font-size: 12px; font-weight: 400; }
-  .day-count { color: var(--text-3); font-size: 11px; flex: none; }
-  .song-row { display: grid; width: 100%; grid-template-columns: 23px minmax(0, 1fr); column-gap: 9px; padding: 9px 0; border: none; border-radius: 0; background: transparent; color: var(--text-1); text-align: left; -webkit-touch-callout: none; user-select: none; cursor: context-menu; }
-  .song-row:active { background: #faf9f6; }
-  .song-number { color: #929187; font-size: 11px; line-height: 23px; }
+  .song-row { display: grid; width: 100%; grid-template-columns: 23px minmax(0, 1fr); column-gap: 9px; padding: 12px 0; border: none; border-radius: 0; background: transparent; color: var(--text-1); text-align: left; -webkit-touch-callout: none; user-select: none; cursor: context-menu; }
+  .song-row:active { background: var(--pressed); }
+  .song-number { color: var(--text-3); font-size: 11px; line-height: 26px; }
   .song-content { min-width: 0; }
-  .song-name { display: block; font-size: 15px; line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
-  .song-singer { display: block; margin-top: 2px; color: var(--text-2); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-  .song-note { display: block; margin-top: 4px; color: #526658; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .song-name { display: block; font-size: 17px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
+  .song-singer { display: block; margin-top: 4px; color: var(--text-2); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  .song-note { display: flex; align-items: baseline; gap: 8px; margin-top: 9px; padding-left: 9px; border-left: 2px solid var(--note-edge); color: var(--text-2); font-size: 12px; line-height: 1.8; }
+  .note-label { flex: none; color: var(--text-3); font-size: 11px; }
+  .note-text { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .no-song { margin: 0; padding: 10px 0 8px 32px; color: var(--text-3); font-size: 13px; line-height: 1.7; }
-  .admin-note { margin-top: 28px; padding-top: 2px; }
+  .admin-note { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
   .admin-note h2 { color: var(--text-2); font-size: 13px; font-weight: 600; margin: 0 0 8px; }
   .admin-note p { font-size: 12px; color: var(--text-2); line-height: 1.85; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   .cache-hint { color: var(--text-3); font-size: 12px; line-height: 1.7; padding-top: 20px; margin: 0; }
@@ -76,7 +89,7 @@
   .retry { margin-top: 16px; border: none; background: transparent; color: var(--accent); padding: 10px 0; min-height: 44px; font-size: 13px; }
   .safe-area { height: 24px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--surface); }
   .home-indicator { width: 122px; height: 4px; border-radius: 4px; background: var(--text-1); }
-  .toast { position: absolute; z-index: 2; bottom: 38px; left: 24px; right: 24px; padding: 12px 16px; border-radius: 9px; background: #30352f; color: white; font-size: 12px; line-height: 1.6; text-align: center; opacity: 0; transform: translateY(6px); transition: opacity .15s, transform .15s; pointer-events: none; }
+  .toast { position: absolute; z-index: 2; bottom: 38px; left: 24px; right: 24px; padding: 12px 16px; border-radius: 9px; background: var(--toast-bg); color: var(--toast-text); font-size: 12px; line-height: 1.6; text-align: center; opacity: 0; transform: translateY(6px); transition: opacity .15s, transform .15s; pointer-events: none; }
   .toast.visible { opacity: 1; transform: translateY(0); }
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
   [hidden] { display: none !important; }
@@ -92,9 +105,9 @@
 <body>
 <main class="workbench">
   <aside class="design-notes" aria-label="样稿预览控制">
-    <span class="eyebrow">WZ 随机助手 · 交互样稿 E</span>
+    <span class="eyebrow">WZ 随机助手 · 交互样稿 E.2</span>
     <h1>把注意力<br>留给歌单。</h1>
-    <p class="intro">三期切换、日期分组和完整备注。去掉每天的外层卡片，让列表轻一点，阅读更连贯。</p>
+    <p class="intro">时间只在页头交代一次，提醒收在右上角。歌名是阅读重点，日期负责分组，歌手与备注依次退后。</p>
     <div class="controls">
       <label class="control-label" for="stateSelect">预览状态</label>
       <select id="stateSelect">
@@ -113,29 +126,38 @@
         <option value="320">320px · 窄屏检查</option>
         <option value="430">430px · 大屏手机</option>
       </select>
+      <label class="control-label" for="themeSelect">预览外观</label>
+      <select id="themeSelect">
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+        <option value="system">跟随系统</option>
+      </select>
       <button class="preview-action" id="refreshPreview" type="button">模拟下拉刷新 ↻</button>
     </div>
     <div class="details">
       <p>可切换期次、开启演示提醒，并在手机区域滚动。长按曲目可复制；电脑上也可右键或用 Enter 键复制。</p>
       <p>这里使用固定示例数据，不连接业务云端，不申请真实消息订阅。日期、数量和状态均为排版演示。</p>
       <p>本轮仅供讨论。正式小程序歌单页尚未替换。</p>
+      <p>深色仅为样稿预览。正式适配安排在歌单布局确认后、主题色与自定义背景之前。</p>
     </div>
   </aside>
 
   <section class="preview-stage" aria-label="歌单页手机预览">
     <div class="device" id="device">
       <div class="status-bar" aria-hidden="true"><span class="num">9:41</span><span class="status-icons"><svg width="15" height="12" viewBox="0 0 15 12"><path d="M1 11V8h2v3zm4 0V6h2v5zm4 0V3h2v8zm4 0V0h2v11z" fill="currentColor"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M1 4q7-6 14 0M4 7q4-4 8 0M7 10q1-1 2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><svg width="23" height="12" viewBox="0 0 23 12"><rect x="1" y="1" width="18" height="10" rx="2" fill="none" stroke="currentColor"/><rect x="3" y="3" width="14" height="6" rx="1" fill="currentColor"/><path d="M21 4v4" stroke="currentColor" stroke-width="2"/></svg></span></div>
-      <div class="native-nav"><span class="nav-back" aria-hidden="true">‹</span><span class="nav-title">已发布歌单</span><span class="native-capsule" aria-hidden="true"><span>•••</span><span class="capsule-dot"></span></span></div>
+      <div class="native-nav"><span class="nav-back" aria-hidden="true">‹</span><span class="nav-title">WZ随机助手</span><span class="native-capsule" aria-hidden="true"><span>•••</span><span class="capsule-dot"></span></span></div>
       <div class="screen-scroll" id="screenScroll">
         <header class="page-head">
+          <div class="page-toolbar">
+            <h1 class="page-title">每周歌单</h1>
+            <button type="button" class="notify-action" id="notifyButton" aria-label="开启本周发布提醒"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5h12l-1.5-2V7a4.5 4.5 0 0 0-9 0v4.5zM8 16a2.2 2.2 0 0 0 4 0"/></svg><span id="notifyLabel">发布提醒</span></button>
+          </div>
           <div class="week-tabs" role="tablist" aria-label="选择歌单期次">
             <button class="week-tab" type="button" role="tab" id="weekTab0" aria-selected="true" aria-controls="playlistContent" data-period="0">最新一期</button>
             <button class="week-tab" type="button" role="tab" id="weekTab1" aria-selected="false" aria-controls="playlistContent" data-period="1" tabindex="-1">上一期</button>
             <button class="week-tab" type="button" role="tab" id="weekTab2" aria-selected="false" aria-controls="playlistContent" data-period="2" tabindex="-1">上上期</button>
           </div>
           <div class="period-meta"><p class="period-range num" id="periodRange"></p><span class="period-count num" id="periodCount"></span></div>
-          <span class="period-year num" id="periodYear"></span>
-          <div class="notify-row"><span>发布提醒</span><button type="button" class="notify-action" id="notifyButton">开启 ›</button></div>
           <p class="copy-tip" id="copyTip">长按曲目，复制完整信息</p>
         </header>
         <div class="song-list" role="tabpanel" aria-labelledby="weekTab0" id="playlistContent" aria-live="polite"></div>
@@ -181,7 +203,7 @@
     const row=el('button','song-row'); row.type='button'; row.setAttribute('aria-label',`复制 ${song[0]}，${song[1]}`);
     row.append(el('span','song-number num',String(index+1).padStart(2,'0')));
     const body=el('span','song-content'); body.append(el('span','song-name',song[0]),el('span','song-singer',song[1]));
-    if(song[2]) body.append(el('span','song-note','备注：'+song[2])); row.append(body);
+    if(song[2]) { const note=el('span','song-note'); note.append(el('span','note-label','备注'),el('span','note-text',song[2])); body.append(note); } row.append(body);
     let timer, origin;
     const clear=()=>{clearTimeout(timer);timer=null;};
     row.addEventListener('pointerdown',e=>{ if(e.button!==0)return; origin=[e.clientX,e.clientY]; clear(); timer=setTimeout(()=>copySong(song),520); });
@@ -202,8 +224,8 @@
     if(mode==='empty') selectedDays.forEach((_,i)=>{selectedDays[i]=[];});
     if(mode==='long') {selectedDays[0][0]=['在平凡的日子里也想把这首长长名字的歌送给一直努力的你（校园现场特别版）','示例歌手 / 校园合唱团','这是一条用于检查换行的长备注。希望保留完整的歌名、歌手和这段说明，不截断重要信息，也不要让文字挤出手机屏幕。'];}
     const first=dateAt(source.week,1),last=dateAt(source.week,5),total=selectedDays.reduce((sum,rows)=>sum+rows.length,0);
-    byId('periodRange').textContent=`${monthDay(first)}—${monthDay(last)}`;
-    byId('periodYear').textContent=`${source.week.replaceAll('-','.')} 期`;
+    const shortDate=d=>`${d.getUTCMonth()+1}.${String(d.getUTCDate()).padStart(2,'0')}`;
+    byId('periodRange').textContent=`${first.getUTCFullYear()}.${shortDate(first)} — ${last.getUTCFullYear()!==first.getUTCFullYear()?last.getUTCFullYear()+'.':''}${shortDate(last)}`;
     const hasList=!['unpublished','error','loading'].includes(mode);
     byId('periodCount').textContent=hasList?`共 ${total} 首`:'';
     byId('copyTip').hidden=!hasList || total===0;
@@ -215,7 +237,7 @@
     if(mode==='cached') content.append(el('p','cache-hint','当前显示上次保存的内容，联网后会重新核对。'));
     selectedDays.forEach((rows,i)=>{
       const section=el('section','day-section'); const heading=el('div','day-heading'); const title=el('h2','day-title',days[i]);
-      title.append(el('span','day-date num',monthDay(dateAt(source.week,i+1)))); heading.append(title,el('span','day-count num',`${rows.length} 首`)); section.append(heading);
+      title.append(el('span','day-date num',monthDay(dateAt(source.week,i+1)))); heading.append(title); section.append(heading);
       if(rows.length) rows.forEach((song,index)=>section.append(songRow(song,index)));
       else section.append(el('p','no-song','当天暂无安排')); content.append(section);
     });
@@ -228,9 +250,13 @@
   });
   stateSelect.addEventListener('change',()=>{clearTimeout(refreshTimer);render();byId('screenScroll').scrollTop=0;});
   byId('widthSelect').addEventListener('change',e=>{byId('device').style.width=e.target.value+'px';});
-  byId('notifyButton').addEventListener('click',()=>{if(reminderEnabled)return;reminderEnabled=true;byId('notifyButton').textContent='本周已开启';byId('notifyButton').disabled=true;toast('预览：已开启本周发布提醒');});
+  byId('notifyButton').addEventListener('click',()=>{if(reminderEnabled)return;reminderEnabled=true;byId('notifyLabel').textContent='本周已开启';byId('notifyButton').setAttribute('aria-label','本周发布提醒已开启');byId('notifyButton').disabled=true;toast('预览：已开启本周发布提醒');});
+  const darkMedia=window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme() { const choice=byId('themeSelect').value; document.documentElement.dataset.theme=choice==='system'?(darkMedia.matches?'dark':'light'):choice; }
+  byId('themeSelect').addEventListener('change',applyTheme);
+  darkMedia.addEventListener('change',applyTheme);
   byId('refreshPreview').addEventListener('click',()=>{clearTimeout(refreshTimer);const restore=stateSelect.value==='loading'?'published':stateSelect.value;stateSelect.value='loading';render();refreshTimer=setTimeout(()=>{stateSelect.value=restore;render();toast('歌单示例已刷新');},450);});
-  render();
+  applyTheme(); render();
 })();
 </script>
 </body>
