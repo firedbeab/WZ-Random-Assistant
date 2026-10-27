@@ -40,7 +40,7 @@
 
 - 当前界面约定：[DESIGN.md](DESIGN.md)。布局方向先讨论、再看 HTML 样稿、确认后才接入正式小程序。
 - 歌单连续列表示例：[E-playlist-flat.html](Progress/design/mockups/E-playlist-flat.html)（E.2）。日期信息去重、提醒位于内容区右上角，支持三期、长文本、多种状态及浅色/深色/跟随系统预览；使用固定示例数据，不连接业务云端。正式页面和深色适配尚未落地，旧 B/C 样稿保留为历史对照。
-- 首页风格对照：[F-playlist-card.html](Progress/design/mockups/F-playlist-card.html)。暖灰底配白色主卡片、圆角和淡绿序号，整份歌单统一收在一个内容面内；保留 E.2 及其演示交互，E/F 待评审，未改正式页面。
+- 首页风格对照：[F-playlist-card.html](Progress/design/mockups/F-playlist-card.html)（F.2）。三期标签左对齐，日期/总数/复制提示在卡片外，白色主卡片从日期分组开始；页面共用可随主题换色的连续渐变。保留 E.2 及其演示交互，E/F 待评审，未改正式页面。
 - 备份约定：每轮改动前提交并推送备份到 `origin/main`；验证后提交并推送结果。网络失败要明确报告，不能用“本地已提交”代替“远端已备份”；只有用户明确允许时才先完成本地工作。
 
 ## 许可证
