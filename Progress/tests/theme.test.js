@@ -47,7 +47,7 @@ test('颜色生成物无漂移，九页均接入外观变量和切换按钮，�
   for (const [file, expected] of Object.entries(outputs())) assert.equal(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'), expected);
   const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
   assert.equal(app.darkmode, true); assert.equal(app.themeLocation, 'theme.json');
-  const variableNames = new Set(Object.keys(theme.getTokens()).concat([...fs.readFileSync(path.join(root, 'styles/tokens.wxss'), 'utf8').matchAll(/--([\w-]+):/g)].map(match => match[1]), ['lift', 'tilt', 'travel', 'rise', 'spin', 'entry-x', 'entry-y', 'drift']));
+  const variableNames = new Set(Object.keys(theme.getTokens()).concat([...fs.readFileSync(path.join(root, 'styles/tokens.wxss'), 'utf8').matchAll(/--([\w-]+):/g)].map(match => match[1]), ['lift', 'tilt', 'travel', 'rise', 'spin', 'entry-x', 'entry-y', 'drift', 'dice-size', 'dice-pip-depth']));
   function inspect(dir) { for (const item of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) { const file = path.join(dir, item.name); if (item.isDirectory()) inspect(file); else if (item.name.endsWith('.wxss')) for (const match of fs.readFileSync(path.join(root, file), 'utf8').matchAll(/var\(--([\w-]+)/g)) assert(variableNames.has(match[1]), `${file}: undefined ${match[1]}`); } }
   for (const dir of ['pages', 'components', 'styles']) inspect(dir);
   for (const page of app.pages) {

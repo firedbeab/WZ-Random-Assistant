@@ -46,7 +46,7 @@ Component(theme.component({
   data: {
     visible: false, stage: 'dice', rolling: false, face: 0, streak: 0, streakNumbers: [], dots: [], dotPulse: false,
     faces: FACE_PIPS.map((pips, i) => ({ value: i + 1, dots: Array.from({ length: 9 }, (_, slot) => ({ slot, visible: pips.includes(slot) })) })),
-    coreFacets: Array.from({ length: 26 }, (_, i) => i),
+    coreFacets: Array.from({ length: 114 }, (_, i) => i), // 与构建时圆角内芯面片数一致。
     cubeStyle: 'transform:rotateX(-18deg) rotateY(-26deg);', celebrating: false, confetti: [], meows: [],
     invitation: '', photoSrc: '', photoReady: false, photoBoxHeight: PHOTO_BOX_DEFAULT, _photoId: '', topText: '', bottomText: '', asciiCat: cats[0],
     encounterSeen: 0, encounterTotal: 0, scrollHeight: 400, panelScrollTop: 0,
