@@ -1,3 +1,4 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
 const imageAccess = require('../../utils/image-access');
@@ -24,7 +25,7 @@ function hashText(text) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-Page(theme.page({
+Page(theme.page(feedback.notifications({
   data: {
     isTestMode: isTestMode(),
     articles: [],
@@ -265,7 +266,7 @@ Page(theme.page({
     if (!current || !Array.isArray(images) || images.length === 0) return;
     let currentPath = await this.getCachedImagePath(current);
     if (!currentPath) {
-      wx.showLoading({ title: '加载大图...', mask: true });
+      feedback.showLoading(this, { title: '加载大图...', mask: true });
       try {
         currentPath = await this.cacheImage(current);
       } catch (err) {
@@ -273,11 +274,11 @@ Page(theme.page({
         diagnostics.record('help_image', 'preview', err);
         currentPath = await imageAccess.resolve('manageHelpContent', current).catch(() => '');
       } finally {
-        wx.hideLoading();
+        feedback.hideLoading(this);
       }
     }
     if (!currentPath) {
-      wx.showToast({ title: '图片暂时无法打开', icon: 'none' });
+      feedback.showToast(this, { title: '图片暂时无法打开', icon: 'none' });
       return;
     }
     const urls = await Promise.all(images.map(async fileID => {
@@ -336,4 +337,4 @@ Page(theme.page({
     list.forEach(fileID => { delete srcs[fileID]; delete errors[fileID]; imageAccess.forget(fileID); });
     this.setData({ imageSrcs: srcs, imageErrors: errors }, () => this.prepareImages(list));
   }
-}));
+})));

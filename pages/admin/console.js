@@ -266,7 +266,7 @@ Page(theme.page(feedback.page({
   closeSubmissionEditor() {
     if (this.data.submissionClosing) return;
     this.setData({ submissionClosing: true });
-    this._submissionCloseTimer = setTimeout(() => this.setData({ showSubmissionEditor: false, editSubmission: null, submissionClosing: false }), 200);
+    this._submissionCloseTimer = setTimeout(() => this.setData({ showSubmissionEditor: false, editSubmission: null, submissionClosing: false }), feedback.DRAWER_CLOSE_MS);
   },
   onSubmissionField(e) {
     const field = e.currentTarget.dataset.field;

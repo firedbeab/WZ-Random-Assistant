@@ -14,10 +14,10 @@
     </view>
   </block>
 </view>
-<view wx:if="{{editing}}" id="easter-editor-mask" class="editor-mask admin-drawer-mask {{editorClosing ? 'drawer-closing' : ''}}" bindtap="onAdminDrawerMaskTap" data-close="closeEditor">
+<view wx:if="{{editing}}" id="easter-editor-mask" class="editor-mask admin-drawer-mask {{editorClosing ? 'drawer-closing' : ''}}" bindtap="onAdminDrawerMaskTap" data-close="closeEditor"><view class="drawer-backdrop" id="easter-editor-mask-backdrop" bindtap="onAdminDrawerMaskTap" catchtouchmove="adminDrawerNoop" data-close="closeEditor" />
   <view class="egg-editor-shell admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeEditor">
-    <view class="drawer-handle" data-drawer-drag="true" />
-    <view class="egg-editor-heading" data-drawer-drag="true"><text data-drawer-drag="true">{{id ? '编辑彩蛋' : '添加彩蛋'}}</text><button class="egg-editor-close" bindtap="closeEditor" disabled="{{busy}}" aria-label="关闭编辑"><image src="{{themeIcons.close}}" /></button></view>
+    <view class="drawer-handle" data-drawer-drag="true" catchtouchmove="adminDrawerNoop" />
+    <view class="egg-editor-heading" data-drawer-drag="true" catchtouchmove="adminDrawerNoop"><text data-drawer-drag="true" catchtouchmove="adminDrawerNoop">{{id ? '编辑彩蛋' : '添加彩蛋'}}</text><button class="egg-editor-close" bindtap="closeEditor" disabled="{{busy}}" aria-label="关闭编辑"><image src="{{themeIcons.close}}" /></button></view>
     <scroll-view scroll-y class="egg-editor-scroll" show-scrollbar="{{false}}">
       <view class="egg-editor-body">
         <text class="egg-edit-hint">直接编辑上下文案，留空使用默认内容。</text>

@@ -1,0 +1,16 @@
+/* 只包含反馈命名空间，用户页面无需引入管理页的按钮或布局样式。 */
+.admin-feedback-layer { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; pointer-events: none; background: var(--feedback-scrim); }
+.admin-feedback-layer.masked { pointer-events: auto; }
+.admin-loading-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28rpx; min-width: 240rpx; max-width: calc(100vw - 96rpx); box-sizing: border-box; padding: 40rpx 44rpx; border: 2rpx solid var(--feedback-line); border-radius: 28rpx; background: var(--feedback-surface); color: var(--text-1); box-shadow: var(--shadow-dialog); font-size: 30rpx; font-weight: 550; line-height: 1.65; text-align: center; overflow-wrap: anywhere; }
+.admin-loading-dots { display: flex; align-items: center; justify-content: center; gap: 14rpx; min-height: 28rpx; }
+.admin-loading-dots view { width: 16rpx; height: 16rpx; border-radius: 50%; background: var(--accent); animation: feedback-dot-pulse 1000ms ease-in-out infinite; }
+.admin-loading-dots view:nth-child(2) { animation-delay: 160ms; }.admin-loading-dots view:nth-child(3) { animation-delay: 320ms; }
+.admin-message { position: fixed; top: calc(env(safe-area-inset-top) + 16rpx); left: 50%; transform: translateX(-50%); z-index: 1400; display: flex; align-items: center; gap: 20rpx; width: max-content; max-width: calc(100vw - 48rpx); box-sizing: border-box; padding: 24rpx 30rpx; border-radius: 24rpx; background: var(--feedback-surface); color: var(--text-1); border: 2rpx solid var(--feedback-line); box-shadow: var(--shadow-dialog); font-size: 30rpx; font-weight: 550; line-height: 1.65; pointer-events: none; animation: feedback-message-in 260ms ease-out both; }
+.admin-message > text { min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.message-symbol { position: relative; width: 32rpx; height: 32rpx; flex: none; box-sizing: border-box; border: 2rpx solid var(--text-2); border-radius: 50%; }
+.message-symbol::after { content: ''; position: absolute; left: 12rpx; top: 6rpx; width: 4rpx; height: 16rpx; background: var(--text-2); border-radius: 4rpx; }
+.admin-message.success .message-symbol { border-color: var(--accent); background: var(--accent); }
+.admin-message.success .message-symbol::after { left: 7rpx; top: 7rpx; width: 13rpx; height: 7rpx; border-left: 3rpx solid var(--on-accent); border-bottom: 3rpx solid var(--on-accent); background: transparent; border-radius: 0; transform: rotate(-45deg); }
+@keyframes feedback-dot-pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes feedback-message-in { from { opacity: 0; transform: translate(-50%, -24rpx); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .admin-loading-dots view { animation: none; opacity: 1; }.admin-message { animation-duration: 1ms; } }

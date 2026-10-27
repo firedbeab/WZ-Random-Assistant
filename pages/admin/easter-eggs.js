@@ -74,7 +74,7 @@ Page(theme.page(feedback.page({
     this._editorCloseTimer = setTimeout(() => {
       this.setData({ editing: false, dirty: false, editorClosing: false });
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
-    }, 200);
+    }, feedback.DRAWER_CLOSE_MS);
   },
   async chooseImage() {
     if (this.data.busy) return;

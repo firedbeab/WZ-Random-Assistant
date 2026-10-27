@@ -49,3 +49,4 @@
 
 <!-- 隐私协议弹窗 -->
 <privacy-popup id="privacyPopup"></privacy-popup>
+<include src="../../templates/feedback.wxml" />

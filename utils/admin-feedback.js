@@ -1,4 +1,5 @@
-// 管理端页内反馈：与主题同源，加载和提示互不清除，不覆盖微信系统UI。
+// 页内反馈：与主题同源，加载和提示互不清除，不覆盖微信系统UI。
+const DRAWER_CLOSE_MS = 300;
 const timers = new WeakMap();
 const disposed = new WeakSet();
 const dialogs = new WeakMap();
@@ -23,6 +24,11 @@ function showToast(page, options = {}) {
   if (timer && typeof timer.unref === 'function') timer.unref();
   timers.set(page, timer);
 }
+function showClipboardToast(page, options = {}) {
+  if (!live(page)) return;
+  if (typeof wx !== 'undefined' && typeof wx.hideToast === 'function') wx.hideToast();
+  showToast(page, options);
+}
 function finishDialog(page, result) {
   const dialog = dialogs.get(page); if (!dialog) return;
   dialogs.delete(page);
@@ -38,7 +44,7 @@ function settleDialog(page, result) {
   dialog.closing = true; page.setData({ _adminDialogClosing: true });
   closingTimers.set(page, setTimeout(() => {
     closingTimers.delete(page); if (live(page)) finishDialog(page,result);
-  }, 200));
+  }, DRAWER_CLOSE_MS));
 }
 function showModal(page, options = {}) {
   if (!live(page) || dialogs.has(page)) return Promise.resolve({ confirm: false, cancel: true, content: '' });
@@ -102,8 +108,14 @@ function page(definition) {
     onAdminDrawerTouchStart(e) { const t=e.touches&&e.touches.length===1&&e.touches[0];this._sharedDrawerTouch=t&&e.target.dataset&&e.target.dataset.drawerDrag?{x:t.clientX,y:t.clientY,time:e.timeStamp}:null; },
     onAdminDrawerTouchEnd(e) { const start=this._sharedDrawerTouch;this._sharedDrawerTouch=null;const t=e.changedTouches&&e.changedTouches.length===1&&e.changedTouches[0];if(!start||!t)return;const dy=t.clientY-start.y,dx=t.clientX-start.x;if(dy>60&&dy>Math.abs(dx)*1.5&&e.timeStamp-start.time<3000){const close=this[e.currentTarget.dataset.close];if(typeof close==='function')close.call(this);} },
     adminDrawerNoop() {},
+    onFeedbackTouchMove() {},
     ...definition,
     onUnload(...args) { clear(this); if(typeof unload==='function')return unload.apply(this,args); }
   };
 }
-module.exports = { showLoading, hideLoading, showToast, showModal, showChoice, showDatePicker, showActionSheet, page, clear };
+// 用户页面只接入通知与卸载清理，不迁移其授权、确认或业务交互。
+function notifications(definition) {
+  const unload = definition.onUnload;
+  return { onFeedbackTouchMove() {}, ...definition, onUnload(...args) { clear(this); if (typeof unload === 'function') return unload.apply(this, args); } };
+}
+module.exports = { DRAWER_CLOSE_MS, showLoading, hideLoading, showToast, showClipboardToast, showModal, showChoice, showDatePicker, showActionSheet, page, notifications, clear };

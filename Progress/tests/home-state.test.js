@@ -76,7 +76,7 @@ function fixture(options = {}) {
     Page: value => { page = value; }, Date: FixedDate, wx, console,
     getApp: () => ({ globalData: { userInfo: { openid: 'fixture-user' } } }),
     setTimeout: () => 1, clearTimeout() {},
-    require: name => name.endsWith('/theme') ? require('../../utils/theme') : name.endsWith('/runtime') ? runtime : name.endsWith('/home-presentation') ? presentation : {}
+    require: name => name.endsWith('/admin-feedback') ? require('../../utils/admin-feedback') : name.endsWith('/theme') ? require('../../utils/theme') : name.endsWith('/runtime') ? runtime : name.endsWith('/home-presentation') ? presentation : {}
   });
   page.data = structuredClone(page.data);
   page.data.userInfo = { openid: 'fixture-user', ...options.userInfo };
@@ -108,7 +108,7 @@ test('后台路由仍按真实角色选择，导航失败有明确反馈', () =>
     const f = fixture({ userInfo: { role }, navigateFails: true });
     f.page.goAdmin();
     assert.equal(f.routes[0], role === 'user' ? '/pages/admin/login' : '/pages/admin/admin');
-    assert.match(f.toasts[0].title, /页面未能打开/);
+    assert.match(f.page.data._adminFeedbackMessage, /页面未能打开/);
   }
 });
 test('强制开关优先级不变，关闭文案不承诺管理员恢复日期', async () => {
@@ -163,11 +163,25 @@ test('输入焦点竞争、说明/往期入口及原提交字段契约', async (
 });
 test('往期入口参数有边界，默认仍展示最新一期', () => {
   let definition;
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/playlist/index.js'), 'utf8'), { Page: value => { definition = value; }, require: name => name.endsWith('/theme') ? require('../../utils/theme') : name.endsWith('/playlist-presentation') ? require('../../utils/playlist-presentation') : ({ isTestMode: () => true }) });
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/playlist/index.js'), 'utf8'), { Page: value => { definition = value; }, require: name => name.endsWith('/admin-feedback') ? require('../../utils/admin-feedback') : name.endsWith('/theme') ? require('../../utils/theme') : name.endsWith('/playlist-presentation') ? require('../../utils/playlist-presentation') : ({ isTestMode: () => true }) });
   for (const [tab, expected] of [[undefined, 0], ['1', 1], ['2', 2], ['-1', 0], ['100', 0]]) {
     const page = { data: {}, setData(patch) { Object.assign(this.data, patch); }, loadWeekPlaylist(offset) { this.loaded = offset; }, checkSubStatus() {} };
     definition.onLoad.call(page, { tab });
     assert.equal(page.loaded, expected); assert.equal(page.data.activeTab, expected);
+  }
+});
+
+test('投稿加载和结果通知互不覆盖，重复提交受保护，失败后可重试', async () => {
+  for(const success of [true,false]) {
+    let resolve;
+    const f=fixture({call:()=>new Promise(done=>{resolve=done;})}),page=f.page;
+    page.setData({weeklyCode:'ABC123',title:'歌名',remark:'歌手',specialNote:''});
+    const task=page.submitRequest();assert.equal(page.data._adminFeedbackLoading,true);assert.equal(page.data._adminFeedbackMask,true);
+    await page.submitRequest();
+    resolve({result:success?{success:true,totalSubmissions:1}:{success:false,message:'验证码无效'}});await task;
+    assert.equal(page.data.loading,false);assert.equal(page.data._adminFeedbackLoading,false);
+    assert.equal(page.data._adminFeedbackMessage,success?'提交成功':'验证码无效');
+    if(!success)assert.equal(page.data.weeklyCode,'ABC123');
   }
 });
 

@@ -26,7 +26,7 @@ function fixture(options={}) {
   };
   vm.runInNewContext(fs.readFileSync(path.join(root,'pages/playlist/index.js'),'utf8'),{
     Page:value=>{page=value;},Date:FixedDate,wx,console:{warn(){}},getApp:()=>({globalData:{userInfo:{openid:'fixture-user'}}}),
-    require:name=>name.endsWith('/theme')?require('../../utils/theme'):name.endsWith('/playlist-presentation')?presentation:runtime
+    require:name=>name.endsWith('/admin-feedback') ? require('../../utils/admin-feedback') : name.endsWith('/theme')?require('../../utils/theme'):name.endsWith('/playlist-presentation')?presentation:runtime
   });
   page.data=structuredClone(page.data);page.setData=patch=>Object.assign(page.data,patch);
   return {page,disk,calls,writes,copies,wx};

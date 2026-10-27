@@ -1,4 +1,4 @@
-<page-meta page-style="{{appearanceStyle}}" />
+<page-meta page-style="{{appearanceStyle}} {{_adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
 <view class="page admin-page-enter" wx:if="{{!loading}}">
 <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view><view class="sub-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回说明管理"><image src="{{themeIcons.back}}" /></button><text>编辑说明</text></view>
   <view class="form-card">

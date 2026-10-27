@@ -129,3 +129,4 @@
 </view>
 <privacy-popup id="privacyPopup"></privacy-popup>
 <easter-dice id="easterDice" test-mode="{{isTestMode}}" superadmin="{{userInfo.role === 'superadmin'}}" bind:resetgate="onResetDiceGate"></easter-dice>
+<include src="../../templates/feedback.wxml" />

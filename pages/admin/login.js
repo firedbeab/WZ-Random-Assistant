@@ -1,7 +1,8 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
 
-Page(theme.page({
+Page(theme.page(feedback.notifications({
   data: {
     isTestMode: isTestMode(),
     adminCode: '',
@@ -44,10 +45,12 @@ Page(theme.page({
   toggleShow() { this.setData({ showCode: !this.data.showCode }); },
 
   async handleVerify() {
+    if (this.data.loading) return;
     const { adminCode } = this.data;
-    if (!adminCode.trim()) return wx.showToast({ title: '请输入通行码', icon: 'none' });
+    if (!adminCode.trim()) return feedback.showToast(this, { title: '请输入通行码', icon: 'none' });
 
     this.setData({ loading: true });
+    feedback.showLoading(this, { title: '验证中…', mask: true });
     try {
       const res = await cloudCall({
         name: 'verifyAdmin',
@@ -67,17 +70,18 @@ Page(theme.page({
           app.globalData.userInfo.role = role;
         }
 
-        wx.showToast({ title: isSuperAdmin ? '超管验证成功' : '验证成功', icon: 'success' });
+        feedback.showToast(this, { title: isSuperAdmin ? '超管验证成功' : '验证成功', icon: 'success' });
         setTimeout(() => {
           wx.redirectTo({ url: '/pages/admin/admin' });
         }, 1000);
       } else {
-        wx.showToast({ title: res.result.message, icon: 'none' });
+        feedback.showToast(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '网络异常', icon: 'none' });
+      feedback.showToast(this, { title: '网络异常', icon: 'none' });
     } finally {
       this.setData({ loading: false });
+      feedback.hideLoading(this);
     }
   }
-}));
+})));

@@ -25,7 +25,7 @@ button[disabled] { opacity: .45; }
 @keyframes admin-page-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes admin-mask-in { from { background-color: transparent; } to { background-color: var(--mask); } }
 @keyframes admin-drawer-in { from { opacity: 0; transform: translateY(24rpx); } to { opacity: 1; transform: translateY(0); } }
-@keyframes admin-drawer-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(18rpx); } }
+@keyframes admin-drawer-out { from { opacity: 1; transform: translateY(0); } to { opacity: 1; transform: translateY(100%); } }
 @keyframes admin-mask-out { from { background-color: var(--mask); } to { background-color: transparent; } }
 .admin-page-enter { animation: admin-page-in 260ms ease both; }
 
@@ -39,11 +39,12 @@ button[disabled] { opacity: .45; }
 .sub-back { display: flex; align-items: center; justify-content: center; flex: none; width: 72rpx; min-width: 72rpx; min-height: 88rpx; margin: 0 0 0 -18rpx; padding: 0; background: transparent; line-height: 1; border-radius: var(--radius-md); }.sub-back image { width: 34rpx; height: 34rpx; display: block; }.sub-heading { gap: 8rpx; }.sub-heading > text { flex: 1; min-width: 0; }.new-entry-button { display: flex; align-items: center; justify-content: center; flex: none; min-height: 88rpx; margin: 0; padding: 0 18rpx; background: transparent; color: var(--accent); font-size: 26rpx; line-height: 1.5; font-weight: 550; }.grow { flex: 1; min-width: 0; }
 
 /* 所有自制底部抽屉使用同一外壳；业务表单与原生确认框维持各自职责。 */
+.drawer-backdrop { position: absolute; inset: 0; }
 view.admin-drawer-mask { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; padding: 0; box-sizing: border-box; background: var(--mask); animation: admin-mask-in 240ms ease both; }
 .admin-drawer-mask > .admin-drawer { position: relative; display: block; width: 100%; max-height: 82vh; overflow-y: auto; box-sizing: border-box; margin: 0; padding: 44rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); border-radius: 36rpx 36rpx 0 0; background: var(--surface); color: var(--text-1); animation: admin-drawer-in 280ms ease both; }
 .drawer-handle { position: absolute; top: 14rpx; left: 50%; transform: translateX(-50%); width: 64rpx; height: 8rpx; border-radius: 8rpx; background: var(--line-strong); }
-.admin-drawer-mask.drawer-closing { animation: admin-mask-out 200ms ease both; pointer-events: none; }
-.admin-drawer-mask.drawer-closing > .admin-drawer { animation: admin-drawer-out 200ms ease both; }
+.admin-drawer-mask.drawer-closing { animation: admin-mask-out 300ms ease both; pointer-events: none; }
+.admin-drawer-mask.drawer-closing > .admin-drawer { animation: admin-drawer-out 300ms cubic-bezier(.4,0,.7,.3) both; }
 .admin-drawer .modal-title,.admin-drawer .editor-heading { color: var(--text-1); font-size: 38rpx; font-weight: 650; line-height: 1.45; }
 .drawer-description { display: block; margin: 10rpx 0 24rpx; color: var(--text-2); font-size: 25rpx; line-height: 1.75; }
 .drawer-song-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4rpx 18rpx; }.drawer-song-line .modal-title { margin: 0; }.drawer-song-line > text:last-child { color: var(--text-2); font-size: 26rpx; }
@@ -56,17 +57,13 @@ view.admin-drawer-mask { position: fixed; inset: 0; z-index: 1000; display: flex
 .admin-drawer .btn-cancel { background: var(--surface-2); color: var(--text-2); }.admin-drawer .btn-confirm { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .publish-summary { margin: 24rpx 0; }.publish-summary > view { display: flex; justify-content: space-between; gap: 24rpx; padding: 18rpx 0; border-bottom: 1rpx solid var(--line); font-size: 28rpx; color: var(--text-2); }.publish-summary > view > text:last-child { color: var(--text-1); font-weight: 550; font-variant-numeric: tabular-nums; }
 .publish-label { margin: 24rpx 0 12rpx; }.drawer-input-wrap { padding: 2rpx; border: 2rpx solid transparent; border-radius: 20rpx; }.drawer-input-wrap.focused { border-color: var(--accent); box-shadow: var(--focus-ring); }.drawer-input-wrap .note-input { width: 100%; min-height: 160rpx; border: 0; background: var(--surface-2); border-radius: 14rpx; margin: 0; padding: 20rpx 22rpx; box-sizing: border-box; font-size: 28rpx; line-height: 1.75; color: var(--text-1); }.drawer-error { display: block; color: var(--danger); margin-top: 14rpx; font-size: 26rpx; line-height: 1.6; }
-.admin-feedback-layer { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; pointer-events: none; }.admin-feedback-layer.masked { pointer-events: auto; background: var(--mask); }.admin-loading-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20rpx; min-width: 220rpx; max-width: 520rpx; padding: 30rpx 36rpx; border-radius: var(--radius-lg); background: var(--surface); color: var(--text-1); box-shadow: var(--shadow-md); font-size: 27rpx; line-height: 1.6; }.admin-loading-dots { display: flex; align-items: center; justify-content: center; gap: 10rpx; min-height: 20rpx; }.admin-loading-dots view { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--accent); animation: admin-dot-pulse 1000ms ease-in-out infinite; }.admin-loading-dots view:nth-child(2) { animation-delay: 160ms; }.admin-loading-dots view:nth-child(3) { animation-delay: 320ms; }
 .dialog-choice-scroll { height: 44vh; margin-top: 18rpx; }.dialog-choice-scroll .drawer-menu { margin-top: 0; }.dialog-choice-dot { width: 16rpx; height: 16rpx; border-radius: 50%; border: 2rpx solid var(--line-strong); flex: none; }.dialog-choice-dot.selected { background: var(--accent); border-color: var(--accent); }.dialog-input { width: 100%; height: 96rpx; line-height: 96rpx; padding: 0 22rpx; box-sizing: border-box; border: 1rpx solid var(--line); border-radius: var(--radius-md); color: var(--text-1); background: var(--surface-2); font-size: 28rpx; }.admin-drawer .drawer-description { white-space: pre-wrap; overflow-wrap: anywhere; }.admin-drawer-mask > .admin-drawer { animation-fill-mode: none; }.admin-drawer .modal-title { display: block; margin-bottom: 12rpx; }
 .admin-drawer .btn-confirm.dialog-danger { color: var(--on-danger); background: var(--danger); }
 .dialog-date-wheel { width: 100%; height: 440rpx; margin: 24rpx 0; background: var(--surface); }.date-wheel-item { display: flex; align-items: center; justify-content: center; height: 88rpx; line-height: 88rpx; color: var(--text-2); font-size: 30rpx; font-variant-numeric: tabular-nums; }.date-wheel-item.selected { color: var(--text-1); font-weight: 600; }
 .admin-drawer-mask.drawer-closing { pointer-events: auto; }.admin-drawer-mask.drawer-closing > .admin-drawer { pointer-events: none; }
 .drawer-handle { top: 0; left: 0; width: 100%; height: 44rpx; transform: none; background: transparent; border-radius: 0; }.drawer-handle::after { content: ''; position: absolute; top: 14rpx; left: 50%; transform: translateX(-50%); width: 64rpx; height: 8rpx; border-radius: 8rpx; background: var(--line-strong); }
-@keyframes admin-dot-pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
-.admin-message { position: fixed; top: 20rpx; left: 32rpx; right: 32rpx; z-index: 1400; display: flex; align-items: center; justify-content: center; gap: 18rpx; padding: 22rpx 26rpx; border-radius: var(--radius-lg); background: var(--surface); color: var(--text-1); box-shadow: var(--shadow-md); border: 1rpx solid var(--line); font-size: 27rpx; line-height: 1.7; pointer-events: none; animation: admin-page-in 180ms ease both; }.admin-message > view { width: 8rpx; height: 32rpx; background: var(--line-strong); border-radius: 8rpx; flex: none; }.admin-message.success > view { background: var(--accent); }.admin-message > text { min-width: 0; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   .tab-panel { animation-duration: 1ms; }
   .admin-page-enter { animation-duration: 1ms; }
   view.admin-drawer-mask,.admin-drawer-mask > .admin-drawer,.admin-drawer-mask.drawer-closing,.admin-drawer-mask.drawer-closing > .admin-drawer { animation-duration: 1ms; }
-  .admin-loading-dots view { animation: none; opacity: 1; }.admin-message { animation-duration: 1ms; }
 }

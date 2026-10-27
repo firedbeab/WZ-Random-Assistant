@@ -1,5 +1,6 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
-Page(theme.page({
+Page(theme.page(feedback.notifications({
   data: {},
 
   goHelp() {
@@ -22,7 +23,7 @@ Page(theme.page({
           wx.setClipboardData({
             data: 'https://wj.qq.com/s2/26857193/13fa/',
             success: () => {
-              wx.showToast({ title: '链接已复制', icon: 'success' });
+              feedback.showClipboardToast(this, { title: '链接已复制', icon: 'success' });
             }
           });
         }
@@ -33,9 +34,9 @@ Page(theme.page({
   // 查看隐私保护指引
   openPrivacy() {
     wx.openPrivacyContract({
-      fail() {
-        wx.showToast({ title: '暂无隐私协议', icon: 'none' });
+      fail: () => {
+        feedback.showToast(this, { title: '暂无隐私协议', icon: 'none' });
       }
     });
   }
-}));
+})));

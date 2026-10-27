@@ -45,3 +45,4 @@
 </view>
 
 <privacy-popup id="privacyPopup"></privacy-popup>
+<include src="../../templates/feedback.wxml" />

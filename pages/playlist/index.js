@@ -1,10 +1,11 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 // 订阅消息模板 ID（学生：新活动发布提醒）
 const STUDENT_TPL_ID = 'evJj_6Kl8CNKTf5C_j2PtJ6FPmMTbBESvuZ35DfOiGA';
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 const { playlistPresentation } = require('../../utils/playlist-presentation');
 
-Page(theme.page({
+Page(theme.page(feedback.notifications({
   data: {
     isTestMode: isTestMode(),
     schedule: null,
@@ -250,10 +251,10 @@ Page(theme.page({
       : `${name} - ${singer}`;
     wx.setClipboardData({
       data: item,
-      success: () => wx.showToast({ title: '已复制', icon: 'success' }),
-      fail(err) {
+      success: () => feedback.showClipboardToast(this, { title: '已复制', icon: 'success' }),
+      fail: err => {
         console.warn('复制失败:', err);
-        wx.showToast({ title: '复制失败，需同意隐私协议', icon: 'none' });
+        feedback.showToast(this, { title: '复制失败，需同意隐私协议', icon: 'none' });
       }
     });
   },
@@ -292,7 +293,7 @@ Page(theme.page({
     if (this.data.subscribed || this.data.subscribing) return;
     if (this.data.isTestMode) {
       this.setData({ subscribed: true });
-      wx.showToast({ title: '测试环境已模拟订阅', icon: 'none' });
+      feedback.showToast(this, { title: '测试环境已模拟订阅', icon: 'none' });
       return;
     }
     this.setData({ subscribing: true });
@@ -320,7 +321,7 @@ Page(theme.page({
           });
         }
         this.setData({ subscribed: true });
-        wx.showToast({ title: '已开启通知', icon: 'success' });
+        feedback.showToast(this, { title: '已开启通知', icon: 'success' });
       }
     } catch (err) {
       console.warn('订阅失败:', err);
@@ -328,4 +329,4 @@ Page(theme.page({
       this.setData({ subscribing: false });
     }
   }
-}));
+})));

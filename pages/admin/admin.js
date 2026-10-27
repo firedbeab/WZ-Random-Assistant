@@ -335,7 +335,7 @@ Page(theme.page(feedback.page({
       if (this._adminUnloaded) return;
       this.setData({ [field]: false, drawerClosing: false });
       if (afterClose) afterClose();
-    }, 200);
+    }, feedback.DRAWER_CLOSE_MS);
   },
 
   // 按钮点击：开启通知（首次订阅，会弹窗）
@@ -399,7 +399,7 @@ Page(theme.page(feedback.page({
       if (res.result.success) {
         const schedule = res.result.data;
         if (!schedule) {
-          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, bulkDay: -1 });
+          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, pendingRemovalCount: 0, batchResultMessage: '', bulkDay: -1 });
           return;
         }
         const pendingRemovalCount = ['day1', 'day2', 'day3', 'day4', 'day5']
@@ -413,6 +413,7 @@ Page(theme.page(feedback.page({
         this.setData({
           schedule,
           pendingRemovalCount,
+          batchResultMessage: '',
           dayCounts,
           batchMode: false,
           batchSelectedCount: 0,
@@ -427,7 +428,7 @@ Page(theme.page(feedback.page({
         });
       } else {
         if (res.result.message === '暂无待审核排期') {
-          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, bulkDay: -1 });
+          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, pendingRemovalCount: 0, batchResultMessage: '', bulkDay: -1 });
           return;
         }
         this.setData({ auditError: res.result.message || '请稍后重试' });
@@ -529,7 +530,7 @@ Page(theme.page(feedback.page({
       this.setData({ batchResultMessage: '排期已经变化，请刷新后重新选择。', showBulkConfirmDrawer: false }); return;
     }
     const reason = e && e.detail && e.detail.value && e.detail.value.removalReason || '当天安排调整';
-    let revision = schedule.revision, confirmed = 0, message = '';
+    let revision = schedule.revision, confirmed = 0, message = '', failed = false;
     this.setData({ batchRemoving: true });
     try {
       for (const group of snapshot.groups) {
@@ -543,13 +544,15 @@ Page(theme.page(feedback.page({
       }
       message = `已标记 ${confirmed} 首，发布前可撤销。`;
     } catch (err) {
+      failed = true;
       message = `已确认标记 ${confirmed} 首；其余结果未确认，请刷新核对。${err.message || ''}`;
     } finally {
       this._bulkSnapshot = null;
       await this.loadPlaylist(false);
       this.setData({ batchRemoving: false, showBulkConfirmDrawer: false, batchMode: false, batchSelectedCount: 0,
-        batchResultMessage: message, auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
+        batchResultMessage: failed ? '部分操作未确认，请刷新核对排期。' : '', auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
         auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
+      feedback.showToast(this, { title: message, icon: failed ? 'none' : 'success', duration: failed ? 5000 : 2800 });
     }
   },
 
@@ -600,7 +603,7 @@ Page(theme.page(feedback.page({
     const dayIndex = Number(e.currentTarget.dataset.day);
     const songIndex = Number(e.currentTarget.dataset.songIndex);
     feedback.showLoading(this, { title: '撤销中' });
-    cloudCall({
+    return cloudCall({
       name: 'adminAuditPlaylist',
       data: {
         action: 'restoreItems',
@@ -797,8 +800,8 @@ Page(theme.page(feedback.page({
       : `${name} - ${singer}`;
     wx.setClipboardData({
       data: song,
-      success: () => toastLater(this, { title: '已复制', icon: 'success' }),
-      fail(err) {
+      success: () => feedback.showClipboardToast(this, { title: '已复制', icon: 'success' }),
+      fail: err => {
         console.warn('复制失败:', err);
         toastLater(this, { title: '复制失败', icon: 'none' });
       }
@@ -810,8 +813,8 @@ Page(theme.page(feedback.page({
     if (code && code !== '******') {
       wx.setClipboardData({
         data: code,
-        success() { toastLater(this, { title: '已复制', icon: 'success' }); },
-        fail(err) {
+        success: () => { feedback.showClipboardToast(this, { title: '已复制', icon: 'success' }); },
+        fail: err => {
           console.warn('复制失败:', err);
           toastLater(this, { title: '复制失败', icon: 'none' });
         }
@@ -1406,8 +1409,8 @@ Page(theme.page(feedback.page({
     if (code) {
       wx.setClipboardData({
         data: code,
-        success() { toastLater(this, { title: '已复制', icon: 'success' }); },
-        fail(err) {
+        success: () => { feedback.showClipboardToast(this, { title: '已复制', icon: 'success' }); },
+        fail: err => {
           console.warn('复制失败:', err);
           toastLater(this, { title: '复制失败', icon: 'none' });
         }

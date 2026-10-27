@@ -84,3 +84,4 @@
     </view>
   </view>
 </view>
+<include src="../../templates/feedback.wxml" />

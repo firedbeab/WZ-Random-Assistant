@@ -20,6 +20,16 @@ test('页面卸载取消提示计时器并忽略迟到的网络反馈', () => {
   f.feedback.showToast(f.page,{title:'迟到'}); f.feedback.showLoading(f.page,{title:'迟到'}); assert.equal(f.page.data._adminFeedbackMessage,'当前'); assert.equal(f.page.data._adminFeedbackLoading,undefined);
 });
 
+test('用户页通知包装保留业务方法和卸载返回值，离页后不接受迟到反馈', () => {
+  const f=fixture();let unloaded=0;
+  const definition=f.feedback.notifications({data:{song:'保留'},submit(){return '提交';},onUnload(){unloaded++;return '已卸载';}});
+  const p={...definition,data:{...definition.data},setData(patch){Object.assign(this.data,patch);}};
+  f.feedback.showLoading(p,{title:'加载大图',mask:true}); f.feedback.showToast(p,{title:'任意长度的反馈'});
+  f.feedback.hideLoading(p);assert.equal(p.data._adminFeedbackMessage,'任意长度的反馈');assert.equal(p.submit(),'提交');
+  assert.equal(p.onUnload(),'已卸载');assert.equal(unloaded,1);assert.equal(f.timers.size,0);
+  f.feedback.showToast(p,{title:'迟到'});assert.equal(p.data._adminFeedbackMessage,'任意长度的反馈');
+});
+
 test('统一确认抽屉同时兼容success回调和Promise，使用提交时输入且只确认一次', async () => {
   const f = fixture(); let count=0, received;
   const result=f.feedback.showModal(f.page,{title:'确认操作',editable:true,content:'影响范围说明',success:r=>{count++;received=r;}});

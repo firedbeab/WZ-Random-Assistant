@@ -12,7 +12,8 @@ function page(file) {
     showToast() {}, showLoading() {}, hideLoading() {}, stopPullDownRefresh() {},
     enableAlertBeforeUnload() { api.leaveGuard = true; }, disableAlertBeforeUnload() { api.leaveGuard = false; },
     navigateTo() {}, navigateBack() {}, setNavigationBarTitle() {},
-    previewImage(options) { api.preview = options; }
+    previewImage(options) { api.preview = options; },
+    setClipboardData(options) { api.clipboard = options; }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../pages/admin', file), 'utf8'), {
     Page(value) { definition = value; }, wx, console: { warn() {} },
@@ -191,7 +192,7 @@ test('跨日批量按原单日接口串行提交、推进revision并回读', asy
   assert.equal(p.calls[0].data.dayIndex, 0); assert.equal(p.calls[0].data.revision, 3);
   assert.equal(p.calls[1].data.dayIndex, 1); assert.equal(p.calls[1].data.revision, 4);
   for (const call of p.calls.slice(0,2)) { assert.equal(call.data.action, 'removeItems'); assert.equal(call.data.songIndexes[0], 0); assert.equal(call.data.reason, '活动安排'); }
-  assert.equal(p.calls.at(-1).data.action, 'getPending'); assert.equal(a.data.batchMode, false); assert.match(a.data.batchResultMessage, /2 首/);
+  assert.equal(p.calls.at(-1).data.action, 'getPending'); assert.equal(a.data.batchMode, false); assert.equal(a.data.batchResultMessage, ''); assert.match(a.data._adminFeedbackMessage, /2 首/);
 });
 
 test('批量部分失败立即停止，不跳过失败继续操作其它日期', async () => {
@@ -201,7 +202,47 @@ test('批量部分失败立即停止，不跳过失败继续操作其它日期',
   p.api.handler = request => request.data.action === 'getPending' ? { success: true, data: schedule } : request.data.dayIndex === 1 ? { success: false, message: '版本过期' } : { success: true };
   await a.confirmBulkRemoval();
   assert.equal(p.calls.filter(call => call.data.action === 'removeItems').length, 2); assert.equal(a.data.batchRemoving, false);
-  assert.match(a.data.batchResultMessage, /已确认标记 1 首/); assert.match(a.data.batchResultMessage, /未确认/);
+  assert.match(a.data._adminFeedbackMessage, /已确认标记 1 首/); assert.match(a.data.batchResultMessage, /未确认/);
+});
+
+test('批量后逐首撤销、再次选择取消及单独移除，计数始终取当前排期', async () => {
+  const p = page('admin.js'), a = p.instance;
+  const server = { _id: 's', revision: 1, day1: [{song_name:'A'}, {song_name:'B'}], day2: [{song_name:'C'}] };
+  p.api.handler = request => {
+    const data = request.data;
+    if (data.action === 'getPending') return {success:true, data:JSON.parse(JSON.stringify(server))};
+    assert.equal(data.revision, server.revision);
+    for (const index of data.songIndexes) {
+      if (data.action === 'removeItems') server['day'+(data.dayIndex+1)][index].audit_state='pending_remove';
+      else delete server['day'+(data.dayIndex+1)][index].audit_state;
+    }
+    server.revision++;
+    return {success:true,message:'已处理'};
+  };
+  await a.loadPlaylist(false);
+  a.openBatchRemoval(); for (const songIndex of [0,1]) a.toggleAuditSong(event({day:0,songIndex}));
+  a.openBulkConfirm(); await a.confirmBulkRemoval();
+  assert.equal(a.data.pendingRemovalCount,2); assert.equal(a.data.activeSongCount,1);
+  await a.onRestoreRemoval(event({day:0,songIndex:0})); assert.equal(a.data.pendingRemovalCount,1);
+  a.openBatchRemoval(); a.openBatchRemoval(); assert.equal(a.data.pendingRemovalCount,1);
+  a.setData({'auditSelections.day1':['0']}); a.onRemoveSelectedFromDay(event({day:1}));
+  await p.api.modal.success({confirm:true,content:'单首调整'});
+  assert.equal(a.data.pendingRemovalCount,2); assert.equal(a.data.activeSongCount,1);
+  await a.onRestoreRemoval(event({day:0,songIndex:1}));
+  await a.onRestoreRemoval(event({day:1,songIndex:0}));
+  assert.equal(a.data.pendingRemovalCount,0); assert.equal(a.data.activeSongCount,3);
+  p.api.handler = () => ({success:true,data:null}); await a.loadPlaylist(false);
+  assert.equal(a.data.pendingRemovalCount,0); assert.equal(a.data.batchResultMessage,'');
+});
+
+test('验证码与通行码复制的成功回调仍绑定页面，失败也能显示通知', () => {
+  const p=page('admin.js'),a=p.instance;
+  a.onCopyCode(event({code:'ABC123'})); assert.equal(p.api.clipboard.data,'ABC123');
+  p.api.clipboard.success(); assert.equal(a.data._adminFeedbackMessage,'已复制');
+  a.setData({generatedPasscode:'DEF456'});a.onCopyPasscode();
+  assert.equal(p.api.clipboard.data,'DEF456');p.api.clipboard.success();
+  assert.equal(a.data._adminFeedbackKind,'success');p.api.clipboard.fail({errMsg:'拒绝'});p.flush();
+  assert.equal(a.data._adminFeedbackMessage,'复制失败');
 });
 
 function swipe(a, from, to, duration = 200) {

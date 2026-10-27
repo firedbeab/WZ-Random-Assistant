@@ -1,4 +1,4 @@
-<page-meta page-style="{{appearanceStyle}}" />
+<page-meta page-style="{{appearanceStyle}} {{showSubmissionEditor || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
 <view class="page admin-page-enter">
   <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
   <view class="sub-heading"><button class="sub-back" bindtap="backToManagement" aria-label="返回控制台"><image src="{{themeIcons.back}}" /></button><text>{{title}}</text></view><text class="hero-sub">{{subtitle}}</text>
@@ -89,8 +89,8 @@
   </block>
 </view>
 
-<view class="modal admin-drawer-mask {{submissionClosing ? 'drawer-closing' : ''}}" wx:if="{{showSubmissionEditor}}" id="drawer-showSubmissionEditor" bindtap="onAdminDrawerMaskTap" data-close="closeSubmissionEditor">
-  <view class="modal-card admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSubmissionEditor"><view class="drawer-handle" data-drawer-drag="true" />
+<view class="modal admin-drawer-mask {{submissionClosing ? 'drawer-closing' : ''}}" wx:if="{{showSubmissionEditor}}" id="drawer-showSubmissionEditor" bindtap="onAdminDrawerMaskTap" data-close="closeSubmissionEditor"><view class="drawer-backdrop" id="drawer-showSubmissionEditor-backdrop" bindtap="onAdminDrawerMaskTap" catchtouchmove="adminDrawerNoop" data-close="closeSubmissionEditor" />
+  <view class="modal-card admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSubmissionEditor"><view class="drawer-handle" data-drawer-drag="true" catchtouchmove="adminDrawerNoop" />
     <text class="item-title">编辑投稿</text>
     <text class="input-caption modal-caption">曲目名称</text>
     <input class="field" value="{{editSubmission.song_name}}" bindinput="onSubmissionField" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" />

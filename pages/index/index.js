@@ -1,3 +1,4 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 
@@ -6,7 +7,7 @@ const { unlockTapCount } = require('../../utils/dice-easter-egg');
 const eggPhotos = require('../../utils/easter-egg-photos');
 const homePresentation = require('../../utils/home-presentation');
 
-Page(theme.page({
+Page(theme.page(feedback.notifications({
   data: {
     isTestMode: isTestMode(),
     userInfo: null,
@@ -324,12 +325,12 @@ Page(theme.page({
     const { weeklyCode, title, remark, specialNote } = this.data;
 
     // 1. 前端基础校验
-    if (!weeklyCode) return wx.showToast({ title: '请输入本周验证码', icon: 'none' });
-    if (!title) return wx.showToast({ title: '请输入歌名', icon: 'none' });
-    if (!remark) return wx.showToast({ title: '请输入歌手或来源', icon: 'none' });
+    if (!weeklyCode) return feedback.showToast(this, { title: '请输入本周验证码', icon: 'none' });
+    if (!title) return feedback.showToast(this, { title: '请输入歌名', icon: 'none' });
+    if (!remark) return feedback.showToast(this, { title: '请输入歌手或来源', icon: 'none' });
 
     this.setData({ loading: true });
-
+    feedback.showLoading(this, { title: '提交中…', mask: true });
     try {
       // 2. 调用云函数
       const res = await cloudCall({
@@ -346,7 +347,7 @@ Page(theme.page({
         const count = res.result.totalSubmissions;
         const countText = count ? `（本周第 ${count} 次提交）` : '';
 
-        wx.showToast({ title: '提交成功', icon: 'success' });
+        feedback.showToast(this, { title: '提交成功', icon: 'success' });
         // 缓存提交信息（含 week_key，防止跨周误显示）
         const weekKey = this.getWeekKey();
         wx.setStorageSync(LAST_SUBMISSION_KEY, {
@@ -371,12 +372,13 @@ Page(theme.page({
         });
         this.showStatusMessage(`已提交，请等待抽取 ${countText}`);
       } else {
-        wx.showToast({ title: res.result.message, icon: 'none' });
+        feedback.showToast(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.showToast({ title: '网络错误', icon: 'none' });
+      feedback.showToast(this, { title: '网络错误', icon: 'none' });
     } finally {
       this.setData({ loading: false });
+      feedback.hideLoading(this);
     }
   },
 
@@ -412,7 +414,7 @@ Page(theme.page({
     if (!this.data.isTestMode || !this.data.userInfo || this.data.userInfo.role !== 'superadmin') return;
     this.cancelDiceShake(); this._diceUnlocked = false; this._diceTapCount = 0;
     this._diceTapTarget = unlockTapCount(!e.detail.normal);
-    wx.showToast({ title: e.detail.normal ? '已重置随机5–20次入口' : '已重置5次入口', icon: 'none' });
+    feedback.showToast(this, { title: e.detail.normal ? '已重置随机5–20次入口' : '已重置5次入口', icon: 'none' });
   },
 
   // 跳转排期页
@@ -441,7 +443,7 @@ Page(theme.page({
     const url = isAdmin ? '/pages/admin/admin' : '/pages/admin/login';
     wx.navigateTo({ url: url, fail: err => {
       console.warn('管理页面跳转失败:', err && err.errMsg || '未知原因');
-      wx.showToast({ title: '页面未能打开，请重新编译后重试', icon: 'none' });
+      feedback.showToast(this, { title: '页面未能打开，请重新编译后重试', icon: 'none' });
     } });
   }
-}));
+})));

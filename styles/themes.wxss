@@ -13,6 +13,9 @@ page {
   --text-disabled: #777e75;
   --mask: rgba(0, 0, 0, .5);
   --on-overlay: #ffffff;
+  --feedback-surface: #ffffff;
+  --feedback-line: #aebfb1;
+  --feedback-scrim: rgba(28, 36, 30, .18);
   --surface-translucent: rgba(255, 255, 255, .96);
   --shadow-sm: 0 2rpx 8rpx rgba(60, 50, 40, .05);
   --shadow-md: 0 8rpx 24rpx rgba(60, 50, 40, .08);
@@ -57,6 +60,9 @@ page {
     --text-disabled: #9caaa0;
     --mask: rgba(0, 0, 0, .72);
     --on-overlay: #ffffff;
+    --feedback-surface: #344139;
+    --feedback-line: #829587;
+    --feedback-scrim: rgba(0, 0, 0, .4);
     --surface-translucent: rgba(31, 39, 34, .96);
     --shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, .2);
     --shadow-md: 0 8rpx 24rpx rgba(0, 0, 0, .28);
