@@ -149,6 +149,10 @@ Page(theme.page(feedback.page({
     if (this.data.isSuperAdmin) wx.navigateTo({ url: '/pages/admin/easter-eggs' });
   },
 
+  goFeedbackManager() {
+    if (this.data.isSuperAdmin) wx.navigateTo({ url: '/pages/admin/feedback' });
+  },
+
   async checkPermissionFromCloud() {
     feedback.showLoading(this, { title: '验证身份...' });
     try {

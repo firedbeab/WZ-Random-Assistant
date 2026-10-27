@@ -118,9 +118,7 @@
   </view>
   <view class="home-footer">
     <view class="footer-links">
-      <button class="text-button" bindtap="goHelp" hover-class="text-pressed">使用说明</button>
-      <text class="footer-separator">·</text>
-      <button class="text-button" bindtap="goAbout" hover-class="text-pressed">关于</button>
+      <button class="text-button" bindtap="goMy" hover-class="text-pressed">我的</button>
     </view>
     <text class="version num">v1.9</text>
   </view>

@@ -1,4 +1,5 @@
 // 外观的唯一颜色来源。中性色、品牌色、状态色分开；页面只消费语义变量。
+const colors = require('./color-palette');
 const NEUTRALS = {
   light: {
     bg: '#f4f2ef', surface: '#ffffff', 'surface-2': '#edebe7', 'surface-3': '#e2e5df',
@@ -65,10 +66,11 @@ const listeners = new Set();
 const api = () => typeof wx === 'undefined' ? null : wx;
 const validMode = value => value === 'light' || value === 'dark' || value === 'system';
 
-function getTokens(mode = 'light', palette = 'green') {
+function getTokens(mode = 'light', palette = 'green', customColor = '#28764f') {
   const resolved = mode === 'dark' ? 'dark' : 'light';
-  const brand = Object.prototype.hasOwnProperty.call(PALETTES, palette) ? PALETTES[palette] : PALETTES.green;
-  return { ...NEUTRALS[resolved], ...brand[resolved], ...STATES[resolved] };
+  const seed = palette === 'custom' ? colors.normalize(customColor) : colors.PRESETS[palette];
+  const brand = palette !== 'green' && seed ? colors.generate(seed, resolved) : PALETTES.green[resolved];
+  return { ...NEUTRALS[resolved], ...brand, ...STATES[resolved] };
 }
 function cssVariables(tokens) {
   return Object.keys(tokens).map(key => `--${key}:${tokens[key]};`).join('');
@@ -88,7 +90,7 @@ function iconSources(tokens) {
 }
 function getState() {
   const resolved = preference.mode === 'system' ? systemMode : preference.mode;
-  const tokens = getTokens(resolved, preference.palette);
+  const tokens = getTokens(resolved, preference.palette, preference.customColor);
   return { ...preference, resolved, tokens, style: cssVariables(tokens), icons: iconSources(tokens) };
 }
 function notify() { const state = getState(); listeners.forEach(listener => listener(state)); }
@@ -110,7 +112,11 @@ function start() {
   try {
     const saved = platform.getStorageSync && platform.getStorageSync(STORAGE_KEY);
     if (saved && validMode(saved.mode)) preference.mode = saved.mode;
-    if (saved && Object.prototype.hasOwnProperty.call(PALETTES, saved.palette)) preference.palette = saved.palette;
+    if (saved && Object.prototype.hasOwnProperty.call(colors.PRESETS, saved.palette)) preference.palette = saved.palette;
+    if (saved && colors.normalize(saved.customColor)) {
+      preference.customColor = colors.normalize(saved.customColor);
+      if (saved.palette === 'custom') preference.palette = 'custom';
+    }
   } catch (_) {}
   readSystemMode();
   try {
@@ -129,12 +135,14 @@ function refreshSystem() {
   if (before !== getState().resolved) notify();
 }
 // 微信原生确认框由系统着色；手动选择应用深色时也应按系统底色选择其按钮色。
-function getNativeColors() { readSystemMode(); return getTokens(systemMode, preference.palette); }
+function getNativeColors() { readSystemMode(); return getTokens(systemMode, preference.palette, preference.customColor); }
 function subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }
-// 供后续「我的」接入；本轮没有新增设置入口，也不主动写入偏好。
 function setPreference(next) {
-  if (!next || !validMode(next.mode) || !Object.prototype.hasOwnProperty.call(PALETTES, next.palette || preference.palette)) return false;
-  preference = { mode: next.mode, palette: next.palette || preference.palette };
+  if (!next || !validMode(next.mode)) return false;
+  const palette = next.palette || preference.palette, customColor = next.customColor === undefined ? preference.customColor : colors.normalize(next.customColor);
+  if (!(Object.prototype.hasOwnProperty.call(colors.PRESETS, palette) || palette === 'custom' && customColor)) return false;
+  if (next.customColor !== undefined && !customColor) return false;
+  preference = { mode: next.mode, palette, ...(customColor ? { customColor } : {}) };
   readSystemMode();
   try { if (api() && api().setStorageSync) api().setStorageSync(STORAGE_KEY, { ...preference }); } catch (_) {}
   notify();

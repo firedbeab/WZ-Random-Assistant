@@ -1,0 +1,11 @@
+<template name="community-polls">
+  <view wx:for="{{polls}}" wx:key="_id" class="c-card">
+    <view class="c-row c-between"><text class="c-caption">{{item.ended ? '已结束' : '进行中'}}</text><text class="c-caption">{{item.total}} 人参与</text></view><text class="c-title">{{item.title}}</text><text class="c-sub" wx:if="{{item.description}}">{{item.description}}</text>
+    <button wx:for="{{item.options}}" wx:for-item="option" wx:for-index="optionIndex" wx:key="label" class="c-poll-option {{item.choice === optionIndex ? 'selected' : ''}}" disabled="{{item.ended || busy || admin}}" bindtap="vote" data-id="{{item._id}}" data-choice="{{optionIndex}}" aria-label="{{option.label}} {{item.choice === optionIndex ? '已选' : ''}}"><view wx:if="{{item.resultsVisible}}" class="c-poll-fill" style="width:{{option.percent}}%;" /><text class="c-grow">{{item.choice === optionIndex ? '✓ ' : ''}}{{option.label}}</text><text wx:if="{{item.resultsVisible}}">{{option.count}} · {{option.percent}}%</text></button>
+    <view class="c-poll-meta"><text class="c-caption">截止 {{item.deadline}}</text><text class="c-caption">{{item.ended ? '结果已保留' : admin ? '仅显示汇总，不展示投票人' : item.choice >= 0 ? '截止前可点选改票' : '单选 · 投票后查看结果'}}</text></view>
+    <button wx:if="{{admin && !item.ended}}" class="c-link" bindtap="endPoll" data-id="{{item._id}}">结束投票</button>
+  </view>
+</template>
+<template name="community-feedback-list">
+  <view class="c-list" wx:if="{{entries.length}}"><button class="c-item" wx:for="{{entries}}" wx:key="_id" bindtap="openFeedback" data-id="{{item._id}}"><view class="c-row c-between"><text class="c-caption">{{item.category}}{{admin ? ' · ' + item.alias : ''}}</text><text class="c-badge {{item.status}}">{{item.statusLabel}}</text></view><text class="c-summary">{{item.content}}</text><view class="c-row c-between"><text class="c-caption">{{item.date}}</text><text class="c-unread" wx:if="{{item.unread}}">新回复</text><image wx:else class="c-list-arrow" src="{{themeIcons.chevronRight}}" /></view></button></view>
+</template>

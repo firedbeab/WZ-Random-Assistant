@@ -3,7 +3,7 @@
   <app-navigation back />
   <view class="info-head">
     <view class="info-heading-row"><text class="info-title">关于</text><appearance-toggle /></view>
-    <text class="info-desc">了解工具，找到帮助和反馈。</text>
+    <text class="info-desc">了解工具，查看说明与管理入口。</text>
   </view>
 
   <view class="info-content">
@@ -18,13 +18,6 @@
         <view class="entry-text">
           <text class="entry-label">使用说明</text>
           <text class="entry-caption">点歌规则、歌单查看与常见问题</text>
-        </view>
-        <image class="info-chevron entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
-      </button>
-      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goFeedback">
-        <view class="entry-text">
-          <text class="entry-label">意见反馈</text>
-          <text class="entry-caption">复制问卷链接，在浏览器中填写</text>
         </view>
         <image class="info-chevron entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
       </button>

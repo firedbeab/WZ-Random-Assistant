@@ -430,6 +430,8 @@ Page(theme.page(feedback.notifications({
     wx.navigateTo({ url: '/pages/help/index' });
   },
 
+  goMy() { wx.navigateTo({ url: '/pages/my/index' }); },
+
   // 跳转关于页
   goAbout() {
     wx.navigateTo({ url: '/pages/about/index' });

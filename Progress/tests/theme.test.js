@@ -19,7 +19,7 @@ function fixture(options = {}) {
   };
   if (options.old) { delete wx.getAppBaseInfo; wx.getSystemInfoSync = () => ({ theme: system }); }
   if (options.throwing) { wx.getAppBaseInfo = () => { throw Error('unsupported'); }; wx.onThemeChange = () => { throw Error('unsupported'); }; }
-  const sandbox = { module: { exports: {} }, wx };
+  const sandbox = { module: { exports: {} }, wx, require: () => require('../../utils/color-palette') };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/theme.js'), 'utf8'), sandbox);
   const instance = sandbox.module.exports;
   return { theme: instance, wx, disk, natives, observers: () => observers, emit(mode) { system = mode; if (event) event({ theme: mode }); } };

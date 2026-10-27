@@ -1,0 +1,2 @@
+@import "../../styles/community.wxss";
+.info-page { padding-top: 24rpx; }.info-head { padding-bottom: 24rpx; }.c-list-arrow { width: 28rpx; height: 28rpx; }.admin-feedback-content { margin: 26rpx 0; }

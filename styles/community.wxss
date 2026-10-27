@@ -1,0 +1,33 @@
+@import "admin.wxss";
+@import "info-pages.wxss";
+.community { color: var(--text-1); }
+.c-content { padding: 0 32rpx 48rpx; }
+.c-row { display: flex; align-items: center; gap: 20rpx; min-width: 0; }
+.c-between { justify-content: space-between; }
+.c-grow { flex: 1; min-width: 0; }
+.c-card { margin-bottom: 24rpx; padding: 32rpx; background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.c-title { display: block; font-size: 34rpx; line-height: 1.55; font-weight: 600; overflow-wrap: anywhere; }
+.c-sub { display: block; margin-top: 10rpx; color: var(--text-2); font-size: 25rpx; line-height: 1.75; overflow-wrap: anywhere; }
+.c-caption { display: block; color: var(--text-3); font-size: 23rpx; line-height: 1.7; }
+.c-text { display: block; color: var(--text-1); font-size: 28rpx; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.c-label { display: block; margin: 28rpx 0 12rpx; color: var(--text-2); font-size: 26rpx; font-weight: 550; }
+.c-primary,.c-secondary { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 92rpx; margin: 0; padding: 18rpx 24rpx; border: 0; border-radius: var(--radius-md); font-size: 28rpx; line-height: 1.5; font-weight: 600; }
+.c-primary { background: var(--accent); color: var(--on-accent); }
+.c-secondary { background: var(--surface-2); color: var(--text-2); }
+.c-link { display: flex; align-items: center; justify-content: center; min-height: 88rpx; padding: 10rpx 12rpx; margin: 0; background: transparent; color: var(--accent); font-size: 26rpx; line-height: 1.5; border-radius: var(--radius-md); }
+.c-actions { display: flex; gap: 20rpx; padding-top: 28rpx; }.c-actions button { flex: 1; }
+.c-entry { display: flex; align-items: center; width: 100%; min-height: 126rpx; margin: 0; padding: 24rpx 0; gap: 20rpx; text-align: left; border-radius: 0; background: transparent; color: var(--text-1); line-height: 1.5; }
+.c-entry + .c-entry { border-top: 1rpx solid var(--line); }.c-entry image { width: 34rpx; height: 34rpx; flex: none; }.c-entry .c-title { font-size: 30rpx; }.c-entry .c-sub { font-size: 24rpx; margin-top: 6rpx; }
+.c-tabs { display: flex; gap: 36rpx; border-bottom: 1rpx solid var(--line); margin-bottom: 28rpx; }.c-tab { position: relative; min-height: 90rpx; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0 4rpx; color: var(--text-2); background: transparent; font-size: 30rpx; line-height: 1.5; border-radius: 0; transition: color 280ms; }.c-tab.active { color: var(--accent); font-weight: 600; }.c-tab.active::before { content: ''; position: absolute; bottom: 0; left: 4rpx; right: 4rpx; height: 4rpx; border-radius: 4rpx; background: var(--accent); }
+.c-chips { display: flex; flex-wrap: wrap; gap: 12rpx; }.c-chip { display: flex; align-items: center; justify-content: center; min-height: 80rpx; padding: 12rpx 22rpx; margin: 0; border: 1rpx solid var(--line); border-radius: var(--radius-md); background: transparent; color: var(--text-2); font-size: 25rpx; line-height: 1.5; }.c-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); }
+.c-field { width: 100%; height: 92rpx; padding: 0 22rpx; box-sizing: border-box; background: var(--surface-2); border: 1rpx solid var(--line); border-radius: var(--radius-md); color: var(--text-1); font-size: 28rpx; line-height: 1.75; }.c-textarea { height: 230rpx; padding: 20rpx 22rpx; }.c-placeholder { color: var(--placeholder); }.c-field:focus { border-color: var(--accent); }
+.c-form-meta { display: flex; justify-content: space-between; gap: 20rpx; margin: 12rpx 0 24rpx; }
+.c-list { overflow: hidden; border-radius: var(--radius-lg); background: var(--surface); padding: 0 28rpx; margin: 20rpx 0; }
+.c-item { display: block; width: 100%; margin: 0; padding: 26rpx 0; background: transparent; border-radius: 0; text-align: left; color: var(--text-1); line-height: 1.6; }.c-item + .c-item { border-top: 1rpx solid var(--line); }.c-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 14rpx 0; font-size: 28rpx; overflow-wrap: anywhere; }
+.c-badge { flex: none; display: inline-block; padding: 4rpx 12rpx; background: var(--surface-2); color: var(--text-2); border-radius: 8rpx; font-size: 22rpx; line-height: 1.6; }.c-badge.handling { background: var(--info-weak); color: var(--info); }.c-badge.done { background: var(--success-weak); color: var(--success); }.c-unread { color: var(--accent); font-size: 23rpx; }
+.c-state { padding: 48rpx 4rpx 64rpx; }.c-state .c-title { font-size: 32rpx; }.c-section { margin: 36rpx 0 12rpx; font-size: 30rpx; font-weight: 600; }
+.c-reply { margin-top: 28rpx; padding: 24rpx; background: var(--surface-2); border-radius: var(--radius-md); }.c-reply .c-label { margin-top: 0; color: var(--accent); }
+.c-poll-option { position: relative; display: flex; align-items: center; gap: 16rpx; width: 100%; min-height: 92rpx; padding: 20rpx; box-sizing: border-box; margin: 14rpx 0 0; border: 1rpx solid var(--line); border-radius: var(--radius-md); background: transparent; color: var(--text-1); text-align: left; font-size: 27rpx; line-height: 1.6; overflow: hidden; }.c-poll-option.selected { border-color: var(--accent); }.c-poll-option[disabled]:not([type]) { background: transparent; color: var(--text-1); opacity: 1; }.c-poll-option text { position: relative; }.c-poll-fill { position: absolute; top: 0; left: 0; bottom: 0; background: var(--accent-weak); transition: width 300ms; }.c-poll-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8rpx 18rpx; margin: 20rpx 0 8rpx; }
+.c-sheet.admin-drawer-mask > .admin-drawer { display: flex; flex-direction: column; overflow: hidden; max-height: 86vh; padding: 44rpx 32rpx calc(24rpx + env(safe-area-inset-bottom)); }.c-sheet-head { flex: none; margin-bottom: 22rpx; }.c-sheet-scroll { flex: 1; min-height: 0; height: 52vh; }.c-sheet-body { padding-bottom: 8rpx; }.c-sheet-actions { flex: none; padding-top: 24rpx; }.c-error { display: block; color: var(--danger); font-size: 25rpx; line-height: 1.7; margin-top: 16rpx; }.c-motion { animation: admin-page-in 280ms ease; }
+.c-options-edit { display: flex; align-items: center; gap: 12rpx; margin-top: 14rpx; }.c-options-edit input { flex: 1; min-width: 0; }.c-options-edit button { flex: none; }
+@media(prefers-reduced-motion:reduce) { .c-motion { animation-duration: 1ms; } }

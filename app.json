@@ -8,7 +8,10 @@
     "pages/admin/admin",
     "pages/admin/console",
     "pages/admin/help-editor",
-    "pages/admin/easter-eggs"
+    "pages/admin/easter-eggs",
+    "pages/my/index",
+    "pages/feedback/index",
+    "pages/admin/feedback"
   ],
   "window": {
     "navigationBarTextStyle": "@navigationBarTextStyle",
