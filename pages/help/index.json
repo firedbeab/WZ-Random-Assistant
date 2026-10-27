@@ -1,4 +1,11 @@
 {
   "navigationBarTitleText": "使用说明",
+  "usingComponents": {
+    "app-navigation": "../../components/app-navigation/app-navigation"
+  },
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f4f2ef",
+  "backgroundTextStyle": "dark",
   "enablePullDownRefresh": true
 }

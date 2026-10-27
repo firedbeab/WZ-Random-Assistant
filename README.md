@@ -41,8 +41,8 @@
 - 当前界面约定：[DESIGN.md](DESIGN.md)。布局方向先讨论、再看 HTML 样稿、确认后才接入正式小程序。
 - 歌单平铺历史对照：[E-playlist-flat.html](Progress/design/mockups/E-playlist-flat.html)（E.2）。保留三期、长文本、多状态及浅色/深色/跟随系统的固定数据演示，不连接业务云端；当前接入代码的方案为 F.2，正式深色适配仍未完成。
 - 已确认歌单样稿：[F-playlist-card.html](Progress/design/mockups/F-playlist-card.html)（F.3）。F.2 已接入，F.3 补齐日期标题层级与无卡片状态；首页与歌单共用连续渐变和自定义顶部导航。代码完成不代表已发布，HTML 深色仍为预览；E.2 保留作历史对照。
-- 待评审的说明/关于：[G-info-pages.html](Progress/design/mockups/G-info-pages.html)。可切换两页、说明折叠与图片演示、状态、小屏和浅深色；仅固定样例，不接云端。用户正在查看，正式 `pages/help` 与 `pages/about` 未修改。
-- 操作图标使用按需本地 SVG；当前返回、提醒及提醒状态三个源文件共 677 字节，不引入图标库依赖或字体包。
+- 已确认并接入的说明/关于：[G-info-pages.html](Progress/design/mockups/G-info-pages.html)。正式两页统一渐变、导航及内容面，保留原交互；关于页的隐私指引与署名位于页面底部。HTML 仍是固定样例，深色仅预览；正式模拟器最终视觉待核验，尚未上传发布。
+- 操作图标使用按需本地 SVG；当前返回、提醒、提醒状态及折叠箭头四个源文件共 875 字节，不引入图标库依赖或字体包。
 - 备份约定：每轮改动前提交并推送备份到 `origin/main`；验证后提交并推送结果。网络失败要明确报告，不能用“本地已提交”代替“远端已备份”；只有用户明确允许时才先完成本地工作。
 
 ## 许可证

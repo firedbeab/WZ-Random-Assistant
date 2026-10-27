@@ -1,27 +1,46 @@
-<view class="container">
-  <view class="card intro-card">
-    <text class="title">关于 WZ随机助手</text>
-    <text class="content">本工具用于每周内容提交、随机抽取与排期发布。提交通道通常在每周日 8:00-20:00 开放。</text>
-    <button class="btn-help" bindtap="goHelp">查看完整使用说明</button>
+<view class="info-page">
+  <app-navigation back />
+  <view class="info-head">
+    <text class="info-title">关于</text>
+    <text class="info-desc">了解工具，找到帮助和反馈。</text>
   </view>
 
-  <view class="card">
-    <text class="title">管理员</text>
-    <text class="content">管理员可审核排期列表、标记异常、发布最终内容。通行码由负责人统一分发，登录后免重复登录。</text>
-    <button class="btn-admin" bindtap="goAdminLogin">管理员验证入口</button>
+  <view class="info-content">
+    <view class="info-surface intro-card">
+      <text class="intro-title">WZ随机助手</text>
+      <text class="intro-content">用于校园广播站每周点歌、随机抽取与排期发布。提交通道通常在每周日 8:00–20:00 开放。</text>
+      <text class="version-label">版本 v1.9</text>
+    </view>
+
+    <view class="info-surface entry-list">
+      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goHelp">
+        <view class="entry-text">
+          <text class="entry-label">使用说明</text>
+          <text class="entry-caption">点歌规则、歌单查看与常见问题</text>
+        </view>
+        <image class="info-chevron entry-arrow" src="/assets/icons/chevron-down.svg" mode="aspectFit" aria-hidden="true" />
+      </button>
+      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goFeedback">
+        <view class="entry-text">
+          <text class="entry-label">意见反馈</text>
+          <text class="entry-caption">复制问卷链接，在浏览器中填写</text>
+        </view>
+        <image class="info-chevron entry-arrow" src="/assets/icons/chevron-down.svg" mode="aspectFit" aria-hidden="true" />
+      </button>
+      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goAdminLogin">
+        <view class="entry-text">
+          <text class="entry-label">管理员验证</text>
+          <text class="entry-caption">管理人员使用</text>
+        </view>
+        <image class="info-chevron entry-arrow" src="/assets/icons/chevron-down.svg" mode="aspectFit" aria-hidden="true" />
+      </button>
+    </view>
   </view>
 
-  <view class="card">
-    <text class="title">意见反馈</text>
-    <text class="content">如遇到问题或有改进建议，欢迎通过问卷反馈。点击按钮复制链接，在浏览器中打开即可填写。</text>
-    <button class="btn-feedback" bindtap="goFeedback">打开反馈问卷</button>
-  </view>
-
-  <view class="footer">
-    <text class="btn-privacy" bindtap="openPrivacy">隐私保护指引</text>
-    <text>WZ随机助手 v1.9 | @发牌的小度</text>
+  <view class="info-footer">
+    <button class="info-button privacy-link" hover-class="info-pressed" bindtap="openPrivacy">隐私保护指引</button>
+    <text class="attribution">@发牌的小度</text>
   </view>
 </view>
 
-<!-- 隐私协议弹窗 -->
 <privacy-popup id="privacyPopup"></privacy-popup>

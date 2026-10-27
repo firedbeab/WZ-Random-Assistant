@@ -1,94 +1,17 @@
-page {
-  background: #f6f7f9;
-}
-.container {
-  padding: 30rpx;
-  min-height: 100vh;
-  box-sizing: border-box;
-}
+@import "../../styles/info-pages.wxss";
 
-.card {
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 40rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
-}
-
-.title {
-  font-size: 34rpx;
-  font-weight: bold;
-  color: #333;
-  display: block;
-  margin-bottom: 30rpx;
-}
-
-.intro-card {
-  background: linear-gradient(145deg, #ffffff, #f8fbff);
-}
-
-.section {
-  margin-bottom: 30rpx;
-}
-.section:last-child {
-  margin-bottom: 0;
-}
-
-.section-title {
-  font-size: 28rpx;
-  color: #555;
-  font-weight: 500;
-  display: block;
-  margin-bottom: 10rpx;
-}
-
-.content {
-  font-size: 26rpx;
-  color: #666;
-  line-height: 1.6;
-  display: block;
-}
-
-.btn-admin {
-  margin-top: 30rpx;
-  background: #07c160;
-  color: #fff;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-}
-
-.btn-help {
-  margin-top: 30rpx;
-  background: linear-gradient(135deg, #07c160, #05ad55);
-  color: #fff;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-}
-
-.btn-feedback {
-  margin-top: 30rpx;
-  background: #576b95;
-  color: #fff;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-}
-
-.footer {
-  text-align: center;
-  padding: 40rpx 0;
-  color: #ccc;
-  font-size: 24rpx;
-}
-
-.btn-privacy {
-  display: block;
-  font-size: 26rpx;
-  color: #576b95;
-  margin-bottom: 16rpx;
-}
+.intro-card { padding: 40rpx; }
+.intro-title { display: block; margin-bottom: var(--space-4); font-size: 36rpx; font-weight: 600; line-height: 1.5; }
+.intro-content { display: block; color: var(--text-2); font-size: var(--font-md); line-height: 1.9; }
+.version-label { display: block; margin-top: var(--space-5); color: var(--text-3); font-size: var(--font-sm); line-height: 1.5; font-variant-numeric: tabular-nums; }
+.entry-list { margin-top: 28rpx; padding: 0 var(--space-5); }
+.info-entry { display: flex; align-items: center; justify-content: space-between; gap: 28rpx; width: 100%; min-height: 148rpx; padding: var(--space-5) 0; box-sizing: border-box; }
+.info-entry + .info-entry { border-top: 1rpx solid var(--line); }
+.entry-text { min-width: 0; flex: 1; }
+.entry-label { display: block; font-size: var(--font-md); font-weight: 500; line-height: 1.6; }
+.entry-caption { display: block; margin-top: 10rpx; color: var(--text-2); font-size: var(--font-sm); line-height: 1.7; }
+.entry-arrow { transform: rotate(-90deg); }
+/* 自然流中的底部页脚：短页贴近下沿，长页接在正文后，不遮挡内容。 */
+.info-footer { margin-top: auto; padding: 36rpx var(--space-5) var(--space-1); text-align: center; color: var(--text-3); }
+.privacy-link { display: inline-flex; align-items: center; justify-content: center; min-height: 88rpx; padding: var(--space-3) var(--space-4); color: var(--accent); font-size: 26rpx; line-height: 1.8; }
+.attribution { display: block; font-size: 22rpx; line-height: 1.8; }

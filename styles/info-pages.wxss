@@ -1,0 +1,15 @@
+/* 说明 / 关于共用 G 版基础，导航与页面使用同一层连续渐变。 */
+.info-page { display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box; padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); background: var(--gradient-closed); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+.info-head { flex: none; padding: 36rpx var(--space-5) var(--space-6); }
+.info-title { display: block; font-size: var(--font-2xl); font-weight: 600; line-height: 1.4; }
+.info-desc { display: block; margin-top: 20rpx; color: var(--text-2); font-size: 26rpx; line-height: 1.8; }
+.info-content { flex: none; margin: 0 var(--space-5); }
+.info-surface { border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+.info-pressed { opacity: .6; }
+.info-button { margin: 0; border: none; border-radius: 0; background: transparent; color: inherit; font-weight: 400; text-align: left; }
+.info-button::after { border: none; }
+.info-chevron { flex: none; width: 36rpx; height: 36rpx; }
+.info-state { padding: 64rpx 0 96rpx; }
+.info-state-title { display: block; font-size: var(--font-xl); font-weight: 600; line-height: 1.5; }
+.info-state-desc { display: block; margin-top: var(--space-3); color: var(--text-2); font-size: var(--font-md); line-height: 1.8; }
+.test-mode-banner { border: none; border-radius: 0; font-size: var(--font-xs); font-weight: 400; }

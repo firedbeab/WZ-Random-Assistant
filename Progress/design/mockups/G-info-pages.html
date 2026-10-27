@@ -129,10 +129,12 @@
   .song-number { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-top: 1px; border-radius: 50%; background: var(--accent-weak); color: var(--accent); font-size: 12px; line-height: 1; }
   .safe-area { background: transparent; }
 
-  .info-head { padding: 18px 16px 24px; }
+  .info-head { flex: none; padding: 18px 16px 24px; }
   .info-head h1 { margin: 0; font-size: 25px; font-weight: 600; line-height: 1.4; letter-spacing: -.5px; }
   .info-desc { margin: 10px 0 0; font-size: 13px; color: var(--text-2); line-height: 1.8; }
+  #screenScroll { display: flex; flex-direction: column; }
   .info-content { padding: 0 16px 30px; }
+  .info-content.is-about { display: flex; flex: 1 0 auto; flex-direction: column; padding-bottom: 4px; }
   .guide-list, .intro-card, .entry-list { border-radius: var(--card-radius); box-shadow: var(--card-shadow); background: var(--surface); }
   .guide-list { padding: 0 16px; }
   .guide-item + .guide-item { border-top: 1px solid var(--line); }
@@ -161,7 +163,7 @@
   .entry-label { display: block; font-size: 14px; font-weight: 500; line-height: 1.6; }
   .entry-caption { display: block; font-size: 12px; color: var(--text-2); margin-top: 5px; line-height: 1.7; }
   .info-entry .chevron { transform: rotate(-90deg); }
-  .info-footer { padding: 18px 0 4px; text-align: center; color: var(--text-3); font-size: 11px; line-height: 1.8; }
+  .info-footer { margin-top: auto; padding: 18px 0 4px; text-align: center; color: var(--text-3); font-size: 11px; line-height: 1.8; }
   .privacy-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; background: transparent; border: none; color: var(--accent); font-size: 13px; }
   .status-view { padding: 32px 0 48px; }
   .status-view h2 { margin: 0 0 12px; font-size: 19px; font-weight: 600; line-height: 1.5; }
@@ -186,12 +188,12 @@
       <label class="control-label" for="widthSelect">预览宽度</label><select id="widthSelect"><option value="390">390px · 常规手机</option><option value="375">375px · 小一号</option><option value="320">320px · 窄屏检查</option><option value="430">430px · 大屏手机</option></select>
       <label class="control-label" for="themeSelect">预览外观</label><select id="themeSelect"><option value="light">浅色</option><option value="dark">深色</option><option value="system">跟随系统</option></select>
     </div>
-    <div class="details"><p>说明条目可展开、折叠，图片可放大或重试；关于页的使用说明可切换到对应预览。</p><p>全部为固定示例，不读写云端、不调用微信接口、不提交问卷。反馈、管理员与隐私入口仅展示操作提示。</p><p>正式说明页和关于页保持原样，确认样稿后再接入。深色同样仅供预览。</p></div>
+    <div class="details"><p>说明条目可展开、折叠，图片可放大或重试；关于页的使用说明可切换到对应预览。</p><p>全部为固定示例，不读写云端、不调用微信接口、不提交问卷。反馈、管理员与隐私入口仅展示操作提示。</p><p>G 版已确认并接入代码，隐私指引与署名放在页面底部；短页靠近下沿，长页随内容下移。尚未上传发布，深色仍仅供预览。</p></div>
   </aside>
   <section class="preview-stage" aria-label="说明与关于手机预览"><div class="device" id="device">
     <div class="status-bar" aria-hidden="true"><span class="num">9:41</span><span class="status-icons"><svg width="15" height="12" viewBox="0 0 15 12"><path d="M1 11V8h2v3zm4 0V6h2v5zm4 0V3h2v8zm4 0V0h2v11z" fill="currentColor"/></svg><svg width="16" height="12" viewBox="0 0 16 12"><path d="M1 4q7-6 14 0M4 7q4-4 8 0M7 10q1-1 2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><svg width="23" height="12" viewBox="0 0 23 12"><rect x="1" y="1" width="18" height="10" rx="2" fill="none" stroke="currentColor"/><rect x="3" y="3" width="14" height="6" rx="1" fill="currentColor"/><path d="M21 4v4" stroke="currentColor" stroke-width="2"/></svg></span></div>
       <div class="native-nav"><span class="nav-back" aria-hidden="true">‹</span><span class="nav-title">WZ随机助手</span><span class="native-capsule" aria-hidden="true"><span>•••</span><span class="capsule-dot"></span></span></div>
-      
+
     <div class="screen-scroll" id="screenScroll"><header class="info-head"><h1 id="pageTitle">使用说明</h1><p class="info-desc" id="pageDesc">点开条目，查看规则和操作方法。</p></header><div class="info-content" id="infoContent" aria-live="polite"></div></div>
     <div class="safe-area" aria-hidden="true"><span class="home-indicator"></span></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
     <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="示例图片预览" hidden><button type="button" class="lightbox-close" id="closeLightbox" aria-label="关闭图片预览">×</button><div class="lightbox-sheet"><h2 id="imageTitle">示例图片</h2><p>填写本周点歌 → 提交<br>等待抽取与审核 → 查看已发布歌单</p></div></div>
@@ -242,7 +244,7 @@
     ].forEach(([title,caption,action])=>{const b=el('button','info-entry');b.type='button';const text=el('span','');text.append(el('span','entry-label',title),el('span','entry-caption',caption));b.append(text);b.insertAdjacentHTML('beforeend',chevron);b.addEventListener('click',action);entries.append(b);});content.append(entries);
     const footer=el('footer','info-footer'),privacy=el('button','privacy-link','隐私保护指引');privacy.type='button';privacy.addEventListener('click',()=>toast('预览：正式页面继续打开微信隐私保护指引'));footer.append(privacy,el('div','','@发牌的小度'));content.append(footer);
   }
-  function render(){closeImage();content.replaceChildren();const isHelp=byId('pageSelect').value==='help';byId('stateSelect').disabled=!isHelp;byId('pageTitle').textContent=isHelp?'使用说明':'关于';byId('pageDesc').textContent=isHelp?'点开条目，查看规则和操作方法。':'了解工具，找到帮助和反馈。';if(isHelp)help();else about();}
+  function render(){closeImage();content.replaceChildren();const isHelp=byId('pageSelect').value==='help';content.classList.toggle('is-about',!isHelp);byId('stateSelect').disabled=!isHelp;byId('pageTitle').textContent=isHelp?'使用说明':'关于';byId('pageDesc').textContent=isHelp?'点开条目，查看规则和操作方法。':'了解工具，找到帮助和反馈。';if(isHelp)help();else about();}
   byId('pageSelect').addEventListener('change',()=>{render();byId('screenScroll').scrollTop=0;});
   byId('stateSelect').addEventListener('change',()=>{imageFailed=true;expanded=byId('stateSelect').value==='imageFail'?3:0;render();byId('screenScroll').scrollTop=0;});
   byId('widthSelect').addEventListener('change',e=>{byId('device').style.width=e.target.value+'px';});
