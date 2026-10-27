@@ -11,7 +11,8 @@ function page(file) {
     showModal: async options => { api.modal = options; return { confirm: api.confirm }; },
     showToast() {}, showLoading() {}, hideLoading() {}, stopPullDownRefresh() {},
     enableAlertBeforeUnload() { api.leaveGuard = true; }, disableAlertBeforeUnload() { api.leaveGuard = false; },
-    navigateTo() {}, navigateBack() {}, setNavigationBarTitle() {}
+    navigateTo() {}, navigateBack() {}, setNavigationBarTitle() {},
+    previewImage(options) { api.preview = options; }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../pages/admin', file), 'utf8'), {
     Page(value) { definition = value; }, wx, console: { warn() {} },
@@ -241,4 +242,17 @@ test('清理确认仍要求精确口令并传递原服务端一次性令牌', as
   assert.equal(p.calls.filter(call=>call.data.action==='clearWeek').length,0);
   await a.requestCleanupConfirmation('week');await p.api.modal.success({confirm:true,content:'清空本周'});
   const request=p.calls.find(call=>call.data.action==='clearWeek');assert.equal(request.name,'testTool');assert.equal(request.data.confirmationToken,'fixture-token');assert.equal(request.data.confirmationText,'清空本周');
+});
+
+test('彩蛋编辑图片仅预览，不改变本地文件、脏状态或写入云端', () => {
+  const p=page('easter-eggs.js'),a=p.instance;
+  a.setData({ allowed:true, entries:[{id:'photo',fileID:'cloud://fixture/photo.jpg',topText:'上方',bottomText:'下方',enabled:true}] });
+  a.edit(event({id:'photo'}));a.preview(event({src:a.data.imagePath}));
+  assert.equal(p.api.preview.current,'cloud://fixture/photo.jpg');assert.equal(a.data.localPath,'');assert.equal(a.data.dirty,false);assert.equal(p.calls.length,0);
+});
+test('彩蛋关闭动画保留未保存确认，取消不丢字段，忙碌不能关闭', () => {
+  const p=page('easter-eggs.js'),a=p.instance;
+  a.setData({editing:true,dirty:true,topText:'未保存文字'});a.closeEditor();p.api.modal.success({confirm:false});p.flush();assert.equal(a.data.editing,true);assert.equal(a.data.topText,'未保存文字');
+  a.closeEditor();p.api.modal.success({confirm:true});assert.equal(a.data.editorClosing,true);assert.equal(a.data.editing,true);p.flush();assert.equal(a.data.editing,false);assert.equal(a.data.editorClosing,false);
+  a.setData({editing:true,busy:true});a.closeEditor();p.flush();assert.equal(a.data.editing,true);
 });

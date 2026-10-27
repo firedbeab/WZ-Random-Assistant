@@ -1,10 +1,10 @@
-<page-meta page-style="{{appearanceStyle}}" />
+<page-meta page-style="{{appearanceStyle}} {{editing || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
 <view class="egg-admin-page admin-page-enter">
 <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
   <block wx:if="{{allowed}}">
     <view class="page-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回管理"><image src="{{themeIcons.back}}" /></button><text class="grow">彩蛋管理</text><view class="action primary {{busy ? 'disabled' : ''}}" bindtap="edit">＋ 添加条目</view></view>
     <text class="page-hint">每个条目一张照片；上方、下方文字留空会使用默认文案。启用的条目随机展示。</text>
-    <view wx:if="{{loading}}" class="empty">正在加载…</view>
+    <view wx:if="{{loading && !entries.length}}" class="empty">正在加载…</view>
     <view wx:elif="{{!entries.length}}" class="empty">还没有彩蛋照片，先添加一张吧。</view>
     <view wx:for="{{entries}}" wx:key="id" class="entry-card">
       <image src="{{item.fileID}}" mode="aspectFill" class="entry-photo" lazy-load bindtap="preview" data-src="{{item.fileID}}" />
@@ -14,17 +14,25 @@
     </view>
   </block>
 </view>
-<view wx:if="{{editing}}" class="editor-mask admin-drawer-mask {{editorClosing ? 'drawer-closing' : ''}}" catchtap="closeEditor">
-  <scroll-view scroll-y class="editor-card admin-drawer" catchtap="noop"><view class="drawer-handle" data-drawer-drag="true" />
-    <view class="editor-heading" data-drawer-drag="true"><text>{{id ? '编辑彩蛋' : '添加彩蛋'}}</text><view bindtap="closeEditor">×</view></view>
-    <view class="editor-photo" bindtap="chooseImage"><image wx:if="{{imagePath}}" src="{{imagePath}}" mode="aspectFit" /><text wx:else>＋ 选择小猫照片</text></view>
-    <view class="photo-options"><view bindtap="chooseImage">{{imagePath ? '换一张照片' : 'JPG / PNG / WebP，最大2MB'}}</view><view wx:if="{{imagePath}}" bindtap="preview">查看大图</view></view>
-    <text class="field-label">上方文字（可留空）</text><input value="{{topText}}" maxlength="40" placeholder="{{previewTop}}" placeholder-class="form-placeholder" bindinput="input" data-field="topText" disabled="{{busy}}" />
-    <text class="field-label">下方文字（可留空）</text><textarea value="{{bottomText}}" maxlength="100" placeholder="今天的小幸运，是和小猫碰个面。" placeholder-class="form-placeholder" bindinput="input" data-field="bottomText" disabled="{{busy}}" />
-    <view class="enabled-field"><text>启用此条目</text><switch checked="{{enabled}}" color="{{themeColors.accent}}" bindchange="toggleEditor" disabled="{{busy}}" /></view>
-    <view class="preview-label">弹窗文案预览</view><view class="text-preview"><text class="preview-top">{{previewTop}}</text><text class="preview-bottom">{{previewBottom}}</text></view>
-    <view class="editor-actions"><view class="action" bindtap="closeEditor">取消</view><view class="action primary {{busy ? 'disabled' : ''}}" bindtap="save">{{busy ? '保存中…' : '保存彩蛋'}}</view></view>
-  </scroll-view>
+<view wx:if="{{editing}}" id="easter-editor-mask" class="editor-mask admin-drawer-mask {{editorClosing ? 'drawer-closing' : ''}}" bindtap="onAdminDrawerMaskTap" data-close="closeEditor">
+  <view class="egg-editor-shell admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeEditor">
+    <view class="drawer-handle" data-drawer-drag="true" />
+    <view class="egg-editor-heading" data-drawer-drag="true"><text data-drawer-drag="true">{{id ? '编辑彩蛋' : '添加彩蛋'}}</text><button class="egg-editor-close" bindtap="closeEditor" disabled="{{busy}}" aria-label="关闭编辑"><image src="{{themeIcons.close}}" /></button></view>
+    <scroll-view scroll-y class="egg-editor-scroll" show-scrollbar="{{false}}">
+      <view class="egg-editor-body">
+        <text class="egg-edit-hint">直接编辑上下文案，留空使用默认内容。</text>
+        <view class="egg-editor-stage">
+          <textarea class="egg-title-editor" auto-height value="{{topText}}" maxlength="40" placeholder="{{previewTop}}" placeholder-class="egg-title-placeholder" bindinput="input" data-field="topText" disabled="{{busy}}" aria-label="上方文字，可留空" />
+          <view class="egg-stage-photo"><image wx:if="{{imagePath}}" src="{{imagePath}}" mode="aspectFit" bindtap="preview" data-src="{{imagePath}}" /><text wx:else>请在下方选择照片</text></view>
+          <text class="egg-photo-hint" wx:if="{{imagePath}}">点击图片查看大图</text>
+          <textarea class="egg-description-editor" auto-height value="{{bottomText}}" maxlength="100" placeholder="{{previewBottom}}" placeholder-class="form-placeholder" bindinput="input" data-field="bottomText" disabled="{{busy}}" aria-label="下方描述，可留空" />
+        </view>
+        <button class="egg-replace-photo" bindtap="chooseImage" disabled="{{busy}}">{{imagePath ? '换一张照片' : '选择照片'}}</button>
+        <view class="enabled-field"><text>启用此条目</text><switch checked="{{enabled}}" color="{{themeColors.accent}}" bindchange="toggleEditor" disabled="{{busy}}" /></view>
+      </view>
+    </scroll-view>
+    <view class="egg-editor-footer"><button class="egg-cancel" bindtap="closeEditor" disabled="{{busy}}">取消</button><button class="egg-save" bindtap="save" disabled="{{busy}}">{{busy ? '保存中…' : '保存彩蛋'}}</button></view>
+  </view>
 </view>
 <privacy-popup />
 

@@ -100,7 +100,7 @@ function page(definition) {
     onAdminDialogChoice(e) { const index=Number(e.currentTarget.dataset.index); if(!Number.isInteger(index)||!this.data._adminDialogChoices[index])return; settleDialog(this,{confirm:true,cancel:false,tapIndex:index,index,content:''}); },
     onAdminDrawerMaskTap(e) { if(e.target.id===e.currentTarget.id){const close=this[e.currentTarget.dataset.close];if(typeof close==='function')close.call(this);} },
     onAdminDrawerTouchStart(e) { const t=e.touches&&e.touches.length===1&&e.touches[0];this._sharedDrawerTouch=t&&e.target.dataset&&e.target.dataset.drawerDrag?{x:t.clientX,y:t.clientY,time:e.timeStamp}:null; },
-    onAdminDrawerTouchEnd(e) { const start=this._sharedDrawerTouch;this._sharedDrawerTouch=null;const t=e.changedTouches&&e.changedTouches.length===1&&e.changedTouches[0];if(!start||!t)return;const dy=t.clientY-start.y,dx=t.clientX-start.x;if(dy>60&&dy>Math.abs(dx)*1.5&&e.timeStamp-start.time<800){const close=this[e.currentTarget.dataset.close];if(typeof close==='function')close.call(this);} },
+    onAdminDrawerTouchEnd(e) { const start=this._sharedDrawerTouch;this._sharedDrawerTouch=null;const t=e.changedTouches&&e.changedTouches.length===1&&e.changedTouches[0];if(!start||!t)return;const dy=t.clientY-start.y,dx=t.clientX-start.x;if(dy>60&&dy>Math.abs(dx)*1.5&&e.timeStamp-start.time<3000){const close=this[e.currentTarget.dataset.close];if(typeof close==='function')close.call(this);} },
     adminDrawerNoop() {},
     ...definition,
     onUnload(...args) { clear(this); if(typeof unload==='function')return unload.apply(this,args); }

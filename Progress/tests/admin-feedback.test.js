@@ -35,7 +35,7 @@ test('遮罩和顶部下滑可取消抽屉，内容输入区的滚动不关闭',
   f.page.onAdminDrawerMaskTap({target:{id:'mask'},currentTarget:{id:'mask',dataset:{close:'onAdminDialogCancel'}}}); f.flush(); assert.equal((await result).cancel,true);
   result=f.feedback.showModal(f.page,{title:'第二次'});
   f.page.onAdminDrawerTouchStart({target:{dataset:{drawerDrag:true}},touches:[{clientX:100,clientY:100}],timeStamp:0});
-  f.page.onAdminDrawerTouchEnd({currentTarget:{dataset:{close:'onAdminDialogCancel'}},changedTouches:[{clientX:105,clientY:220}],timeStamp:300});f.flush();assert.equal((await result).cancel,true);
+  f.page.onAdminDrawerTouchEnd({currentTarget:{dataset:{close:'onAdminDialogCancel'}},changedTouches:[{clientX:105,clientY:220}],timeStamp:1500});f.flush();assert.equal((await result).cancel,true);
 });
 test('筛选返回原索引，操作菜单取消不误触success，页面卸载释放等待者', async () => {
   const f=fixture();let success=0,fail=0;

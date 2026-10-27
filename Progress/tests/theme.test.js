@@ -53,7 +53,7 @@ test('颜色生成物无漂移，九页均接入外观变量和切换按钮，�
   for (const page of app.pages) {
     const config = JSON.parse(fs.readFileSync(path.join(root, page + '.json'), 'utf8')), xml = fs.readFileSync(path.join(root, page + '.wxml'), 'utf8');
     assert.equal(config.navigationBarTextStyle, '@navigationBarTextStyle');
-    assert.ok(xml.startsWith('<page-meta page-style="{{appearanceStyle}}" />'));
+    assert.ok(xml.startsWith('<page-meta page-style="{{appearanceStyle}}'));
     assert.ok(xml.includes('<appearance-toggle />')); assert.ok(config.usingComponents['appearance-toggle']);
   }
 });

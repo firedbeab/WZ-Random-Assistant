@@ -78,6 +78,7 @@ function iconSources(tokens) {
     back: svg('<path d="m12 4-6 6 6 6"/>', tokens['text-1']),
     chevron: svg('<path d="m5.5 7.5 4.5 4.5 4.5-4.5"/>', tokens['text-3']),
     chevronRight: svg('<path d="m7.5 5.5 4.5 4.5-4.5 4.5"/>', tokens['text-3']),
+    close: svg('<path d="m5 5 10 10M5 15 15 5"/>', tokens['text-2']),
     bell: svg(bell, tokens.accent), bellMuted: svg(bell, tokens['text-2']),
     musicList: svg('<path d="M3 4h8M3 8h6M3 12h4M13 13V5l4-1v8"/><ellipse cx="11" cy="14" rx="2" ry="1.5"/><ellipse cx="15" cy="13" rx="2" ry="1.5"/>', tokens.accent),
     history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent)

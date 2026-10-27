@@ -64,15 +64,17 @@ Page(theme.page(feedback.page({
   toggleEditor(e) { this.markDirty({ enabled: e.detail.value }); },
   closeEditor() {
     if (this.data.busy || this.data.editorClosing) return;
-    const close = () => {
-      this.setData({ editorClosing: true });
-      this._editorCloseTimer = setTimeout(() => {
-        this.setData({ editing: false, dirty: false, editorClosing: false });
-        if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
-      }, 200);
-    };
+    const close = () => this.animateEditorClose();
     if (!this.data.dirty) { close(); return; }
     feedback.showModal(this, { title: '放弃本次修改？', content: '未保存的图片和文字不会上传。', success: res => { if (res.confirm) close(); } });
+  },
+  animateEditorClose() {
+    if (this.data.editorClosing) return;
+    this.setData({ editorClosing: true });
+    this._editorCloseTimer = setTimeout(() => {
+      this.setData({ editing: false, dirty: false, editorClosing: false });
+      if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
+    }, 200);
   },
   async chooseImage() {
     if (this.data.busy) return;
@@ -117,7 +119,7 @@ Page(theme.page(feedback.page({
       }
       await this.api({ action: 'save', revision: this.data.revision, id: this.data.id, fileID,
         topText: this.data.topText.trim(), bottomText: this.data.bottomText.trim(), enabled: this.data.enabled });
-      this.setData({ editing: false, dirty: false }); if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
+      this.setData({ dirty: false }); this.animateEditorClose(); if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       feedback.showToast(this, { title: '彩蛋已保存', icon: 'success' }); await this.loadEntries();
     } catch (err) {
       if (uploaded) { try { await this.api({ action: 'deleteFiles', fileIDs: [uploaded] }); } catch (_) { /* 保存错误优先。 */ } }
