@@ -20,6 +20,20 @@ const ALL_CLEANUP_BASE_COLLECTIONS = [
   'message_subscriptions', 'help_articles', 'system_events', 'users'
 ];
 
+// 环境配置类文档：全量清理时必须保留。
+// 它们不是业务数据：清掉白名单会让授权账号进不了测试域，清掉通道开关会让通道状态意外改变，
+// 清掉彩蛋配置会让测试域彩蛋无内容，清掉审计会让清理记录丢失。
+const PRESERVED_CONFIG_DOCS = [
+  'test_accounts_v1',        // 测试域 openid 白名单
+  'channel_override',        // 通道强制开关
+  'easter_eggs_v1',          // 彩蛋条目配置
+  'test_tool_cleanup_audit'  // 清理审计
+];
+
+function configCleanupWhere() {
+  return { _id: _.nin(PRESERVED_CONFIG_DOCS) };
+}
+
 function getWeekKey(bjTime) {
   const day = bjTime.getUTCDay();
   const diff = (7 - day) % 7;
@@ -103,15 +117,16 @@ async function getSubscriptionsCleanupPreview(dataScope) {
 }
 
 async function getAllCleanupPreview(dataScope, currentOpenid) {
-  const entries = await Promise.all(ALL_CLEANUP_BASE_COLLECTIONS.map(async baseName => [
-    baseName,
-    await countMatching(
-      dataScope.collection(baseName),
-      baseName === 'users' ? { openid: _.neq(currentOpenid) } : {}
-    )
-  ]));
+  const entries = await Promise.all(ALL_CLEANUP_BASE_COLLECTIONS.map(async baseName => {
+    let where = {};
+    if (baseName === 'users') where = { openid: _.neq(currentOpenid) };
+    // 预览数量与真实清理保持一致：配置类文档不在清理范围内。
+    if (baseName === 'configs') where = configCleanupWhere();
+    return [baseName, await countMatching(dataScope.collection(baseName), where)];
+  }));
   const preview = Object.fromEntries(entries);
   preview.total = entries.reduce((sum, entry) => sum + entry[1], 0);
+  preview.configs_preserved = PRESERVED_CONFIG_DOCS.length;
   return preview;
 }
 
@@ -522,6 +537,12 @@ exports.main = async (event) => {
         if (baseName === 'users') {
           // 保留当前执行清理的测试超管，避免全量清理中途失败后失去测试入口。
           details[baseName] = await removeAll(usersCollection, { openid: _.neq(OPENID) });
+          continue;
+        }
+        if (baseName === 'configs') {
+          // 只清配置里的业务性文档，保留白名单、通道开关、彩蛋配置与审计。
+          details[baseName] = await removeAll(dataScope.collection(baseName), configCleanupWhere());
+          details.configs_preserved = PRESERVED_CONFIG_DOCS.length;
           continue;
         }
         details[baseName] = await removeAll(dataScope.collection(baseName), {});
