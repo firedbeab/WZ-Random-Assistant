@@ -1,3 +1,4 @@
+@import "./dice-core.wxss";
 .egg-mask { position: fixed; inset: 0; z-index: 8000; display: flex; align-items: center; justify-content: center; padding: 44rpx; box-sizing: border-box; background: var(--mask); animation: mask-in .22s ease-out; }
 .egg-backdrop { position: absolute; inset: 0; }
 .egg-card { position: relative; width: 100%; max-width: 640rpx; overflow: hidden; box-sizing: border-box; border-radius: 36rpx; text-align: center; background: linear-gradient(155deg, var(--surface), var(--surface) 60%, var(--accent-weak)); box-shadow: var(--shadow-dialog); animation: card-in .35s cubic-bezier(.2, .85, .3, 1.1); }
@@ -13,15 +14,9 @@
 .dice-halo { position: absolute; width: 220rpx; height: 220rpx; border-radius: 50%; background: radial-gradient(circle, var(--accent-weak), transparent 70%); }
 .dice-lift { width: 134rpx; height: 134rpx; transform-style: preserve-3d; }
 .dice-cube { position: relative; width: 134rpx; height: 134rpx; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.17, .67, .24, 1); }
-/* 内芯封住圆角面片后方的空隙，外层仍保留原来的 20rpx 圆角与点阵。 */
-.dice-core { position: absolute; inset: 8rpx; transform-style: preserve-3d; pointer-events: none; }
-.dice-core-face { position: absolute; inset: 0; background: #f4f8f2; backface-visibility: hidden; }
-.core-face-1 { transform: translateZ(59rpx); }
-.core-face-2 { transform: rotateY(90deg) translateZ(59rpx); }
-.core-face-3 { transform: rotateX(90deg) translateZ(59rpx); background: #fffdf6; }
-.core-face-4 { transform: rotateX(-90deg) translateZ(59rpx); }
-.core-face-5 { transform: rotateY(-90deg) translateZ(59rpx); }
-.core-face-6 { transform: rotateY(180deg) translateZ(59rpx); }
+/* 封闭内芯含边和角，不再用缩小的方块补洞；外层保留原来的 20rpx 圆角与点阵。 */
+.dice-core { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+.dice-core-facet { position: absolute; left: 50%; top: 50%; backface-visibility: hidden; }
 .dice-face { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10rpx; padding: 23rpx; border: 2rpx solid #e1e9e3; border-radius: 20rpx; background: #fffdfa; box-sizing: border-box; backface-visibility: hidden; box-shadow: inset 0 -5rpx 12rpx rgba(52, 90, 65, .06); }
 .face-1 { transform: translateZ(67rpx); }
 .face-2 { transform: rotateY(90deg) translateZ(67rpx); background: #f4f8f2; }
