@@ -1,11 +1,8 @@
 <page-meta page-style="{{appearanceStyle}}" />
 <view class="appearance-toolbar"><appearance-toggle /></view>
-<view class="page">
-  <view class="hero">
-    <text class="hero-title">{{title}}</text>
-    <text class="hero-sub">{{subtitle}}</text>
-  </view>
-
+<view class="page admin-page-enter">
+  <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
+  <view class="sub-heading"><button class="text-button" bindtap="backToManagement">‹ 返回数据管理</button><text>{{title}}</text></view><text class="hero-sub">{{subtitle}}</text>
   <view class="loading" wx:if="{{loading}}">正在加载...</view>
 
   <block wx:if="{{mode === 'submissions'}}">
@@ -51,30 +48,13 @@
       <view class="empty" wx:if="{{!loading && schedules.length === 0}}">暂无排期</view>
     </block>
     <view wx:else>
-      <view class="detail-head">
-        <button class="small" bindtap="closeSchedule">返回列表</button>
-        <text>{{scheduleDraft.week_key}} · {{scheduleDraft.status}} · 修订 {{scheduleDraft.revision}}</text>
+      <view class="detail-head"><button class="small" bindtap="closeSchedule">返回列表</button><text>{{scheduleDraft.week_key}} · {{scheduleDraft.status}} · 修订 {{scheduleDraft.revision}}</text><button class="small green" wx:if="{{!scheduleEditing}}" bindtap="startScheduleEdit">编辑</button></view>
+      <view class="schedule-read admin-page-enter" wx:if="{{!scheduleEditing}}"><view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><text class="meta">{{scheduleDraft[day].length || 0}} 首</text></view><view class="read-song" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="read-index">{{songIndex + 1}}</text><view><view class="read-line"><text>{{song.song_name}}</text><text class="read-singer">{{song.singer}}</text></view><text class="read-note" wx:if="{{song.special_note}}">{{song.special_note}}</text></view></view><text class="meta" wx:if="{{!scheduleDraft[day].length}}">当天没有曲目安排</text></view><view class="card"><text class="label">当周备注</text><text class="muted">{{scheduleDraft.admin_note || '未填写'}}</text></view></view>
+      <view class="admin-page-enter" wx:else>
+        <view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><button class="tiny green" bindtap="addScheduleItem" data-day="{{day}}">添加曲目</button></view><view class="schedule-item" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="input-caption">第 {{songIndex + 1}} 首 · 歌名</text><input class="field" value="{{song.song_name}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" /><text class="input-caption">歌手 / 补充说明</text><input class="field" value="{{song.singer}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder" /><text class="input-caption">特殊备注（可留空）</text><input class="field" value="{{song.special_note}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="special_note" placeholder="没有备注可留空" placeholder-class="form-placeholder" /><button class="tiny danger" bindtap="removeScheduleItem" data-day="{{day}}" data-index="{{songIndex}}">删除此项</button></view></view>
+        <view class="card"><text class="label">当周备注</text><textarea class="textarea" value="{{scheduleDraft.admin_note}}" bindinput="onAdminNoteInput" maxlength="100" placeholder="没有当周备注可留空" placeholder-class="form-placeholder" /></view>
       </view>
-      <view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex">
-        <view class="row"><text class="item-title">周{{dayIndex + 1}}</text><button class="tiny green" bindtap="addScheduleItem" data-day="{{day}}">添加</button></view>
-        <view class="schedule-item" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex">
-          <text class="input-caption">曲目名称</text>
-          <input class="field" value="{{song.song_name}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" />
-          <text class="input-caption">歌手 / 补充说明</text>
-          <input class="field" value="{{song.singer}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder" />
-          <text class="input-caption">特殊备注（可留空）</text>
-          <input class="field" value="{{song.special_note}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="special_note" placeholder="没有备注可留空" placeholder-class="form-placeholder" />
-          <button class="tiny danger" bindtap="removeScheduleItem" data-day="{{day}}" data-index="{{songIndex}}">删除此项</button>
-        </view>
-      </view>
-      <view class="card">
-        <text class="label">当周备注</text>
-        <textarea class="textarea" value="{{scheduleDraft.admin_note}}" bindinput="onAdminNoteInput" maxlength="100" placeholder="没有当周备注可留空" placeholder-class="form-placeholder"></textarea>
-      </view>
-      <view class="sticky-actions">
-        <button class="primary" bindtap="saveSchedule">保存修改</button>
-        <button class="danger" wx:if="{{scheduleDraft.status === 'published'}}" bindtap="withdrawSchedule">撤回发布</button>
-      </view>
+      <view class="sticky-actions"><block wx:if="{{scheduleEditing}}"><button class="secondary" bindtap="cancelScheduleEdit" disabled="{{scheduleSaving}}">取消编辑</button><button class="primary" bindtap="saveSchedule" disabled="{{scheduleSaving}}" loading="{{scheduleSaving}}">保存修改</button></block><button class="danger outlined" wx:elif="{{scheduleDraft.status === 'published'}}" bindtap="withdrawSchedule">撤回发布</button></view>
     </view>
   </block>
 
@@ -82,12 +62,7 @@
     <picker range="{{eventCategories}}" range-key="label" value="{{eventCategoryIndex}}" bindchange="onEventCategoryChange">
       <view class="picker full">筛选：{{eventCategories[eventCategoryIndex].label}}</view>
     </picker>
-    <view class="card tappable" wx:for="{{events}}" wx:key="_id" bindtap="toggleEvent" data-index="{{index}}">
-      <view class="row"><text class="item-title">{{item.action_text}}</text><text class="tag">{{item.category_text}}</text></view>
-      <text class="meta">{{item.created_at_text}} · {{item.week_key || '无周次'}}</text>
-      <text class="muted">{{item.reason || item.error || '点击查看详情'}}</text>
-      <text class="json" wx:if="{{item.expanded}}" selectable>{{item.detail_text}}</text>
-    </view>
+    <view class="event-list"><view class="event-item" wx:for="{{events}}" wx:key="_id"><view class="event-summary" bindtap="toggleEvent" data-index="{{index}}" aria-role="button" aria-expanded="{{item.expanded}}"><view class="event-top"><text class="event-title">{{item.action_text}}</text><text class="event-category">{{item.category_text}}</text><text class="event-chevron {{item.expanded ? 'expanded' : ''}}">⌄</text></view><text class="event-meta">{{item.created_at_text}}<text wx:if="{{item.week_key}}"> · {{item.week_key}}</text></text><text class="event-reason" wx:if="{{item.reason || item.error}}">{{item.reason || item.error}}</text></view><view class="event-expand {{item.expanded ? 'expanded' : ''}}"><view class="event-inner"><text class="json" selectable>{{item.detail_text}}</text></view></view></view></view>
     <view class="empty" wx:if="{{!loading && events.length === 0}}">暂无事件记录</view>
   </block>
 
@@ -121,7 +96,7 @@
   </block>
 </view>
 
-<view class="modal" wx:if="{{showSubmissionEditor}}">
+<view class="modal {{submissionClosing ? 'drawer-closing' : ''}}" wx:if="{{showSubmissionEditor}}">
   <view class="modal-card">
     <text class="item-title">编辑投稿</text>
     <text class="input-caption modal-caption">曲目名称</text>

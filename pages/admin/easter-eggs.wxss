@@ -1,3 +1,4 @@
+@import "../../styles/admin.wxss";
 page { background: var(--bg); }
 .egg-admin-page { padding: 28rpx; }
 .page-heading, .entry-heading, .editor-heading, .enabled-field { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; }
@@ -34,3 +35,8 @@ input { height: 78rpx; } textarea { height: 126rpx; }
 .preview-top { display: block; font-size: 26rpx; color: var(--text-1); font-weight: 600; }
 .preview-bottom { display: block; margin-top: 12rpx; font-size: 22rpx; line-height: 1.6; color: var(--text-3); }
 .editor-actions { margin: 24rpx 0 12rpx; } .editor-actions .action { flex: 1; padding: 22rpx; }
+.egg-admin-page { min-height: 100vh; padding: 24rpx 32rpx; box-sizing: border-box; background: var(--gradient-open); }
+.page-heading { font-size: 34rpx; font-weight: 600; margin: 16rpx 0; }.page-heading .action { min-height: 88rpx; }
+.entry-card { border-radius: var(--radius-lg); padding: 28rpx; gap: 22rpx; box-shadow: var(--shadow-sm); }.entry-photo { width: 128rpx; height: 128rpx; border-radius: var(--radius-md); }.entry-title { font-size: 30rpx; }.entry-caption { font-size: 24rpx; color: var(--text-2); }.entry-actions { flex-wrap: wrap; gap: 4rpx; }.entry-actions .action { background: transparent; min-height: 88rpx; font-size: 24rpx; padding: 0 14rpx; }
+.editor-mask { align-items: flex-end; padding: 0; animation: admin-mask-in 240ms ease both; }.editor-card { max-height: 82vh; border-radius: 36rpx 36rpx 0 0; padding: 34rpx 32rpx calc(24rpx + env(safe-area-inset-bottom)); animation: admin-drawer-in 280ms ease both; }.editor-mask.drawer-closing { animation: admin-mask-out 200ms ease both; pointer-events: none; }.drawer-closing .editor-card { animation: admin-drawer-out 200ms ease both; }.editor-heading view { min-width: 88rpx; min-height: 88rpx; display: flex; align-items: center; justify-content: center; }.photo-options > view { min-height: 88rpx; display: flex; align-items: center; }.action { min-height: 88rpx; }
+@media (prefers-reduced-motion: reduce) { .editor-mask,.editor-card,.editor-mask.drawer-closing,.drawer-closing .editor-card { animation-duration: 1ms; } }

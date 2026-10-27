@@ -1,0 +1,32 @@
+/* 管理端公共层级与动效。颜色继续由主题模块提供。 */
+page { background: var(--bg); color: var(--text-1); }
+.admin-hero { padding: 12rpx 4rpx 14rpx; }
+.admin-heading { display: flex; align-items: center; gap: 12rpx; }
+.admin-title { flex: 1; font-size: 48rpx; font-weight: 650; letter-spacing: -1rpx; }
+.role-label { font-size: 22rpx; color: var(--text-2); white-space: nowrap; }
+.admin-meta { display: flex; align-items: center; gap: 16rpx; min-height: 68rpx; }
+.environment-tag { font-size: 22rpx; color: var(--warn); margin-right: auto; }
+.environment-tag::before { content: ''; display: inline-block; width: 8rpx; height: 8rpx; border-radius: 50%; background: currentColor; margin-right: 10rpx; vertical-align: middle; }
+.admin-meta appearance-toggle { margin-left: auto; }
+.text-button { display: inline-flex; align-items: center; justify-content: center; min-height: 88rpx; margin: 0; padding: 0 12rpx; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-2); font-size: 26rpx; line-height: 1.4; }
+button::after { border: none; }
+button[disabled] { opacity: .45; }
+.text-button[disabled] { background: transparent; color: var(--text-3); }
+.text-button:active { background: var(--surface-2); }
+.accent { color: var(--accent); }.danger-text { color: var(--danger) !important; }
+.admin-meta .text-button { font-size: 22rpx; }
+.sub-heading { display: flex; align-items: center; gap: 18rpx; min-height: 88rpx; margin-bottom: 18rpx; }
+.sub-heading > text { font-size: 34rpx; font-weight: 600; }
+.sub-heading .text-button { color: var(--accent); padding-left: 0; }
+.panel-stage { opacity: 1; }
+.tab-panel { animation: admin-page-in 280ms ease both; }
+@keyframes admin-page-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes admin-mask-in { from { background-color: transparent; } to { background-color: var(--mask); } }
+@keyframes admin-drawer-in { from { opacity: 0; transform: translateY(24rpx); } to { opacity: 1; transform: translateY(0); } }
+@keyframes admin-drawer-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(18rpx); } }
+@keyframes admin-mask-out { from { background-color: var(--mask); } to { background-color: transparent; } }
+.admin-page-enter { animation: admin-page-in 260ms ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel { animation-duration: 1ms; }
+  .admin-page-enter { animation-duration: 1ms; }
+}

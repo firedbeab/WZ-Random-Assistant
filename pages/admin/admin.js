@@ -42,6 +42,15 @@ Page(theme.page({
     reasons: ['内容不可用', '内容不适宜', '版权受限'],
     // 选项卡
     currentTab: 'audit',
+    panelVisible: true,
+    bulkDay: -1,
+    auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} },
+    activeSongCount: 0,
+    auditLoading: false,
+    auditError: '',
+    showAuditTips: false,
+    showPublishNote: false,
+    drawerClosing: false,
     // 验证码管理
     codeList: [],
     showCodeModal: false,
@@ -65,6 +74,8 @@ Page(theme.page({
     subscribed: false,
     // 通道控制
     channelMode: undefined,
+    channelLoading: false,
+    channelBusy: false,
     // 特殊备注弹窗
     showNoteModal: false,
     noteSong: null,
@@ -78,6 +89,8 @@ Page(theme.page({
   },
 
   onLoad() {
+    this._adminUnloaded = false;
+    this.setData({ panelVisible: true, drawerClosing: false });
     const app = getApp();
 
     // 先使用已加载的云端角色初始化界面，随后再次从服务端校验
@@ -95,6 +108,8 @@ Page(theme.page({
     await this.loadPlaylist(false);
     if (this.data.currentTab === 'codes') await this.loadCodeList({ force: true });
     if (this.data.currentTab === 'admins') await Promise.all([this.loadPasscodeList(), this.loadAdminList()]);
+    if (this.data.currentTab === 'test') await Promise.all([this.loadTestStats(), this.loadChannelStatus()]);
+    if (this.data.currentTab === 'help') await this.loadHelpArticles(false);
     wx.stopPullDownRefresh();
   },
 
@@ -102,6 +117,13 @@ Page(theme.page({
     if (this.data.currentTab === 'help' && this.data.isSuperAdmin) {
       this.loadHelpArticles(false);
     }
+  },
+
+  onUnload() {
+    this._adminUnloaded = true;
+    clearTimeout(this._panelTimer);
+    clearTimeout(this._panelShowTimer);
+    clearTimeout(this._drawerTimer);
   },
 
   goEasterEggs() {
@@ -178,8 +200,21 @@ Page(theme.page({
   // 切换选项卡
   switchTab(e) {
     const tab = e.currentTarget.dataset.tab;
-    if (tab === this.data.currentTab) return;
-    this.setData({ currentTab: tab });
+    if (!['audit', 'codes', 'test', 'manage', 'admins', 'help', 'data'].includes(tab)) return;
+    if (tab === 'test' && !this.data.isTestEnv) return;
+    if (['manage', 'admins', 'help', 'data'].includes(tab) && !this.data.isSuperAdmin) return;
+    // 导航立即更新，淡入交给新面板CSS；不让定时器或透明层阻挡点击。
+    clearTimeout(this._panelTimer);
+    clearTimeout(this._panelShowTimer);
+    if (tab === this.data.currentTab) {
+      this.setData({ panelVisible: true });
+      return;
+    }
+    this.setData({ currentTab: tab, panelVisible: true });
+    this.loadTabData(tab);
+  },
+
+  loadTabData(tab) {
     if (tab === 'codes') {
       this.loadCodeList({ force: true });
     } else if (tab === 'test') {
@@ -191,6 +226,37 @@ Page(theme.page({
     } else if (tab === 'audit') {
       this.loadPlaylist();
     }
+  },
+
+  toggleAuditTips() { this.setData({ showAuditTips: !this.data.showAuditTips }); },
+  togglePublishNote() { this.setData({ showPublishNote: !this.data.showPublishNote }); },
+  retryPlaylist() { return this.loadPlaylist(); },
+  toggleAuditDay(e) {
+    const day = Number(e.currentTarget.dataset.day);
+    if (!Number.isInteger(day) || day < 0 || day > 4) return;
+    this.setData({ bulkDay: this.data.bulkDay === day ? -1 : day,
+      auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
+      auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
+  },
+  openSongActions(e) {
+    const dataset = e.currentTarget.dataset;
+    wx.showActionSheet({
+      itemList: [dataset.song.special_note ? '编辑特殊备注' : '添加特殊备注', '异常处理与替补'],
+      success: result => {
+        if (this._adminUnloaded) return;
+        if (result.tapIndex === 0) this.onOpenNote({ currentTarget: { dataset } });
+        if (result.tapIndex === 1) this.onException({ currentTarget: { dataset } });
+      }
+    });
+  },
+  closeAdminDrawer(field, afterClose) {
+    if (this.data.drawerClosing) return;
+    this.setData({ drawerClosing: true });
+    this._drawerTimer = setTimeout(() => {
+      if (this._adminUnloaded) return;
+      this.setData({ [field]: false, drawerClosing: false });
+      if (afterClose) afterClose();
+    }, 200);
   },
 
   // 按钮点击：开启通知（首次订阅，会弹窗）
@@ -244,6 +310,7 @@ Page(theme.page({
   },
 
   async loadPlaylist(showLoading = true) {
+    this.setData({ auditLoading: true, auditError: '' });
     if (showLoading) wx.showLoading({ title: '加载中' });
     try {
       const res = await cloudCall({
@@ -252,6 +319,10 @@ Page(theme.page({
       });
       if (res.result.success) {
         const schedule = res.result.data;
+        if (!schedule) {
+          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, bulkDay: -1 });
+          return;
+        }
         const pendingRemovalCount = ['day1', 'day2', 'day3', 'day4', 'day5']
           .reduce((count, day) => count + (schedule[day] || [])
             .filter(item => item.audit_state === 'pending_remove').length, 0);
@@ -264,6 +335,9 @@ Page(theme.page({
           schedule,
           pendingRemovalCount,
           dayCounts,
+          activeSongCount: dayCounts.reduce((total, day) => total + day.active, 0),
+          bulkDay: -1,
+          auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} },
           // 显示周次并标出是否本周，避免把遗留的旧排期当成本周列表误发。
           scheduleWeekKey: schedule.week_key || '',
           scheduleIsCurrentWeek: (schedule.week_key || '') === currentWeekKey(),
@@ -271,11 +345,18 @@ Page(theme.page({
           auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] }
         });
       } else {
+        if (res.result.message === '暂无待审核排期') {
+          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, bulkDay: -1 });
+          return;
+        }
+        this.setData({ auditError: res.result.message || '请稍后重试' });
         toastLater({ title: res.result.message, icon: 'none' });
       }
     } catch (err) {
+      this.setData({ auditError: '请检查网络后重新加载' });
       console.warn('加载排期失败');
     } finally {
+      this.setData({ auditLoading: false });
       if (showLoading) wx.hideLoading();
     }
   },
@@ -291,7 +372,7 @@ Page(theme.page({
     });
   },
 
-  closeModal() { this.setData({ showModal: false }); },
+  closeModal() { this.closeAdminDrawer('showModal'); },
   selectReason(e) { this.setData({ selectedReason: e.currentTarget.dataset.reason }); },
   onReasonInput(e) { this.setData({ customReason: e.detail.value }); },
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
@@ -301,7 +382,7 @@ Page(theme.page({
     const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
     wx.showModal({
       title: '确认跳过',
-      content: `确定跳过「${dayLabel}」吗？该日将不安排任何项目。`,
+      content: `「${dayLabel}」将不安排曲目，现有曲目转回候补。此操作没有一键撤销，确定继续吗？`,
       success: async (res) => {
         if (res.confirm) {
           wx.showLoading({ title: '处理中' });
@@ -333,7 +414,9 @@ Page(theme.page({
 
   onAuditSelectionChange(e) {
     const dayIndex = Number(e.currentTarget.dataset.day);
-    this.setData({ [`auditSelections.day${dayIndex}`]: e.detail.value || [] });
+    const selected = e.detail.value || [];
+    this.setData({ [`auditSelections.day${dayIndex}`]: selected,
+      [`auditChecked.day${dayIndex}`]: selected.reduce((flags, index) => { flags[index] = true; return flags; }, {}) });
   },
 
   onRemoveSelectedFromDay(e) {
@@ -346,7 +429,7 @@ Page(theme.page({
     const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
     wx.showModal({
       title: `标记${dayLabel}所选曲目`,
-      content: ``,
+      content: `只处理${dayLabel}的 ${selected.length} 首曲目，不补位，发布前可撤销。`,
       editable: true,
       placeholderText: '可填写调整原因（选填）',
       confirmText: '标记删除',
@@ -496,7 +579,7 @@ Page(theme.page({
 
   closeNoteModal() {
     if (this.data.noteSaving) return;
-    this.setData({ showNoteModal: false, noteSong: null, noteText: '', noteSaving: false });
+    this.closeAdminDrawer('showNoteModal', () => this.setData({ noteSong: null, noteText: '', noteSaving: false }));
   },
 
   async saveSpecialNote(noteValue, successMessage) {
@@ -694,7 +777,7 @@ Page(theme.page({
   },
 
   closeCodeModal() {
-    this.setData({ showCodeModal: false, editingCodeId: null });
+    this.closeAdminDrawer('showCodeModal', () => this.setData({ editingCodeId: null }));
   },
 
   async confirmSaveCode() {
@@ -824,36 +907,53 @@ Page(theme.page({
 
   // 加载通道状态（通过云函数读取，避免前端权限问题）
   async loadChannelStatus() {
+    this.setData({ channelLoading: true });
     try {
       const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'getChannelStatus' }
       });
+      if (!ret.result || ret.result.success === false) throw new Error('读取失败');
       let mode = 'normal';
       if (ret.result.forceClose) mode = 'close';
       else if (ret.result.forceOpen) mode = 'open';
       this.setData({ channelMode: mode });
     } catch (e) {
-      this.setData({ channelMode: 'normal' });
+      this.setData({ channelMode: '' });
+    } finally {
+      this.setData({ channelLoading: false });
     }
   },
 
   // 切换通道开关（三态：open / close / reset）
   async onToggleChannel(e) {
     const mode = e.currentTarget.dataset.mode;
+    if (!['open', 'close', 'reset'].includes(mode) || !this.data.isTestEnv || this.data.channelBusy || this.data.channelLoading || !this.data.channelMode) return;
+    if ((mode === 'reset' ? 'normal' : mode) === this.data.channelMode) return;
+    this.setData({ channelBusy: true });
     try {
+      const names = { open: '强制开放', close: '强制关闭', reset: '正常时间' };
+      const confirmed = await wx.showModal({
+        title: `切换为${names[mode]}？`,
+        content: mode === 'open' ? '立即开放点歌，暂时忽略正常开放时段。' : mode === 'close' ? '立即暂停接收点歌，已有投稿不受影响。' : '恢复每周日 8:00–20:00 自动开放。',
+        confirmText: '确认切换',
+        confirmColor: mode === 'close' ? theme.getNativeColors().danger : theme.getNativeColors().accent
+      });
+      if (!confirmed.confirm) return;
       const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'toggleChannel', mode }
       });
       if (ret.result.success) {
         toastLater({ title: ret.result.message, icon: 'success' });
-        this.loadChannelStatus();
+        await this.loadChannelStatus();
       } else {
         toastLater({ title: ret.result.message || '操作失败', icon: 'none' });
       }
     } catch (err) {
       toastLater({ title: '调用失败：' + (err.message || '网络错误'), icon: 'none' });
+    } finally {
+      this.setData({ channelBusy: false });
     }
   },
 
@@ -1129,7 +1229,7 @@ Page(theme.page({
   },
 
   closePasscodeModal() {
-    this.setData({ showPasscodeModal: false });
+    this.closeAdminDrawer('showPasscodeModal');
   },
 
   onPasscodeLabelInput(e) {
@@ -1152,8 +1252,8 @@ Page(theme.page({
       wx.hideLoading();
 
       if (ret.result.success) {
-        this.closePasscodeModal();
         this.setData({
+          showPasscodeModal: false,
           showPasscodeResultModal: true,
           generatedPasscode: ret.result.code
         });
@@ -1168,7 +1268,7 @@ Page(theme.page({
   },
 
   closePasscodeResultModal() {
-    this.setData({ showPasscodeResultModal: false, generatedPasscode: '' });
+    this.closeAdminDrawer('showPasscodeResultModal', () => this.setData({ generatedPasscode: '' }));
   },
 
   onCopyPasscode() {

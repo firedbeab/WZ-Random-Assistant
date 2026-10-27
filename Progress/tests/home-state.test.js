@@ -50,7 +50,7 @@ test('预览按播出日排序，最多三首，总数不硬编码，空排期�
 
 function fixture(options = {}) {
   let page;
-  const calls = [], routes = [], disk = new Map();
+  const calls = [], routes = [], toasts = [], disk = new Map();
   const FixedDate = class extends Date { constructor(...args) { super(...(args.length ? args : [options.now || '2026-10-25T04:00:00Z'])); } };
   const runtime = {
     isTestMode: () => options.prod !== true, storageKey: key => `${options.prod ? 'prod' : 'test'}_${key}`,
@@ -68,7 +68,8 @@ function fixture(options = {}) {
   };
   const wx = {
     getStorageSync: key => disk.get(key), removeStorageSync: key => disk.delete(key), setStorageSync: (key, value) => disk.set(key, value),
-    navigateTo: route => routes.push(route.url), showToast() {}, stopPullDownRefresh() {},
+    navigateTo: route => { routes.push(route.url); if (options.navigateFails && route.fail) route.fail({ errMsg: 'navigateTo:fail page limit exceed' }); },
+    showToast: value => toasts.push(value), stopPullDownRefresh() {},
     cloud: { database() { return { collection() { const query = { where() { return query; }, limit() { return query; }, async get() { return { data: options.schedule ? [options.schedule] : [] }; } }; return query; } }; } }
   };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/index/index.js'), 'utf8'), {
@@ -80,7 +81,7 @@ function fixture(options = {}) {
   page.data = structuredClone(page.data);
   page.data.userInfo = { openid: 'fixture-user', ...options.userInfo };
   page.setData = patch => Object.assign(page.data, patch);
-  return { page, calls, routes, disk };
+  return { page, calls, routes, toasts, disk };
 }
 test('开放、已提交缓存及发布预览均能完成状态检查', async () => {
   const open = fixture();
@@ -99,6 +100,15 @@ test('开放、已提交缓存及发布预览均能完成状态检查', async ()
     assert.equal(published.page.data.schedulePublished, true);
     assert.equal(published.page.data.previewSongs[0].title, '稻香');
     assert.equal(published.page.data.hasSubmitted, false);
+  }
+});
+
+test('后台路由仍按真实角色选择，导航失败有明确反馈', () => {
+  for (const role of ['admin', 'superadmin', 'user']) {
+    const f = fixture({ userInfo: { role }, navigateFails: true });
+    f.page.goAdmin();
+    assert.equal(f.routes[0], role === 'user' ? '/pages/admin/login' : '/pages/admin/admin');
+    assert.match(f.toasts[0].title, /页面未能打开/);
   }
 });
 test('强制开关优先级不变，关闭文案不承诺管理员恢复日期', async () => {

@@ -1,301 +1,71 @@
 <page-meta page-style="{{appearanceStyle}}" />
-<view class="appearance-toolbar"><appearance-toggle /></view>
-<!-- pages/admin/admin.wxml -->
 <view class="container">
-
-<view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 所有维护操作仅作用于 test_ 集合</view>
-
-<!-- 返回首页 -->
-<view class="logout-bar">
-  <text class="btn-logout" bindtap="onBackHome">返回首页</text>
-</view>
-
-<!-- 通知订阅 -->
-<view class="notify-bar">
-  <view wx:if="{{subscribed}}" class="notify-status on">
-    <text>✅ 已开启审核通知</text>
+  <view class="admin-hero">
+    <view class="admin-heading"><text class="admin-title">管理后台</text><button class="notify-button {{subscribed ? 'subscribed' : ''}}" bindtap="onEnableNotification" disabled="{{subscribed}}" aria-label="{{subscribed ? '已开启审核通知' : '开启审核通知'}}"><image src="{{subscribed ? themeIcons.bell : themeIcons.bellMuted}}" /></button></view>
+    <view class="admin-meta"><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text><appearance-toggle /></view>
   </view>
-  <view wx:else class="notify-status off">
-    <text>🔔 开启审核通知</text>
-    <text class="notify-btn" bindtap="onEnableNotification">点击开启</text>
+  <view class="tab-bar" wx:if="{{currentTab === 'audit' || currentTab === 'codes' || currentTab === 'test' || currentTab === 'manage'}}">
+    <view class="tab-item {{currentTab === 'audit' ? 'active' : ''}}" bindtap="switchTab" data-tab="audit">审核</view>
+    <view class="tab-item {{currentTab === 'codes' ? 'active' : ''}}" bindtap="switchTab" data-tab="codes">验证码</view>
+    <view class="tab-item {{currentTab === 'test' ? 'active' : ''}}" bindtap="switchTab" data-tab="test" wx:if="{{isTestEnv}}">控制台</view>
+    <view class="tab-item {{currentTab === 'manage' ? 'active' : ''}}" bindtap="switchTab" data-tab="manage" wx:if="{{isSuperAdmin}}">管理</view>
+    <view class="tab-indicator" style="width: {{100 / (isSuperAdmin ? 4 : isTestEnv ? 3 : 2)}}%; left: {{(currentTab === 'audit' ? 0 : currentTab === 'codes' ? 1 : currentTab === 'test' ? 2 : 3) * 100 / (isSuperAdmin ? 4 : isTestEnv ? 3 : 2)}}%;"><view class="indicator-line" /></view>
   </view>
-</view>
-
-<!-- 审核须知 -->
-<view class="notice-card">
-  <text class="notice-title">🔴 审核须知</text>
-  <view class="notice-item">
-    <text class="notice-dot">•</text>
-    <text class="notice-text">请检查各天是否有重复曲目，筛选算法尚未完全自动化</text>
-  </view>
-  <view class="notice-item">
-    <text class="notice-dot">•</text>
-    <text class="notice-text">请检查每项曲目是否可正常播放</text>
-  </view>
-  <view class="notice-item">
-    <text class="notice-dot">•</text>
-    <text class="notice-text">请检查歌名和歌手是否无意义或有敏感词汇</text>
-  </view>
-  <view class="notice-item">
-    <text class="notice-dot">•</text>
-    <text class="notice-text">可通过勾选歌曲单独删除以应对特殊安排调整（可在发布前撤销）</text>
-  </view>
-</view>
-
-<!-- 管理选项卡 -->
-<scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-<view class="tab-bar">
-  <view class="tab-item {{currentTab === 'audit' ? 'active' : ''}}" bindtap="switchTab" data-tab="audit">
-    列表审核
-  </view>
-  <view class="tab-item {{currentTab === 'codes' ? 'active' : ''}}" bindtap="switchTab" data-tab="codes">
-    验证码管理
-  </view>
-  <view class="tab-item {{currentTab === 'test' ? 'active' : ''}}" bindtap="switchTab" data-tab="test" wx:if="{{isTestEnv}}">
-    控制台
-  </view>
-  <view class="tab-item {{currentTab === 'admins' ? 'active' : ''}}" bindtap="switchTab" data-tab="admins" wx:if="{{isSuperAdmin}}">
-    管理员
-  </view>
-  <view class="tab-item {{currentTab === 'help' ? 'active' : ''}}" bindtap="switchTab" data-tab="help" wx:if="{{isSuperAdmin}}">
-    说明管理
-  </view>
-  <view class="tab-item" bindtap="goEasterEggs" wx:if="{{isSuperAdmin}}">彩蛋管理</view>
-</view>
-</scroll-view>
-
-<!-- ========== 列表审核 ========== -->
-<view class="tab-panel" wx:if="{{currentTab === 'audit'}}">
-  <view class="header">
-    <text class="title">列表审核</text>
-    <text class="header-week" wx:if="{{scheduleWeekKey}}">排期周次：{{scheduleWeekKey}}</text>
-  </view>
-  <view class="week-warning" wx:if="{{schedule && !scheduleIsCurrentWeek}}">
-    注意：这是 {{scheduleWeekKey}} 的排期，不是本周（{{thisWeekKey}}）。发布前请确认是否要发这一期。
-  </view>
-  <view class="week-warning" wx:if="{{schedule && schedule.carryover_only}}">
-    本周没有收到新的投稿，这份列表全部来自历史候补。
-  </view>
-
-  <!-- 待审核排期 -->
-  <view class="playlist-card" wx:if="{{schedule}}">
-    <view class="copy-tip-bar">长按项目可复制信息</view>
-    <block wx:for="{{['周一','周二','周三','周四','周五']}}" wx:key="*this" wx:for-index="dayIdx">
-      <view class="day-section">
-        <view class="day-header">
-          <text class="day-title">{{item}}</text>
-          <view class="day-actions">
-            <text class="day-count">{{dayCounts[dayIdx].active}}项<text wx:if="{{dayCounts[dayIdx].pending > 0}}"> · {{dayCounts[dayIdx].pending}}项待删除</text></text>
-            <text class="btn-skip-day" bindtap="onSkipDay" data-day="{{dayIdx}}">跳过此日</text>
+  <view class="sub-heading" wx:else><button class="text-button" bindtap="switchTab" data-tab="manage">‹ 返回管理</button><text>{{currentTab === 'admins' ? '管理员与通行码' : currentTab === 'help' ? '说明管理' : '数据管理'}}</text></view>
+  <view class="panel-stage {{panelVisible ? 'panel-visible' : ''}}">
+  <view class="tab-panel" wx:if="{{currentTab === 'audit'}}">
+    <view class="audit-tools"><button class="text-button" bindtap="toggleAuditTips">审核要点 {{showAuditTips ? '−' : '+'}}</button><text>长按曲目可复制</text></view>
+    <view class="notice-expand {{showAuditTips ? 'expanded' : ''}}"><view class="notice-inner"><view class="notice-card"><text>检查重复曲目、可播放性及名称内容。异常处理会尝试替补；标记移除不补位，发布前可撤销。</text></view></view></view>
+    <view class="audit-period" wx:if="{{scheduleWeekKey}}">排期周次 <text>{{scheduleWeekKey}}</text></view>
+    <view class="week-warning" wx:if="{{schedule && !scheduleIsCurrentWeek}}">这是 {{scheduleWeekKey}} 的排期，不是本周（{{thisWeekKey}}），发布前请确认。</view>
+    <view class="week-warning" wx:if="{{schedule && schedule.carryover_only}}">本周没有新投稿，曲目全部来自历史候补。</view>
+    <view class="state-message" wx:if="{{auditLoading && !schedule}}"><text>正在加载排期</text><text class="hint">请稍候。</text></view>
+    <view class="state-message" wx:elif="{{auditError}}"><text>排期加载失败</text><text class="hint">{{auditError}}</text><button class="text-button" bindtap="retryPlaylist">重新加载</button></view>
+    <block wx:elif="{{schedule}}">
+      <view class="playlist-card">
+        <block wx:for="{{['周一','周二','周三','周四','周五']}}" wx:key="*this" wx:for-index="dayIdx">
+          <view class="day-section">
+            <view class="day-header"><text class="day-title">{{item}}</text><text class="day-count">{{dayCounts[dayIdx].active}} 首<text wx:if="{{dayCounts[dayIdx].pending}}"> · {{dayCounts[dayIdx].pending}} 待移除</text></text><button class="text-button" bindtap="toggleAuditDay" data-day="{{dayIdx}}">{{bulkDay === dayIdx ? '取消' : '选择'}}</button><button class="text-button" bindtap="onSkipDay" data-day="{{dayIdx}}" disabled="{{!dayCounts[dayIdx].active && !dayCounts[dayIdx].pending}}">跳过</button></view>
+            <checkbox-group bindchange="onAuditSelectionChange" data-day="{{dayIdx}}">
+              <view class="song-item {{item.audit_state === 'pending_remove' ? 'pending-remove' : ''}}" wx:for="{{schedule['day'+(dayIdx+1)]}}" wx:key="submission_id" wx:for-index="songIdx">
+                <checkbox class="song-select" color="{{themeColors.accent}}" wx:if="{{bulkDay === dayIdx && item.audit_state !== 'pending_remove'}}" value="{{songIdx}}" checked="{{auditChecked['day'+dayIdx][songIdx]}}" />
+                <text class="song-index" wx:else>{{songIdx + 1}}</text>
+                <view class="song-info" bindlongpress="onCopySong" data-name="{{item.song_name}}" data-singer="{{item.singer}}" data-note="{{item.special_note}}"><view class="song-line"><text class="song-name">{{item.song_name}}</text><text class="song-singer">{{item.singer}}</text></view><text class="song-special" wx:if="{{item.special_note}}">{{item.special_note}}</text><text class="pending-remove-note" wx:if="{{item.audit_state === 'pending_remove'}}">待移除 · {{item.removal_reason || '当天安排调整'}}</text></view>
+                <button class="text-button restore-button" wx:if="{{item.audit_state === 'pending_remove'}}" bindtap="onRestoreRemoval" data-day="{{dayIdx}}" data-song-index="{{songIdx}}">撤销</button>
+                <button class="more-button" wx:else bindtap="openSongActions" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}" aria-label="{{item.song_name}}的操作"><view /><view /><view /></button>
+              </view>
+            </checkbox-group>
+            <text class="empty-day" wx:if="{{!schedule['day'+(dayIdx+1)].length}}">当天没有曲目安排</text>
           </view>
-        </view>
-
-        <checkbox-group class="song-list" bindchange="onAuditSelectionChange" data-day="{{dayIdx}}">
-          <block wx:for="{{schedule['day'+(dayIdx+1)]}}" wx:key="submission_id" wx:for-index="songIdx">
-            <view class="song-item {{item.audit_state === 'pending_remove' ? 'pending-remove' : ''}}">
-              <checkbox class="song-select" wx:if="{{item.audit_state !== 'pending_remove'}}" value="{{songIdx}}" />
-              <view class="song-select-placeholder" wx:else>−</view>
-              <view
-                class="song-info"
-                bindlongpress="onCopySong"
-                data-name="{{item.song_name}}"
-                data-singer="{{item.singer}}"
-                data-note="{{item.special_note}}"
-              >
-                <text class="song-name">{{item.song_name}}</text>
-                <text class="song-singer">{{item.singer}}</text>
-                <text class="song-special" wx:if="{{item.special_note}}">📌 {{item.special_note}}</text>
-                <text class="pending-remove-note" wx:if="{{item.audit_state === 'pending_remove'}}">待删除 · {{item.removal_reason || '当天安排调整'}}</text>
-              </view>
-              <view class="song-actions">
-                <block wx:if="{{item.audit_state === 'pending_remove'}}">
-                  <view class="song-action-btn pending-remove-tag"><text>待删除</text></view>
-                  <view class="song-action-btn btn-restore" bindtap="onRestoreRemoval" data-day="{{dayIdx}}" data-song-index="{{songIdx}}"><text>撤销</text></view>
-                </block>
-                <block wx:else>
-                  <view class="song-action-btn btn-note" bindtap="onOpenNote" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}"><text>{{item.special_note ? '备注' : '+备注'}}</text></view>
-                  <view class="song-action-btn btn-exception" bindtap="onException" data-day="{{dayIdx}}" data-song-index="{{songIdx}}" data-song="{{item}}"><text>异常</text></view>
-                </block>
-              </view>
-            </view>
-          </block>
-        </checkbox-group>
-        <view class="day-bulk-actions" wx:if="{{auditSelections['day'+dayIdx].length > 0}}">
-          <text>已选 {{auditSelections['day'+dayIdx].length}} 首</text>
-          <view class="btn-remove-selected" bindtap="onRemoveSelectedFromDay" data-day="{{dayIdx}}"><text>标记删除，不补位</text></view>
-        </view>
+        </block>
       </view>
+      <button class="note-toggle text-button" bindtap="togglePublishNote">发布说明{{note ? ' · 已填写' : '（选填）'}} {{showPublishNote ? '−' : '+'}}</button>
+      <view class="notice-expand {{showPublishNote || note ? 'expanded' : ''}}"><view class="notice-inner"><textarea class="note-input" placeholder="发布时向用户展示；没有曲目时需填写说明" placeholder-class="form-placeholder" value="{{note}}" bindinput="onNoteInput" maxlength="100" /></view></view>
+      <view class="audit-bottom" wx:if="{{bulkDay >= 0}}"><view class="bottom-copy"><text>{{['周一','周二','周三','周四','周五'][bulkDay]}} · 已选 {{auditSelections['day'+bulkDay].length}} 首</text><button class="text-button" bindtap="toggleAuditDay" data-day="{{bulkDay}}">结束选择</button></view><button class="btn-remove-selected" bindtap="onRemoveSelectedFromDay" data-day="{{bulkDay}}" disabled="{{!auditSelections['day'+bulkDay].length}}">标记移除</button></view>
+      <view class="audit-bottom" wx:else><view class="bottom-copy"><text>{{activeSongCount}} 首 · 5 天</text><text class="bottom-hint">{{pendingRemovalCount ? pendingRemovalCount+' 首待移除' : '核对后向用户发布'}}</text></view><button class="btn-publish" bindtap="onPublish" disabled="{{publishing}}" loading="{{publishing}}">发布歌单</button></view>
     </block>
-
-    <!-- 备注输入 -->
-    <view class="note-section">
-      <text class="label">📝 备注 (公示时显示)</text>
-      <textarea class="note-input" placeholder="例：周三因活动调整顺序..." placeholder-class="form-placeholder" value="{{note}}" bindinput="onNoteInput" maxlength="100"></textarea>
-    </view>
-
-    <!-- 底部按钮 -->
-    <view class="footer">
-      <button class="btn-publish" bindtap="onPublish" disabled="{{publishing}}">
-        {{publishing ? '发布中...' : '确认发布'}}
-      </button>
-    </view>
+    <view class="state-message" wx:else><text>暂无待审核排期</text><text class="hint">请等待周日 20:00 自动抽取。</text></view>
   </view>
-
-  <!-- 空状态 -->
-  <view class="empty" wx:else>
-    <text>本周暂无待审核列表</text>
-    <text class="hint">请等待周日 20:00 自动抽取</text>
+  <view class="tab-panel" wx:elif="{{currentTab === 'codes'}}">
+    <view class="audit-tools"><text>发布后不可修改或删除</text><view class="code-actions"><button class="text-button accent" bindtap="onGenerateCode">自动生成</button><button class="text-button accent" bindtap="onAddCode">添加</button></view></view>
+    <view class="code-card" wx:if="{{codeList.length}}"><view class="code-item" wx:for="{{codeList}}" wx:key="_id"><view class="code-top"><text class="code-value" bindlongpress="onCopyCode" data-code="{{item.code}}">{{item.code}}</text><text class="status-tag {{item.is_published ? 'tag-published' : ''}}">{{item.is_published ? '已发布' : '草稿'}}</text></view><view class="code-meta"><text>有效至 {{item.expire_date}}</text><text>长按复制</text></view><view class="code-actions-row" wx:if="{{!item.is_published}}"><button class="text-button" bindtap="onEditCode" data-id="{{item._id}}" data-code="{{item.code}}">编辑</button><button class="text-button danger-text" bindtap="onDeleteCode" data-id="{{item._id}}">删除</button><button class="small-primary" bindtap="onPublishCode" data-id="{{item._id}}">发布</button></view></view></view><view class="state-message" wx:else><text>暂无验证码</text><text class="hint">自动生成或手动添加当周验证码。</text></view>
   </view>
-</view>
-
-<!-- ========== 验证码管理 ========== -->
-<view class="tab-panel" wx:elif="{{currentTab === 'codes'}}">
-  <view class="header">
-    <text class="title">验证码管理</text>
-    <view class="code-actions">
-      <text class="btn-generate" bindtap="onGenerateCode">自动生成</text>
-      <text class="btn-add" bindtap="onAddCode">手动添加</text>
-    </view>
+  <view class="tab-panel" wx:elif="{{currentTab === 'test'}}">
+    <view class="test-section channel-section"><view class="section-heading"><text>点歌通道</text><button class="text-button" bindtap="loadChannelStatus" disabled="{{channelBusy || channelLoading}}">刷新</button></view><text class="channel-current">{{channelLoading ? '正在读取状态…' : channelMode === 'open' ? '强制开放中' : channelMode === 'close' ? '强制关闭中' : channelMode === 'normal' ? '按正常时间开放' : '状态读取失败'}}</text><text class="channel-hint">{{channelMode === 'normal' ? '每周日 8:00–20:00 自动开放' : channelMode === 'open' ? '当前忽略开放时段限制' : channelMode === 'close' ? '当前暂停接收点歌' : '请刷新后再调整，避免误判当前状态'}}</text><view class="channel-options"><button class="channel-option {{channelMode === 'normal' ? 'selected' : ''}}" bindtap="onToggleChannel" data-mode="reset" disabled="{{channelBusy || channelLoading || !channelMode}}">正常时间</button><button class="channel-option {{channelMode === 'open' ? 'selected' : ''}}" bindtap="onToggleChannel" data-mode="open" disabled="{{channelBusy || channelLoading || !channelMode}}">强制开放</button><button class="channel-option {{channelMode === 'close' ? 'selected' : ''}}" bindtap="onToggleChannel" data-mode="close" disabled="{{channelBusy || channelLoading || !channelMode}}">强制关闭</button></view><text class="channel-hint" wx:if="{{channelBusy}}">正在处理，请稍候…</text></view>
+    <view class="test-section"><view class="section-heading"><text>数据统计</text><button class="text-button" bindtap="onTestStats">刷新</button></view><text class="section-hint">当前数据域总量，按周维护请进入对应列表。</text><view class="stats-grid" wx:if="{{testStats}}"><view class="stat-item"><text class="stat-num">{{testStats.total.submissions}}</text><text class="stat-label">投稿记录</text></view><view class="stat-item"><text class="stat-num">{{testStats.total.schedules}}</text><text class="stat-label">排期</text></view><view class="stat-item"><text class="stat-num">{{testStats.total.weekly_codes}}</text><text class="stat-label">验证码</text></view><view class="stat-item"><text class="stat-num">{{(testStats.total.schedule_exceptions || 0) + (testStats.total.system_events || 0)}}</text><text class="stat-label">异常与事件</text></view><view class="stat-item"><text class="stat-num">{{testStats.total.submission_counters}}</text><text class="stat-label">计数器</text></view><view class="stat-item"><text class="stat-num">{{testStats.total.message_subscriptions}}</text><text class="stat-label">订阅记录</text></view><view class="stat-item"><text class="stat-num">{{testStats.total.users}}</text><text class="stat-label">用户</text></view></view><text class="section-hint" wx:else>统计暂未读取成功，可点击刷新。</text></view>
+    <block wx:if="{{isTestMode}}"><view class="test-section"><text class="section-heading">数据生成</text><view class="test-grid"><button bindtap="onTestGenerate" data-count="10">生成 10 条</button><button bindtap="onTestGenerate" data-count="50">生成 50 条</button><button bindtap="onTestGenerate" data-count="250">生成 250 条</button><button bindtap="onTestGenCodes">生成验证码</button><button bindtap="onTestGenPublished">生成已发布排期</button></view></view><view class="test-section"><text class="section-heading">流程模拟</text><view class="test-grid"><button bindtap="onTestDraw">一键抽取</button><button bindtap="onTestSimulateSubmitted">模拟已提交</button></view></view><view class="test-section"><text class="section-heading">数据清理</text><text class="section-hint">执行前核对影响范围并完成服务端二次确认。</text><view class="test-grid"><button class="danger-text" bindtap="onTestClearWeek">清空本周</button><button class="danger-text" bindtap="onTestClearSubscriptions">清空订阅</button><button class="danger-text" bindtap="onTestClearAll">清空全部测试数据</button></view></view></block>
   </view>
-
-  <!-- 验证码列表 -->
-  <view class="code-card" wx:if="{{codeList.length > 0}}">
-    <block wx:for="{{codeList}}" wx:key="_id">
-      <view class="code-item {{item.is_published ? 'published-item' : 'draft-item'}}">
-        <view class="code-main">
-          <text class="code-value {{item.is_published ? 'published' : 'draft'}}" bindlongpress="onCopyCode" data-code="{{item.code}}">
-            {{item.is_published ? item.code : '******'}}
-          </text>
-          <text class="copy-tip" wx:if="{{item.is_published}}">长按复制</text>
-        </view>
-        <view class="code-status">
-          <text class="status-tag {{item.is_published ? 'tag-published' : 'tag-draft'}}">
-            {{item.is_published ? '已发布' : '草稿'}}
-          </text>
-        </view>
-        <view class="code-meta">
-          <text class="code-week">周标识: {{item.week_key}}</text>
-          <text class="code-expire">过期: {{item.expire_date}}</text>
-        </view>
-        <view class="code-actions-row" wx:if="{{!item.is_published}}">
-          <text class="btn-edit-code" bindtap="onEditCode" data-id="{{item._id}}" data-code="{{item.code}}">编辑</text>
-          <text class="btn-publish-code" bindtap="onPublishCode" data-id="{{item._id}}">发布</text>
-          <text class="btn-delete-code" bindtap="onDeleteCode" data-id="{{item._id}}">删除</text>
-        </view>
-        <view class="code-actions-row" wx:else>
-          <text class="code-hint">已发布，不可修改</text>
-        </view>
-      </view>
-    </block>
-  </view>
-
-  <view class="empty" wx:else>
-    <text>暂无验证码</text>
-    <text class="hint">点击"自动生成"或"手动添加"创建</text>
-  </view>
-</view>
-
-<!-- ========== 测试工具 ========== -->
-<view class="tab-panel" wx:elif="{{currentTab === 'test'}}">
-  <view class="header">
-    <text class="title">{{isTestMode ? '测试控制台' : '运行控制台'}}</text>
-  </view>
-
-  <view class="test-safety-hint" wx:if="{{!isTestMode}}">正式版仅开放只读统计和通道控制；模拟数据与清理入口已隐藏并由服务端拒绝。</view>
-
-  <!-- 数据统计 -->
-  <view class="test-section">
-    <view class="test-section-title">数据统计</view>
-    <view wx:if="{{testStats}}" class="stats-grid">
-        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="submissions">
-          <text class="stat-num">{{testStats.total.submissions}}</text>
-          <text class="stat-label">提交请求</text>
-        </view>
-        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="schedules">
-          <text class="stat-num">{{testStats.total.schedules}}</text>
-          <text class="stat-label">排期</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-num">{{testStats.total.weekly_codes}}</text>
-          <text class="stat-label">验证码</text>
-        </view>
-        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="events">
-          <text class="stat-num">{{(testStats.total.schedule_exceptions || 0) + (testStats.total.system_events || 0)}}</text>
-          <text class="stat-label">异常记录</text>
-        </view>
-        <view class="stat-item clickable" bindtap="goConsoleDetail" data-mode="counters">
-          <text class="stat-num">{{testStats.total.submission_counters}}</text>
-          <text class="stat-label">计数器</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-num">{{testStats.total.message_subscriptions}}</text>
-          <text class="stat-label">订阅记录</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-num">{{testStats.total.users}}</text>
-          <text class="stat-label">用户</text>
-        </view>
-    </view>
-  </view>
-
-  <block wx:if="{{isTestMode}}">
-    <!-- 数据生成 -->
-    <view class="test-section">
-      <view class="test-section-title">数据生成</view>
-      <view class="test-grid">
-        <view class="test-btn blue" bindtap="onTestGenerate" data-count="10">生成10条</view>
-        <view class="test-btn blue" bindtap="onTestGenerate" data-count="50">生成50条</view>
-        <view class="test-btn blue" bindtap="onTestGenerate" data-count="250">生成250条</view>
-        <view class="test-btn blue" bindtap="onTestGenCodes">生成验证码</view>
-        <view class="test-btn blue" bindtap="onTestGenPublished">生成已发布排期（支持往期）</view>
-      </view>
-    </view>
-
-    <!-- 流程模拟 -->
-    <view class="test-section">
-      <view class="test-section-title">流程模拟</view>
-      <view class="test-grid">
-        <view class="test-btn green" bindtap="onTestDraw">一键抽取</view>
-        <view class="test-btn green" bindtap="onTestSimulateSubmitted">模拟已提交</view>
-        <view class="test-btn green" bindtap="onTestStats">刷新统计</view>
-      </view>
-    </view>
-  </block>
-
-  <!-- 通道控制 -->
-  <view class="test-section">
-    <view class="test-section-title">通道控制</view>
-    <view class="test-grid">
-      <view class="test-btn green" bindtap="onToggleChannel" data-mode="open">强制开放通道</view>
-      <view class="test-btn red" bindtap="onToggleChannel" data-mode="close">强制关闭通道</view>
-      <view class="test-btn orange" bindtap="onToggleChannel" data-mode="reset">恢复正常时间</view>
-    </view>
-    <text style="display:block; text-align:center; font-size:24rpx; color:var(--text-3); margin-top:16rpx;" wx:if="{{channelMode !== undefined}}">
-      当前状态：{{channelMode === 'open' ? '强制开放中' : channelMode === 'close' ? '强制关闭（假期模式）' : '正常时间校验'}}
-    </text>
-  </view>
-
-  <!-- 数据清理 -->
-  <view class="test-section" wx:if="{{isTestMode}}">
-    <view class="test-section-title">数据清理</view>
-    <text class="test-safety-hint">仅清理 test_ 集合；执行前会显示影响范围并进行服务端二次确认</text>
-    <view class="test-grid">
-      <view class="test-btn orange" bindtap="onTestClearWeek">清空本周</view>
-      <view class="test-btn orange" bindtap="onTestClearSubscriptions">清空订阅记录</view>
-      <view class="test-btn red" bindtap="onTestClearAll">清空全部测试数据</view>
-    </view>
-  </view>
-</view>
-
+  <view class="tab-panel" wx:elif="{{currentTab === 'manage' && isSuperAdmin}}"><view class="entry-list"><button class="entry-row" bindtap="switchTab" data-tab="help"><view><text class="entry-title">说明管理</text><text class="entry-desc">内容、图片与展示顺序</text></view><image src="{{themeIcons.chevron}}" /></button><button class="entry-row" bindtap="goEasterEggs"><view><text class="entry-title">彩蛋管理</text><text class="entry-desc">照片、文案与启用状态</text></view><image src="{{themeIcons.chevron}}" /></button><button class="entry-row" bindtap="switchTab" data-tab="admins"><view><text class="entry-title">管理员与通行码</text><text class="entry-desc">管理身份和管理员通行码</text></view><image src="{{themeIcons.chevron}}" /></button><button class="entry-row" bindtap="switchTab" data-tab="data"><view><text class="entry-title">数据管理</text><text class="entry-desc">投稿、排期、异常事件与计数器</text></view><image src="{{themeIcons.chevron}}" /></button></view></view>
+  <view class="tab-panel" wx:elif="{{currentTab === 'data' && isSuperAdmin}}"><view class="entry-list"><button class="entry-row" bindtap="goConsoleDetail" data-mode="submissions"><view><text class="entry-title">投稿记录</text><text class="entry-desc">筛选、编辑、移除与恢复</text></view><image src="{{themeIcons.chevron}}" /></button><button class="entry-row" bindtap="goConsoleDetail" data-mode="schedules"><view><text class="entry-title">排期管理</text><text class="entry-desc">完整查看、编辑与撤回</text></view><image src="{{themeIcons.chevron}}" /></button><button class="entry-row" bindtap="goConsoleDetail" data-mode="events"><view><text class="entry-title">异常事件</text><text class="entry-desc">分类查看与展开详情</text></view><image src="{{themeIcons.chevron}}" /></button><button class="entry-row" bindtap="goConsoleDetail" data-mode="counters"><view><text class="entry-title">计数器</text><text class="entry-desc">按周查看构成与校准</text></view><image src="{{themeIcons.chevron}}" /></button></view></view>
 <!-- ========== 管理员管理 ========== -->
-<view class="tab-panel" wx:elif="{{currentTab === 'admins'}}">
+<view class="tab-panel" wx:if="{{currentTab === 'admins'}}">
   <view class="header">
     <text class="title">管理员管理</text>
   </view>
 
   <!-- 通行码管理 -->
   <view class="admin-section">
-    <view class="admin-section-title">📋 通行码管理</view>
+    <view class="admin-section-title">通行码管理</view>
 
     <view class="passcode-list" wx:if="{{passcodeList.length > 0}}">
       <view class="passcode-item" wx:for="{{passcodeList}}" wx:key="_id">
@@ -319,7 +89,7 @@
 
   <!-- 管理员列表 -->
   <view class="admin-section">
-    <view class="admin-section-title">👤 管理员列表</view>
+    <view class="admin-section-title">管理员列表</view>
 
     <view class="admin-list" wx:if="{{adminList.length > 0}}">
       <view class="admin-item" wx:for="{{adminList}}" wx:key="openid">
@@ -377,10 +147,11 @@
   </view>
 </view>
 
-</view>
 
+  </view>
+</view>
 <!-- 异常处理弹窗 -->
-<view class="modal" wx:if="{{showModal}}">
+<view class="modal {{drawerClosing ? 'drawer-closing' : ''}}" wx:if="{{showModal}}">
   <view class="modal-content">
     <text class="modal-title">标记异常项目</text>
     <text class="modal-song">《{{modalSong.song_name}}》- {{modalSong.singer}}</text>
@@ -403,7 +174,7 @@
 </view>
 
 <!-- 手动添加/编辑验证码弹窗 -->
-<view class="modal" wx:if="{{showCodeModal}}">
+<view class="modal {{drawerClosing ? 'drawer-closing' : ''}}" wx:if="{{showCodeModal}}">
   <view class="modal-content">
     <text class="modal-title">{{editingCodeId ? '编辑验证码' : '添加验证码'}}</text>
     <input class="code-modal-input" placeholder="输入6位验证码" placeholder-class="form-placeholder" value="{{newCode}}" bindinput="onNewCodeInput" maxlength="6"/>
@@ -423,7 +194,7 @@
 </view>
 
 <!-- 添加通行码弹窗 -->
-<view class="modal" wx:if="{{showPasscodeModal}}">
+<view class="modal {{drawerClosing ? 'drawer-closing' : ''}}" wx:if="{{showPasscodeModal}}">
   <view class="modal-content">
     <text class="modal-title">生成管理员通行码</text>
     <input class="code-modal-input" placeholder="输入描述标签（如：张老师）" placeholder-class="form-placeholder" value="{{newPasscodeLabel}}" bindinput="onPasscodeLabelInput" maxlength="20"/>
@@ -435,7 +206,7 @@
 </view>
 
 <!-- 显示通行码弹窗 -->
-<view class="modal" wx:if="{{showPasscodeResultModal}}">
+<view class="modal {{drawerClosing ? 'drawer-closing' : ''}}" wx:if="{{showPasscodeResultModal}}">
   <view class="modal-content">
     <text class="modal-title">通行码已生成</text>
     <view class="passcode-result">
@@ -450,7 +221,7 @@
 </view>
 
 <!-- 特殊备注编辑弹窗 -->
-<view class="modal" wx:if="{{showNoteModal}}">
+<view class="modal {{drawerClosing ? 'drawer-closing' : ''}}" wx:if="{{showNoteModal}}">
   <form class="modal-content" bindsubmit="confirmSaveNote">
     <text class="modal-title">特殊备注</text>
     <text class="modal-song">《{{noteSong.song_name}}》- {{noteSong.singer}}</text>

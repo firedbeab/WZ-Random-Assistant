@@ -1,3 +1,4 @@
+@import "../../styles/admin.wxss";
 page {
   min-height: 100%;
   background: var(--bg);
@@ -251,3 +252,9 @@ page {
   background: var(--accent);
   color: var(--on-accent);
 }
+.page { min-height: 100vh; padding: 24rpx 32rpx; background: var(--gradient-open); }
+.form-card,.preview-card { border-radius: var(--radius-lg); padding: 30rpx; }
+.field-label { font-size: 26rpx; color: var(--text-2); }.field-input,.content-input { font-size: 28rpx; border-radius: var(--radius-md); }
+.content-input { min-height: 280rpx; }.image-actions { gap: 0; padding: 0; }.image-action { flex: 1; min-height: 88rpx; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: var(--text-2); }
+.image-action + .image-action { border-left: 1rpx solid var(--line); }.action-btn { min-height: 88rpx; }.action-btn.draft { color: var(--text-2); background: var(--surface-2); }.preview-card { border: none; animation: admin-page-in 260ms ease both; }
+@media (prefers-reduced-motion: reduce) { .preview-card { animation-duration: 1ms; } }

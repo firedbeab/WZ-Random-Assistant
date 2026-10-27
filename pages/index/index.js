@@ -439,6 +439,9 @@ Page(theme.page({
     const role = this.data.userInfo && this.data.userInfo.role;
     const isAdmin = role === 'admin' || role === 'superadmin';
     const url = isAdmin ? '/pages/admin/admin' : '/pages/admin/login';
-    wx.navigateTo({ url: url });
+    wx.navigateTo({ url: url, fail: err => {
+      console.warn('管理页面跳转失败:', err && err.errMsg || '未知原因');
+      wx.showToast({ title: '页面未能打开，请重新编译后重试', icon: 'none' });
+    } });
   }
 }));

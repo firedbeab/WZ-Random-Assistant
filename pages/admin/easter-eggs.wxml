@@ -1,9 +1,10 @@
 <page-meta page-style="{{appearanceStyle}}" />
 <view class="appearance-toolbar"><appearance-toggle /></view>
-<view class="egg-admin-page">
+<view class="egg-admin-page admin-page-enter">
   <view class="test-mode-banner" wx:if="{{isTestMode}}">测试彩蛋 · 仅维护 test_ 配置和 test/ 图片</view>
+  <view class="admin-hero"><text class="admin-title">管理后台</text></view>
   <block wx:if="{{allowed}}">
-    <view class="page-heading"><text>🐱 彩蛋管理</text><view class="action primary {{busy ? 'disabled' : ''}}" bindtap="edit">＋ 添加条目</view></view>
+    <view class="page-heading"><text>彩蛋管理</text><view class="action primary {{busy ? 'disabled' : ''}}" bindtap="edit">＋ 添加条目</view></view>
     <text class="page-hint">每个条目一张照片；上方、下方文字留空会使用默认文案。启用的条目随机展示。</text>
     <view wx:if="{{loading}}" class="empty">正在加载…</view>
     <view wx:elif="{{!entries.length}}" class="empty">还没有彩蛋照片，先添加一张吧。</view>
@@ -15,7 +16,7 @@
     </view>
   </block>
 </view>
-<view wx:if="{{editing}}" class="editor-mask" catchtap="closeEditor">
+<view wx:if="{{editing}}" class="editor-mask {{editorClosing ? 'drawer-closing' : ''}}" catchtap="closeEditor">
   <scroll-view scroll-y class="editor-card" catchtap="noop">
     <view class="editor-heading"><text>{{id ? '编辑彩蛋' : '添加彩蛋'}}</text><view bindtap="closeEditor">×</view></view>
     <view class="editor-photo" bindtap="chooseImage"><image wx:if="{{imagePath}}" src="{{imagePath}}" mode="aspectFit" /><text wx:else>＋ 选择小猫照片</text></view>

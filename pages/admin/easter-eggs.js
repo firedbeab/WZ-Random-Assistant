@@ -6,7 +6,7 @@ Page(theme.page({
   data: {
     isTestMode: isTestMode(), allowed: false, loading: true, entries: [], revision: 0, busy: false,
     editing: false, id: '', fileID: '', imagePath: '', localPath: '', topText: '', bottomText: '', enabled: true,
-    previewTop: DEFAULT_TOP, previewBottom: DEFAULT_BOTTOM, dirty: false
+    previewTop: DEFAULT_TOP, previewBottom: DEFAULT_BOTTOM, dirty: false, editorClosing: false
   },
   async onLoad() {
     try {
@@ -33,6 +33,7 @@ Page(theme.page({
     finally { this.setData({ loading: false }); }
   },
   async onPullDownRefresh() { await this.loadEntries(); wx.stopPullDownRefresh(); },
+  onUnload() { clearTimeout(this._editorCloseTimer); },
   edit(e) {
     if (this.data.busy || !this.data.allowed) return;
     const item = this.data.entries.find(entry => entry.id === e.currentTarget.dataset.id) || {};
@@ -53,8 +54,14 @@ Page(theme.page({
   },
   toggleEditor(e) { this.markDirty({ enabled: e.detail.value }); },
   closeEditor() {
-    if (this.data.busy) return;
-    const close = () => { this.setData({ editing: false, dirty: false }); if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload(); };
+    if (this.data.busy || this.data.editorClosing) return;
+    const close = () => {
+      this.setData({ editorClosing: true });
+      this._editorCloseTimer = setTimeout(() => {
+        this.setData({ editing: false, dirty: false, editorClosing: false });
+        if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
+      }, 200);
+    };
     if (!this.data.dirty) { close(); return; }
     wx.showModal({ title: '放弃本次修改？', content: '未保存的图片和文字不会上传。', success: res => { if (res.confirm) close(); } });
   },

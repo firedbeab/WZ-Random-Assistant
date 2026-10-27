@@ -1,5 +1,5 @@
 const theme = require('../../utils/theme');
-const { cloudCall } = require('../../utils/runtime');
+const { cloudCall, isTestMode } = require('../../utils/runtime');
 
 const MODE_TITLES = {
   submissions: '投稿管理',
@@ -123,6 +123,7 @@ function displayEvent(item) {
 
 Page(theme.page({
   data: {
+    isTestMode: isTestMode(),
     mode: 'submissions',
     title: '数据控制台',
     subtitle: MODE_SUBTITLES.submissions,
@@ -140,6 +141,11 @@ Page(theme.page({
     editSubmission: null,
     schedules: [],
     scheduleDraft: null,
+    scheduleEditing: false,
+    scheduleDirty: false,
+    scheduleSaving: false,
+    submissionClosing: false,
+    dayNames: ['周一', '周二', '周三', '周四', '周五'],
     eventCategories: EVENT_CATEGORIES,
     eventCategoryIndex: 0,
     events: [],
@@ -158,8 +164,16 @@ Page(theme.page({
   },
 
   onPullDownRefresh() {
+    if (this.data.scheduleDirty) {
+      wx.stopPullDownRefresh();
+      wx.showToast({ title: '请先保存或取消编辑', icon: 'none' });
+      return;
+    }
     Promise.resolve(this.loadData()).finally(() => wx.stopPullDownRefresh());
   },
+
+  onUnload() { clearTimeout(this._submissionCloseTimer); },
+  backToManagement() { wx.navigateBack(); },
 
   async call(action, data) {
     const res = await cloudCall({
@@ -223,7 +237,11 @@ Page(theme.page({
     if (!item) return;
     this.setData({ showSubmissionEditor: true, editSubmission: Object.assign({}, item) });
   },
-  closeSubmissionEditor() { this.setData({ showSubmissionEditor: false, editSubmission: null }); },
+  closeSubmissionEditor() {
+    if (this.data.submissionClosing) return;
+    this.setData({ submissionClosing: true });
+    this._submissionCloseTimer = setTimeout(() => this.setData({ showSubmissionEditor: false, editSubmission: null, submissionClosing: false }), 200);
+  },
   onSubmissionField(e) {
     const field = e.currentTarget.dataset.field;
     this.setData({ [`editSubmission.${field}`]: e.detail.value });
@@ -279,27 +297,54 @@ Page(theme.page({
 
   async loadSchedules() {
     const result = await this.call('listSchedules');
-    this.setData({ schedules: result.data || [], scheduleDraft: null });
+    this.setData({ schedules: result.data || [], scheduleDraft: null, scheduleEditing: false, scheduleDirty: false });
   },
   async openSchedule(e) {
     try {
       const result = await this.call('getSchedule', { id: e.currentTarget.dataset.id });
-      this.setData({ scheduleDraft: result.data });
+      this._savedSchedule = JSON.parse(JSON.stringify(result.data));
+      this.setData({ scheduleDraft: result.data, scheduleEditing: false, scheduleDirty: false });
     } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
   },
-  closeSchedule() { this.setData({ scheduleDraft: null }); },
+  confirmDiscardSchedule(continueAction) {
+    if (this.data.scheduleSaving) return;
+    const discard = () => {
+      this.setData({ scheduleDirty: false });
+      if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
+      continueAction();
+    };
+    if (!this.data.scheduleDirty) return discard();
+    wx.showModal({ title: '放弃未保存修改？', content: '本次修改尚未保存。', confirmText: '放弃修改', success: result => { if (result.confirm) discard(); } });
+  },
+  closeSchedule() { this.confirmDiscardSchedule(() => this.setData({ scheduleDraft: null, scheduleEditing: false })); },
+  startScheduleEdit() {
+    this.setData({ scheduleEditing: true });
+  },
+  cancelScheduleEdit() {
+    this.confirmDiscardSchedule(() => this.setData({ scheduleDraft: JSON.parse(JSON.stringify(this._savedSchedule)), scheduleEditing: false }));
+  },
+  markScheduleDirty() {
+    if (!this.data.scheduleDirty && wx.enableAlertBeforeUnload) wx.enableAlertBeforeUnload({ message: '排期修改尚未保存，确定离开吗？' });
+    this.setData({ scheduleDirty: true });
+  },
   onScheduleField(e) {
+    if (this.data.scheduleSaving) return;
+    this.markScheduleDirty();
     const { day, index, field } = e.currentTarget.dataset;
     this.setData({ [`scheduleDraft.${day}[${index}].${field}`]: e.detail.value });
   },
-  onAdminNoteInput(e) { this.setData({ 'scheduleDraft.admin_note': e.detail.value }); },
+  onAdminNoteInput(e) { if (this.data.scheduleSaving) return; this.markScheduleDirty(); this.setData({ 'scheduleDraft.admin_note': e.detail.value }); },
   addScheduleItem(e) {
+    if (this.data.scheduleSaving) return;
+    this.markScheduleDirty();
     const day = e.currentTarget.dataset.day;
     const list = (this.data.scheduleDraft[day] || []).slice();
     list.push({ song_name: '', singer: '', special_note: '', is_repeat: false, source_week_key: '' });
     this.setData({ [`scheduleDraft.${day}`]: list });
   },
   removeScheduleItem(e) {
+    if (this.data.scheduleSaving) return;
+    this.markScheduleDirty();
     const { day, index } = e.currentTarget.dataset;
     const list = (this.data.scheduleDraft[day] || []).slice();
     list.splice(Number(index), 1);
@@ -307,18 +352,21 @@ Page(theme.page({
   },
   async saveSchedule() {
     const draft = this.data.scheduleDraft;
-    if (!draft) return;
+    if (!draft || this.data.scheduleSaving) return;
     const days = {};
     ['day1', 'day2', 'day3', 'day4', 'day5'].forEach(day => { days[day] = draft[day] || []; });
+    this.setData({ scheduleSaving: true });
     wx.showLoading({ title: '保存中' });
     try {
       const result = await this.call('updateSchedule', {
         id: draft._id, revision: draft.revision, days, adminNote: draft.admin_note || ''
       });
-      this.setData({ 'scheduleDraft.revision': result.revision });
+      this.setData({ 'scheduleDraft.revision': result.revision, scheduleEditing: false, scheduleDirty: false });
+      this._savedSchedule = JSON.parse(JSON.stringify(this.data.scheduleDraft));
+      if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       wx.showToast({ title: '排期已保存', icon: 'success' });
     } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
-    finally { wx.hideLoading(); }
+    finally { this.setData({ scheduleSaving: false }); wx.hideLoading(); }
   },
   withdrawSchedule() {
     const draft = this.data.scheduleDraft;
