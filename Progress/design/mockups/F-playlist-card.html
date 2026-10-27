@@ -118,7 +118,13 @@
   .playlist-card { margin: 0 16px; border-radius: var(--card-radius); background: var(--surface); box-shadow: var(--card-shadow); }
   .playlist-tools { padding: 0 16px 20px; }
   .week-tabs { justify-content: flex-start; gap: 24px; margin-top: 13px; }
-  .period-meta { margin-top: 12px; }
+  .period-meta { margin-top: 16px; }
+  .period-range { color: var(--text-1); font-size: 16px; font-weight: 600; line-height: 1.5; }
+  .playlist-card.is-state { background: transparent; box-shadow: none; border-radius: 0; }
+  .playlist-card.is-state .song-list { padding: 0; }
+  .empty-state { padding: 32px 0 48px; }
+  .empty-state h2 { font-size: 19px; font-weight: 600; }
+  .empty-state p { font-size: 14px; line-height: 1.8; }
   .song-list { padding: 0 16px 24px; }
   .day-section { padding-top: 24px; }
   .song-row { grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; }
@@ -129,9 +135,9 @@
 <body>
 <main class="workbench">
   <aside class="design-notes" aria-label="样稿预览控制">
-    <span class="eyebrow">WZ 随机助手 · 交互样稿 F.2</span>
+    <span class="eyebrow">WZ 随机助手 · 交互样稿 F.3</span>
     <h1>和首页，<br>用同一套样式。</h1>
-    <p class="intro">标题和期次信息放在卡片外，三期标签靠左。主卡片从周一上方开始；页面共用一层渐变，连续过渡到暖灰底。</p>
+    <p class="intro">日期范围作为次级标题；加载、未发布或读取失败时直接显示文字状态。有已发布排期时再显示主卡片。</p>
     <a class="compare-link" href="E-playlist-flat.html" target="_blank" rel="noopener">打开 E 版对照 ↗</a>
     <div class="controls">
       <label class="control-label" for="stateSelect">预览状态</label>
@@ -162,7 +168,7 @@
     <div class="details">
       <p>可切换期次、开启演示提醒，并在手机区域滚动。长按曲目可复制；电脑上也可右键或用 Enter 键复制。</p>
       <p>这里使用固定示例数据，不连接业务云端，不申请真实消息订阅。日期、数量和状态均为排版演示。</p>
-      <p>F 与 E 并列供讨论，尚未选定正式方案。首页与正式歌单页均未修改。</p>
+      <p>F.2 已确认并接入小程序，F.3 同步日期层级与无卡片空状态；E 保留为历史对照。这里始终使用演示数据。</p>
       <p>深色仅为样稿预览。正式适配安排在歌单布局确认后、主题色与自定义背景之前。</p>
     </div>
   </aside>
@@ -256,13 +262,14 @@
     const shortDate=d=>`${d.getUTCMonth()+1}.${String(d.getUTCDate()).padStart(2,'0')}`;
     byId('periodRange').textContent=`${first.getUTCFullYear()}.${shortDate(first)} — ${last.getUTCFullYear()!==first.getUTCFullYear()?last.getUTCFullYear()+'.':''}${shortDate(last)}`;
     const hasList=!['unpublished','error','loading'].includes(mode);
+    document.querySelector('.playlist-card').classList.toggle('is-state',!hasList);
     byId('periodCount').textContent=hasList?`共 ${total} 首`:'';
     byId('copyTip').hidden=!hasList || total===0;
     content.replaceChildren(); content.setAttribute('aria-labelledby',`weekTab${period}`);
     tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',String(i===period));tab.tabIndex=i===period?0:-1;});
-    if(mode==='unpublished') {message(period===0?'本期歌单尚未发布':'该期歌单尚未发布','发布后会在这里展示完整安排。你也可以切换期次，查看其它已发布歌单。');return;}
-    if(mode==='error') {message('歌单暂时未能加载','请稍后重试，或检查网络后重新加载。',true);return;}
-    if(mode==='loading') {message('正在获取歌单…','请稍候');return;}
+    if(mode==='unpublished') {message(period===0?'本期歌单尚未发布':'该期歌单尚未发布','可以先切换期次，查看往期歌单。');return;}
+    if(mode==='error') {message('歌单暂时未能加载','检查网络后重试，或先查看其他期次。',true);return;}
+    if(mode==='loading') {message('正在加载歌单…','正在获取该期安排，请稍候。');return;}
     if(mode==='cached') content.append(el('p','cache-hint','当前显示上次保存的内容，联网后会重新核对。'));
     selectedDays.forEach((rows,i)=>{
       const section=el('section','day-section'); const heading=el('div','day-heading'); const title=el('h2','day-title',days[i]);

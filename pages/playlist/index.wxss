@@ -16,8 +16,9 @@
 .tab-item { position: relative; min-height: 88rpx; padding: 26rpx 0 28rpx; background: transparent; color: var(--text-2); font-size: var(--font-md); white-space: nowrap; }
 .tab-item.active { color: var(--accent); font-weight: 600; }
 .tab-item.active::after { position: absolute; content: ''; top: auto; height: 4rpx; width: auto; left: 0; right: 0; bottom: 8rpx; transform: none; border-radius: 4rpx; background: var(--accent); }
-.period-meta { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); margin-top: var(--space-4); color: var(--text-2); font-size: var(--font-sm); }
-.period-count { flex: none; }
+.period-meta { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); margin-top: var(--space-5); }
+.period-range { color: var(--text-1); font-size: var(--font-lg); font-weight: 600; line-height: 1.5; }
+.period-count { flex: none; color: var(--text-2); font-size: var(--font-sm); }
 .copy-tip { display: block; margin-top: 20rpx; color: var(--text-3); font-size: 22rpx; line-height: 1.6; }
 .schedule-card { margin: 0 var(--space-5); padding: 0 var(--space-5) var(--space-6); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
 .day-section { padding-top: var(--space-6); }
@@ -39,7 +40,7 @@
 .note-label { display: block; color: var(--text-2); font-size: 26rpx; font-weight: 600; }
 .note-content { display: block; margin-top: var(--space-3); color: var(--text-2); font-size: var(--font-sm); line-height: 1.85; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
 .cache-hint { display: block; padding-top: 40rpx; font-size: var(--font-sm); line-height: 1.7; color: var(--text-3); }
-.state { padding: 100rpx 0 120rpx; }
-.state-title { display: block; font-size: var(--font-lg); font-weight: 500; line-height: 1.5; }
-.state-description { display: block; margin-top: var(--space-4); font-size: 26rpx; line-height: 1.85; color: var(--text-2); }
+.state { margin: 0 var(--space-5); padding: 64rpx 0 96rpx; }
+.state-title { display: block; font-size: var(--font-xl); font-weight: 600; line-height: 1.5; }
+.state-description { display: block; margin-top: var(--space-3); font-size: var(--font-md); line-height: 1.8; color: var(--text-2); }
 .retry { margin-top: var(--space-4); min-height: 88rpx; padding: 20rpx 0; color: var(--accent); background: transparent; font-size: 26rpx; text-align: left; }
