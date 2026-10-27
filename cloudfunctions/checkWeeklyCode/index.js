@@ -254,10 +254,14 @@ exports.main = async (event, context) => {
 
   } catch (e) {
     console.warn('[提交] 事务异常:', e.message || '未知错误');
-    await transaction.rollback();
+    try { await transaction.rollback(); } catch (_) { /* 事务已失败时回滚也会失败，忽略 */ }
     // 唯一索引冲突 = 并发重复提交（需先在控制台创建 user_id+week_key 唯一索引）
     if (e.message && (e.message.includes('duplicate') || e.message.includes('E11000'))) {
       return { success: false, message: '你本周已经提交过了' };
+    }
+    // 测试域返回真实错误便于定位，正式域保持通用文案、不暴露内部信息。
+    if (scope.testMode) {
+      return { success: false, message: `提交失败（测试域）：${e.message || '未知错误'}`, code: 'TEST_DIAG' };
     }
     return { success: false, message: '系统繁忙，提交失败' };
   }
