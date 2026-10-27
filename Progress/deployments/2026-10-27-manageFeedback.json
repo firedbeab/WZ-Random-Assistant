@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-27",
+  "timezone": "America/New_York",
+  "function": "manageFeedback",
+  "statusObserved": "Active",
+  "runtimeObserved": "Nodejs16.13",
+  "timeoutSecondsObserved": 3,
+  "backupBeforeImplementation": "f279c42",
+  "backupPreservingImplementation": "593f60b",
+  "files": [
+    {
+      "file": "index.js",
+      "local": "ee2e4a14b67520412f8526f0af93cab9f0290d2dfc8d3292e062505382abd0a1",
+      "downloaded": "ee2e4a14b67520412f8526f0af93cab9f0290d2dfc8d3292e062505382abd0a1",
+      "matches": true
+    },
+    {
+      "file": "service.js",
+      "local": "3ea376f809d91ae5696800861572b486843f5e41599bacae742c825cad8a2851",
+      "downloaded": "3ea376f809d91ae5696800861572b486843f5e41599bacae742c825cad8a2851",
+      "matches": true
+    },
+    {
+      "file": "dataScope.js",
+      "local": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+      "downloaded": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+      "matches": true
+    },
+    {
+      "file": "package.json",
+      "local": "cbe47c6222fcfb268ea5bbadf301d5cb195d5bd9b9ff1da7aade10254795832f",
+      "downloaded": "cbe47c6222fcfb268ea5bbadf301d5cb195d5bd9b9ff1da7aade10254795832f",
+      "matches": true
+    },
+    {
+      "file": "config.json",
+      "local": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8",
+      "downloaded": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8",
+      "matches": true
+    }
+  ],
+  "collections": [
+    "user_feedback",
+    "test_user_feedback",
+    "feedback_polls",
+    "test_feedback_polls",
+    "feedback_votes",
+    "test_feedback_votes",
+    "feedback_limits",
+    "test_feedback_limits"
+  ],
+  "clientPermissions": "ADMINONLY",
+  "checks": {
+    "permissionReadback": 8,
+    "testClientDirectWriteDenied": true,
+    "testSubmitIdempotency": true,
+    "testAdminReplyAndReadVersion": true,
+    "testVoteChangeTotal": 1,
+    "testVoteChangeCounts": [
+      0,
+      1
+    ],
+    "testEndPoll": true
+  },
+  "limits": [
+    "No production business writes during smoke checks",
+    "No miniprogram upload or release",
+    "New feedback query composite indexes and production content-check latency still need operational review"
+  ]
+}

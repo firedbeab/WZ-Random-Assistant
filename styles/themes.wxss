@@ -27,9 +27,10 @@ page {
   --on-accent: #ffffff;
   --gradient-open-start: #e2efe7;
   --gradient-open-mid: #eef1ea;
-  --gradient-closed-start: #eceae5;
-  --gradient-closed-mid: #f0eeea;
   --focus-ring: 0 0 0 4rpx rgba(40, 118, 79, .22);
+  --gradient-closed-start: #e2efe7;
+  --gradient-closed-mid: #eef1ea;
+  --input-focused: #f3f7f5;
   --success: #217346;
   --success-weak: #e8f2ec;
   --on-success: #ffffff;
@@ -74,9 +75,10 @@ page {
     --on-accent: #102218;
     --gradient-open-start: #1c2b22;
     --gradient-open-mid: #18231c;
-    --gradient-closed-start: #1a211c;
-    --gradient-closed-mid: #171e19;
     --focus-ring: 0 0 0 4rpx rgba(126, 213, 161, .3);
+    --gradient-closed-start: #1c2b22;
+    --gradient-closed-mid: #18231c;
+    --input-focused: #304036;
     --success: #81d9a3;
     --success-weak: #233d2e;
     --on-success: #102218;

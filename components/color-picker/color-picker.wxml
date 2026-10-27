@@ -1,6 +1,5 @@
 <view class="picker" style="{{appearanceStyle}}">
   <view class="picker-plane" style="background-color:{{hueColor}};" data-kind="plane" bindtouchstart="start" catchtouchmove="move" bindtouchend="end" bindtouchcancel="end" aria-label="调整颜色饱和度和明度"><view class="picker-white" /><view class="picker-black" /><view class="picker-thumb" style="left:{{sat}}%;top:{{val}}%;background:{{hex}};" /></view>
   <view class="picker-hue" data-kind="hue" bindtouchstart="start" catchtouchmove="move" bindtouchend="end" bindtouchcancel="end" aria-label="色相"><view class="hue-thumb" style="left:{{hue / 360 * 100}}%;" /></view>
-  <slider min="0" max="359" value="{{hue}}" bindchange="hueChange" activeColor="{{themeColors.accent}}" backgroundColor="{{themeColors.line}}" block-color="{{themeColors.accent}}" block-size="20" aria-label="色相数字滑块" />
-  <view class="picker-code"><view style="background:{{hex}};" /><input value="{{field}}" maxlength="7" bindinput="input" bindblur="blur" placeholder="#28764f" aria-label="六位十六进制颜色" /></view>
+  <view class="picker-code"><view class="picker-swatch" style="background:{{hex}};" /><view class="picker-input-shell {{focused ? 'focused' : ''}}"><input value="{{field}}" maxlength="7" bindinput="input" bindfocus="focus" bindblur="blur" placeholder="#28764f" aria-label="六位十六进制颜色" /></view></view>
 </view>

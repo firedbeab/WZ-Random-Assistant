@@ -30,14 +30,12 @@ const PALETTES = {
       accent: '#28764f', 'accent-weak': '#e8f2ec', 'accent-pressed': '#246a48',
       'accent-disabled': '#8aab98', 'on-accent': '#ffffff',
       'gradient-open-start': '#e2efe7', 'gradient-open-mid': '#eef1ea',
-      'gradient-closed-start': '#eceae5', 'gradient-closed-mid': '#f0eeea',
       'focus-ring': '0 0 0 4rpx rgba(40, 118, 79, .22)'
     },
     dark: {
       accent: '#7ed5a1', 'accent-weak': '#233d2e', 'accent-pressed': '#a0e2b9',
       'accent-disabled': '#4c6d58', 'on-accent': '#102218',
       'gradient-open-start': '#1c2b22', 'gradient-open-mid': '#18231c',
-      'gradient-closed-start': '#1a211c', 'gradient-closed-mid': '#171e19',
       'focus-ring': '0 0 0 4rpx rgba(126, 213, 161, .3)'
     }
   }
@@ -63,14 +61,18 @@ const STORAGE_KEY = 'appearance_preferences_v1';
 let preference = { mode: 'system', palette: 'green' };
 let systemMode = 'light', started = false;
 const listeners = new Set();
+let preferenceTimer;
 const api = () => typeof wx === 'undefined' ? null : wx;
 const validMode = value => value === 'light' || value === 'dark' || value === 'system';
 
 function getTokens(mode = 'light', palette = 'green', customColor = '#28764f') {
   const resolved = mode === 'dark' ? 'dark' : 'light';
   const seed = palette === 'custom' ? colors.normalize(customColor) : colors.PRESETS[palette];
-  const brand = palette !== 'green' && seed ? colors.generate(seed, resolved) : PALETTES.green[resolved];
-  return { ...NEUTRALS[resolved], ...brand, ...STATES[resolved] };
+  const neutrals = palette !== 'green' && seed ? { ...NEUTRALS[resolved], ...colors.neutralTint(resolved, seed) } : NEUTRALS[resolved];
+  const brand = palette !== 'green' && seed ? colors.generate(seed, resolved, neutrals) : PALETTES.green[resolved];
+  return { ...neutrals, ...brand,
+    'gradient-closed-start': brand['gradient-open-start'], 'gradient-closed-mid': brand['gradient-open-mid'],
+    'input-focused': colors.mix(resolved === 'dark' ? neutrals['surface-2'] : neutrals.surface, brand.accent, resolved === 'dark' ? .07 : .055), ...STATES[resolved] };
 }
 function cssVariables(tokens) {
   return Object.keys(tokens).map(key => `--${key}:${tokens[key]};`).join('');
@@ -85,7 +87,8 @@ function iconSources(tokens) {
     close: svg('<path d="m5 5 10 10M5 15 15 5"/>', tokens['text-2']),
     bell: svg(bell, tokens.accent), bellMuted: svg(bell, tokens['text-2']),
     musicList: svg('<path d="M3 4h8M3 8h6M3 12h4M13 13V5l4-1v8"/><ellipse cx="11" cy="14" rx="2" ry="1.5"/><ellipse cx="15" cy="13" rx="2" ry="1.5"/>', tokens.accent),
-    history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent)
+    history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent),
+    person: svg('<circle cx="10" cy="6" r="3"/><path d="M4 17v-2a6 6 0 0 1 12 0v2"/>', tokens.accent)
   };
 }
 function getState() {
@@ -137,14 +140,19 @@ function refreshSystem() {
 // 微信原生确认框由系统着色；手动选择应用深色时也应按系统底色选择其按钮色。
 function getNativeColors() { readSystemMode(); return getTokens(systemMode, preference.palette, preference.customColor); }
 function subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }
-function setPreference(next) {
+function flushPreference() {
+  clearTimeout(preferenceTimer); preferenceTimer = null;
+  try { if (api() && api().setStorageSync) api().setStorageSync(STORAGE_KEY, { ...preference }); } catch (_) {}
+}
+function setPreference(next, options = {}) {
   if (!next || !validMode(next.mode)) return false;
   const palette = next.palette || preference.palette, customColor = next.customColor === undefined ? preference.customColor : colors.normalize(next.customColor);
   if (!(Object.prototype.hasOwnProperty.call(colors.PRESETS, palette) || palette === 'custom' && customColor)) return false;
   if (next.customColor !== undefined && !customColor) return false;
   preference = { mode: next.mode, palette, ...(customColor ? { customColor } : {}) };
   readSystemMode();
-  try { if (api() && api().setStorageSync) api().setStorageSync(STORAGE_KEY, { ...preference }); } catch (_) {}
+  if (options.deferSave) { clearTimeout(preferenceTimer); preferenceTimer = setTimeout(flushPreference, 120); }
+  else flushPreference();
   notify();
   return true;
 }
@@ -211,4 +219,4 @@ function component(definition) {
     }
   } };
 }
-module.exports = { getTokens, cssVariables, getState, getNativeColors, start, refreshSystem, subscribe, setPreference, page, component, STORAGE_KEY };
+module.exports = { getTokens, cssVariables, getState, getNativeColors, start, refreshSystem, subscribe, setPreference, flushPreference, page, component, STORAGE_KEY };

@@ -20,6 +20,8 @@ const pollView = item => ({ ...item, deadline: date(item.endsAt), options: item.
 function weekKey() { const d = new Date(Date.now() + 28800000); d.setUTCDate(d.getUTCDate() + (7 - d.getUTCDay()) % 7); return d.toISOString().slice(0, 10); }
 // 所有新页面共用关闭保护和退场时间，正文不充当拖动热区。
 const sheetMethods = {
+  onCommunityFieldFocus(e) { this.setData({ focusedField: e.currentTarget.dataset.focusField || e.currentTarget.dataset.field }); },
+  onCommunityFieldBlur(e) { if (this.data.focusedField === (e.currentTarget.dataset.focusField || e.currentTarget.dataset.field)) this.setData({ focusedField: '' }); },
   openSheet(kind, patch = {}) { clearTimeout(this._sheetTimer); this.setData({ sheet: kind, sheetClosing: false, dirty: false, sheetError: '', ...patch }); },
   async closeSheet() {
     if (this.data.busy || this.data.sheetClosing) return;

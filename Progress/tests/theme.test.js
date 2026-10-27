@@ -19,7 +19,7 @@ function fixture(options = {}) {
   };
   if (options.old) { delete wx.getAppBaseInfo; wx.getSystemInfoSync = () => ({ theme: system }); }
   if (options.throwing) { wx.getAppBaseInfo = () => { throw Error('unsupported'); }; wx.onThemeChange = () => { throw Error('unsupported'); }; }
-  const sandbox = { module: { exports: {} }, wx, require: () => require('../../utils/color-palette') };
+  const sandbox = { module: { exports: {} }, wx, setTimeout, clearTimeout, require: () => require('../../utils/color-palette') };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/theme.js'), 'utf8'), sandbox);
   const instance = sandbox.module.exports;
   return { theme: instance, wx, disk, natives, observers: () => observers, emit(mode) { system = mode; if (event) event({ theme: mode }); } };
@@ -113,4 +113,12 @@ test('手动外观不让原生确认框在系统浅色背景使用浅粉色文�
   assert.equal(f.theme.getState().tokens.danger, '#ffaaa5');
   assert.equal(f.theme.getNativeColors().danger, '#bd3535');
   f.emit('dark'); assert.equal(f.theme.getNativeColors().danger, '#ffaaa5');
+});
+
+test('实时调色立即广播，关闭或离页时可刷入最后一个颜色，重启恢复自定义主题', () => {
+  const f=fixture();f.theme.start();
+  f.theme.setPreference({mode:'dark',palette:'custom',customColor:'#9f2925'},{deferSave:true});
+  assert.equal(f.theme.getState().palette,'custom');assert.equal(f.theme.getState().customColor,'#9f2925');
+  f.theme.flushPreference();const second=fixture({disk:f.disk});second.theme.start();
+  assert.equal(second.theme.getState().customColor,'#9f2925');assert.equal(second.theme.getState().resolved,'dark');
 });

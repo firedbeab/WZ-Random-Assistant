@@ -31,3 +31,8 @@
 .c-sheet.admin-drawer-mask > .admin-drawer { display: flex; flex-direction: column; overflow: hidden; max-height: 86vh; padding: 44rpx 32rpx calc(24rpx + env(safe-area-inset-bottom)); }.c-sheet-head { flex: none; margin-bottom: 22rpx; }.c-sheet-scroll { flex: 1; min-height: 0; height: 52vh; }.c-sheet-body { padding-bottom: 8rpx; }.c-sheet-actions { flex: none; padding-top: 24rpx; }.c-error { display: block; color: var(--danger); font-size: 25rpx; line-height: 1.7; margin-top: 16rpx; }.c-motion { animation: admin-page-in 280ms ease; }
 .c-options-edit { display: flex; align-items: center; gap: 12rpx; margin-top: 14rpx; }.c-options-edit input { flex: 1; min-width: 0; }.c-options-edit button { flex: none; }
 @media(prefers-reduced-motion:reduce) { .c-motion { animation-duration: 1ms; } }
+.c-input-shell { padding: 2rpx; border: 2rpx solid transparent; border-radius: 18rpx; transition: background-color 160ms,border-color 160ms,box-shadow 160ms; }
+.c-input-shell .c-field { background: var(--surface-2); border-color: transparent; border-radius: 12rpx; transition: background-color 160ms; }
+.c-input-shell.focused { border-color: var(--accent); box-shadow: var(--focus-ring); }.c-input-shell.focused .c-field { background: var(--input-focused); }
+.c-sheet-scroll { scrollbar-width: none; }.c-sheet-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.c-options-edit .c-input-shell { flex: 1; min-width: 0; }.c-input-shell textarea { display: block; }

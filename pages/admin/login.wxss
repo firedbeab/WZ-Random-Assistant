@@ -1,5 +1,5 @@
 page {
-  background-color: var(--bg);
+  background: var(--gradient-page);
   height: 100vh;
 }
 

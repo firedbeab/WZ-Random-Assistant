@@ -63,9 +63,13 @@
 .entry-title { display: block; font-size: var(--font-md); font-weight: 500; color: var(--text-1); }
 .entry-description { display: block; margin-top: var(--space-1); font-size: var(--font-sm); color: var(--text-2); }
 .entry-arrow { flex: none; font-size: var(--font-lg); color: var(--text-3); }
+.home-entry-row { display: grid; grid-template-columns: minmax(0,1fr) 112rpx; gap: 20rpx; margin-top: var(--space-4); }
+.home-entry-row .playlist-entry { margin-top: 0; height: 112rpx; min-height: 112rpx; padding: 12rpx 20rpx; gap: 12rpx; }
+.home-entry-row .entry-icon { width: 56rpx; height: 56rpx; }.home-entry-row .entry-description { font-size: 22rpx; }
+.home-entry-row .my-entry { width: 112rpx; padding: 12rpx; flex-direction: column; justify-content: center; gap: 4rpx; text-align: center; }.home-entry-row .my-entry .entry-icon { width: 40rpx; height: 40rpx; background: transparent; }.home-entry-row .my-entry .entry-icon-image { width: 40rpx; height: 40rpx; }.home-entry-row .my-entry .entry-title { font-size: 26rpx; }
 .opening-note { margin-top: var(--space-4); color: var(--text-3); font-size: var(--font-xs); text-align: center; line-height: 1.6; }
 .result-msg { margin-top: var(--space-4); color: var(--accent); font-size: var(--font-sm); text-align: center; line-height: 1.5; }
-.home-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding: var(--space-5); padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
+.home-footer { margin-top: auto; display: flex; align-items: center; justify-content: center; padding: var(--space-5); padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }
 .footer-links { display: flex; align-items: center; gap: var(--space-3); }
 .footer-separator, .version { color: var(--text-3); font-size: var(--font-sm); }
 @keyframes secret-wiggle-a {

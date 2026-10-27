@@ -97,6 +97,7 @@
         <button wx:if="{{scheduleLoadFailed}}" class="text-button retry-link" bindtap="onPullDownRefresh">刷新重试 ›</button>
       </view>
     </block>
+    <view class="home-entry-row">
     <button class="playlist-entry" wx:if="{{!schedulePublished || !statusReady || statusError}}" bindtap="goPlaylist" hover-class="entry-pressed">
       <view class="entry-icon"><image class="entry-icon-image" src="{{themeIcons.musicList}}" mode="aspectFit" aria-hidden="true" /></view>
       <view class="entry-content">
@@ -113,14 +114,13 @@
       </view>
       <text class="entry-arrow">›</text>
     </button>
+    <button class="playlist-entry my-entry" bindtap="goMy" hover-class="entry-pressed"><view class="entry-icon"><image class="entry-icon-image" src="{{themeIcons.person}}" mode="aspectFit" aria-hidden="true" /></view><text class="entry-title">我的</text></button>
+    </view>
     <view class="result-msg" wx:if="{{statusMsg}}">{{statusMsg}}</view>
     <view class="opening-note" wx:if="{{statusReady && !canSubmit && !hasSubmitted && !statusError}}">每周日 8:00–20:00 开放点歌</view>
   </view>
   <view class="home-footer">
-    <view class="footer-links">
-      <button class="text-button" bindtap="goMy" hover-class="text-pressed">我的</button>
-    </view>
-    <text class="version num">v1.9</text>
+
   </view>
 </view>
 <privacy-popup id="privacyPopup"></privacy-popup>

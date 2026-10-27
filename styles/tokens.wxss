@@ -1,7 +1,8 @@
 /* 公共排版与几何变量；色值来源为 utils/theme.js。 */
 page {
-  --gradient-open: linear-gradient(180deg, var(--gradient-open-start) 0px, var(--gradient-open-mid) 180px, var(--bg) 420px);
-  --gradient-closed: linear-gradient(180deg, var(--gradient-closed-start) 0px, var(--gradient-closed-mid) 180px, var(--bg) 420px);
+  --gradient-page: linear-gradient(180deg, var(--gradient-open-start) 0px, var(--gradient-open-mid) 180px, var(--bg) 420px);
+  --gradient-open: var(--gradient-page);
+  --gradient-closed: var(--gradient-page);
   --font-xs: 20rpx;
   --font-code: 'Courier New', Courier, monospace;
   --font-sm: 24rpx;
