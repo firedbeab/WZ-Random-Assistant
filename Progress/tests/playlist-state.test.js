@@ -29,7 +29,7 @@ function fixture(options={}) {
     require:name=>name.endsWith('/theme')?require('../../utils/theme'):name.endsWith('/playlist-presentation')?presentation:runtime
   });
   page.data=structuredClone(page.data);page.setData=patch=>Object.assign(page.data,patch);
-  return {page,disk,calls,writes,copies};
+  return {page,disk,calls,writes,copies,wx};
 }
 test('播出日期跨年、空日、长文本、实际总数与管理员说明保留',()=>{
   const original=schedule('长歌名'.repeat(20)), before=JSON.stringify(original);
@@ -204,4 +204,43 @@ test('首屏失败不预取；重试成功后才补齐另外两期，往期直�
   failed=false;await f.page.retryLoad();await f.page._prefetchTask;
   assert.equal(f.calls.length,4);assert.equal(f.page.data.activeTab,1);
   assert.equal(f.page.data.renderedWeeks.join(','),'1');
+});
+
+function tabMeasurements(f) {
+  const pending=[];
+  f.wx.createSelectorQuery=()=>{
+    const query={in:()=>query,select:()=>query,selectAll:()=>query,boundingClientRect:()=>query,exec:callback=>pending.push(callback)};
+    return query;
+  };
+  return pending;
+}
+const tabRects=(left=20,scale=1)=>[{left},[{left,width:64*scale},{left:left+88*scale,width:48*scale},{left:left+160*scale,width:48*scale}]];
+
+test('滑条按实际标签尺寸定位，点击与左右滑动共用一根滑条，往期直达初始位置正确',async()=>{
+  const f=fixture(),pending=tabMeasurements(f);
+  f.page.data.activeTab=1;f.page.onReady();pending[0](tabRects());
+  assert.equal(f.page.data.tabIndicatorReady,true);
+  assert.equal(f.page.data.tabIndicatorStyle,'width:48px;transform:translateX(88px);');
+  await swipe(f.page,[270,220],[100,220]);
+  assert.equal(f.page.data.tabIndicatorStyle,'width:48px;transform:translateX(160px);');
+  await f.page.switchWeek({currentTarget:{dataset:{value:0}}});
+  assert.equal(f.page.data.tabIndicatorStyle,'width:64px;transform:translateX(0px);');
+});
+
+test('窗口变化重新测量，迟到测量与卸载后回调不能覆盖新滑条位置',()=>{
+  const f=fixture(),pending=tabMeasurements(f);f.page.onReady();f.page.onResize();
+  pending[1](tabRects(30,1.25));pending[0](tabRects());
+  assert.equal(f.page.data.tabIndicatorStyle,'width:80px;transform:translateX(0px);');
+  f.page.measureWeekTabs();f.page.onUnload();pending[2](tabRects(20,2));
+  assert.equal(f.page.data.tabIndicatorStyle,'width:80px;transform:translateX(0px);');
+});
+
+test('测量失败或接口不可用时保留静态指示，不输出无效位置，切期与读取仍可用',async()=>{
+  const f=fixture();assert.doesNotThrow(()=>f.page.onReady());
+  await f.page.selectWeek(1);assert.equal(f.page.data.activeTab,1);assert.equal(f.page.data.tabIndicatorReady,false);
+  const pending=tabMeasurements(f);f.page.measureWeekTabs();pending[0](tabRects());
+  assert.equal(f.page.data.tabIndicatorReady,true);
+  f.page.measureWeekTabs();pending[1]([{left:20},[{left:20,width:NaN}]]);
+  assert.equal(f.page.data.tabIndicatorReady,false);
+  await f.page.selectWeek(2);assert.equal(f.page.data.activeTab,2);
 });

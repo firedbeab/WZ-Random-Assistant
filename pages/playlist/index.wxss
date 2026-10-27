@@ -15,10 +15,12 @@
 .notify-action.is-disabled { color: var(--text-2) !important; background: transparent !important; }
 .notify-icon { flex: none; width: 28rpx; height: 28rpx; }
 .playlist-tools { padding: 0 var(--space-5) 40rpx; }
-.week-tabs { display: flex; justify-content: flex-start; gap: var(--space-6); margin-top: 26rpx; }
-.tab-item { position: relative; min-height: 88rpx; padding: 26rpx 0 28rpx; background: transparent; color: var(--text-2); font-size: var(--font-md); white-space: nowrap; }
+.week-tabs { position: relative; display: flex; justify-content: flex-start; gap: var(--space-6); margin-top: 26rpx; }
+.tab-item { position: relative; min-height: 88rpx; padding: 26rpx 0 28rpx; background: transparent; color: var(--text-2); font-size: var(--font-md); white-space: nowrap; transition: color 320ms ease; }
 .tab-item.active { color: var(--accent); font-weight: 600; }
 .tab-item.active::after { position: absolute; content: ''; top: auto; height: 4rpx; width: auto; left: 0; right: 0; bottom: 8rpx; transform: none; border-radius: 4rpx; background: var(--accent); }
+.indicator-ready .tab-item.active::after { display: none; }
+.tab-indicator { position: absolute; left: 0; bottom: 8rpx; height: 4rpx; border-radius: var(--radius-pill); background: var(--accent); pointer-events: none; transition: transform 320ms ease, width 320ms ease; }
 .period-meta { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); margin-top: var(--space-5); }
 .period-range { color: var(--text-1); font-size: var(--font-lg); font-weight: 600; line-height: 1.5; }
 .period-count { flex: none; color: var(--text-2); font-size: var(--font-sm); }

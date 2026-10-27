@@ -18,6 +18,8 @@ Page(theme.page({
     // 周次标签：0=本周, 1=上周, 2=上上周
     activeTab: 0,
     renderedWeeks: [0],
+    tabIndicatorReady: false,
+    tabIndicatorStyle: '',
     tabs: [
       { label: '最新一期', value: 0 },
       { label: '上一期', value: 1 },
@@ -29,9 +31,44 @@ Page(theme.page({
     const activeTab = ['1', '2'].includes(options.tab) ? Number(options.tab) : 0;
     this._prefetchEnabled = true;
     this._prefetchStarted = false;
+    this._playlistUnloaded = false;
     this.setData({ activeTab, renderedWeeks: [activeTab] });
     this.loadWeekPlaylist(activeTab, false);
     this.checkSubStatus();
+  },
+
+  onReady() {
+    this.measureWeekTabs();
+  },
+
+  onResize() {
+    if (typeof wx.nextTick === 'function') wx.nextTick(() => this.measureWeekTabs());
+    else this.measureWeekTabs();
+  },
+
+  // 按实际标签宽度定位同一根滑条，不写死汉字宽度或机型尺寸。
+  measureWeekTabs() {
+    if (this._playlistUnloaded || typeof wx.createSelectorQuery !== 'function') return;
+    const measureId = this._tabMeasureId = (this._tabMeasureId || 0) + 1;
+    const query = wx.createSelectorQuery().in(this);
+    query.select('.week-tabs').boundingClientRect();
+    query.selectAll('.tab-item').boundingClientRect();
+    query.exec(result => {
+      if (this._playlistUnloaded || measureId !== this._tabMeasureId) return;
+      const [container, items] = result || [];
+      if (!container || !Number.isFinite(container.left) || !Array.isArray(items) || items.length !== this.data.tabs.length || items.some(item => !item || !Number.isFinite(item.left) || !Number.isFinite(item.width) || item.width <= 0)) {
+        this._tabLayout = null;
+        this.setData({ tabIndicatorReady: false });
+        return;
+      }
+      this._tabLayout = items.map(item => ({ left: item.left - container.left, width: item.width }));
+      this.setData(this.tabIndicatorPatch(this.data.activeTab));
+    });
+  },
+
+  tabIndicatorPatch(value) {
+    const item = this._tabLayout && this._tabLayout[value];
+    return item ? { tabIndicatorReady: true, tabIndicatorStyle: `width:${item.width}px;transform:translateX(${item.left}px);` } : {};
   },
 
   onPullDownRefresh() {
@@ -62,7 +99,7 @@ Page(theme.page({
   selectWeek(value) {
     if (!Number.isInteger(value) || value < 0 || value >= this.data.tabs.length || value === this.data.activeTab) return;
     // 只渲染选中期次；换 key 重启单段淡入，避免原生多步动画停在透明状态。
-    this.setData({ activeTab: value, renderedWeeks: [value] });
+    this.setData({ activeTab: value, renderedWeeks: [value], ...this.tabIndicatorPatch(value) });
     return this.loadWeekPlaylist(value, false);
   },
 
@@ -105,6 +142,8 @@ Page(theme.page({
 
   onUnload() {
     this._prefetchEnabled = false;
+    this._playlistUnloaded = true;
+    this._tabMeasureId = (this._tabMeasureId || 0) + 1;
     this.onPlaylistTouchCancel();
   },
 

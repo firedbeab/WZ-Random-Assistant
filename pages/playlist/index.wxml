@@ -16,14 +16,15 @@
   </view>
   <view class="playlist-content" bindtouchstart="onPlaylistTouchStart" bindtouchmove="onPlaylistTouchMove" bindtouchend="onPlaylistTouchEnd" bindtouchcancel="onPlaylistTouchCancel">
   <view class="playlist-tools">
-    <view class="week-tabs" role="tablist" aria-label="选择歌单期次">
+    <view class="week-tabs {{tabIndicatorReady ? 'indicator-ready' : ''}}" role="tablist" aria-label="选择歌单期次">
       <button wx:for="{{tabs}}" wx:key="value" class="tab-item {{activeTab === item.value ? 'active' : ''}}" bindtap="switchWeek" data-value="{{item.value}}" role="tab" aria-selected="{{activeTab === item.value}}" hover-class="text-pressed">{{item.label}}</button>
+      <view wx:if="{{tabIndicatorReady}}" class="tab-indicator" style="{{tabIndicatorStyle}}" aria-hidden="true"></view>
     </view>
     <view class="period-meta">
       <text class="period-range num">{{periodRange}}</text>
       <text class="period-count num" wx:if="{{schedule && !loading}}">共 {{playlistTotal}} 首</text>
     </view>
-    <text class="copy-tip" wx:if="{{schedule && !loading && playlistTotal > 0}}">左右滑动切换期次 · 长按曲目复制</text>
+    <view class="copy-tip"><text>左右滑动切换歌单</text><text wx:if="{{schedule && !loading && playlistTotal > 0}}"> · 长按曲目复制</text></view>
   </view>
   <view class="week-panel" wx:for="{{renderedWeeks}}" wx:key="*this">
   <view class="state" wx:if="{{loading}}">
