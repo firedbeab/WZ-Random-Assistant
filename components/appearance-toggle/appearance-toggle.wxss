@@ -1,0 +1,5 @@
+:host { display: inline-block; flex: none; }
+.appearance-toggle { display: flex; align-items: center; justify-content: center; min-height: 88rpx; margin: 0; padding: 0; border: none; border-radius: 0; background: transparent; font-weight: 400; line-height: 1.5; }
+.appearance-toggle::after { border: none; }
+.appearance-pill { display: block; padding: 8rpx 20rpx; border-radius: var(--radius-pill); background: var(--accent-weak); color: var(--accent); font-size: var(--font-sm); white-space: nowrap; }
+.appearance-pressed { opacity: .6; }

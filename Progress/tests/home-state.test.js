@@ -75,7 +75,7 @@ function fixture(options = {}) {
     Page: value => { page = value; }, Date: FixedDate, wx, console,
     getApp: () => ({ globalData: { userInfo: { openid: 'fixture-user' } } }),
     setTimeout: () => 1, clearTimeout() {},
-    require: name => name.endsWith('/runtime') ? runtime : name.endsWith('/home-presentation') ? presentation : {}
+    require: name => name.endsWith('/theme') ? require('../../utils/theme') : name.endsWith('/runtime') ? runtime : name.endsWith('/home-presentation') ? presentation : {}
   });
   page.data = structuredClone(page.data);
   page.data.userInfo = { openid: 'fixture-user', ...options.userInfo };
@@ -88,10 +88,11 @@ test('开放、已提交缓存及发布预览均能完成状态检查', async ()
   assert.equal(open.page.data.canSubmit, true);
   assert.equal(open.page.data.statusReady, true);
   const cached = fixture();
-  cached.disk.set('test_last_submission', { week_key: '2026-10-25', song_name: '稻香', remark: '周杰伦' });
+  cached.disk.set('test_last_submission', { week_key: '2026-10-25', song_name: '稻香', remark: '周杰伦', special_note: '' });
   await cached.page.checkTimeAndSubmission();
   assert.equal(cached.page.data.hasSubmitted, true);
-  assert.equal(cached.page.data.submittedInfo, '《稻香》- 周杰伦');
+  assert.equal(cached.page.data.submittedTitle, '稻香');
+  assert.equal(cached.page.data.submittedSinger, '周杰伦');
   for (const prod of [false, true]) {
     const published = fixture({ prod, schedule: { week_key: '2026-10-25', day1: [{ song_name: '稻香', singer: '周杰伦' }] } });
     await published.page.checkTimeAndSubmission();
@@ -126,7 +127,7 @@ test('迟到的状态响应不能清除新状态或本地投稿缓存', async ()
   const pending = page.checkTimeAndSubmission();
   disk.set('test_last_submission', { song_name: '新投稿' });
   page._statusToken++;
-  page.setData({ hasSubmitted: true, submittedInfo: '新投稿' });
+  page.setData({ hasSubmitted: true, submittedTitle: '新投稿' });
   resolve({ result: { success: true, data: { day1: [] } } });
   await pending;
   assert.equal(page.data.hasSubmitted, true);
@@ -147,13 +148,47 @@ test('输入焦点竞争、说明/往期入口及原提交字段契约', async (
   assert.equal(sent.title, '稻香'); assert.equal(sent.remark, '周杰伦'); assert.equal(sent.specialNote, '现场版');
   assert.equal(page.data.hasSubmitted, true); assert.equal(page.data.loading, false);
   assert.equal(disk.get('test_last_submission').song_name, '稻香');
+  assert.equal(disk.get('test_last_submission').special_note, '现场版');
+  assert.equal(page.data.submittedNote, '现场版');
 });
 test('往期入口参数有边界，默认仍展示最新一期', () => {
   let definition;
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/playlist/index.js'), 'utf8'), { Page: value => { definition = value; }, require: name => name.endsWith('/playlist-presentation') ? require('../../utils/playlist-presentation') : ({ isTestMode: () => true }) });
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/playlist/index.js'), 'utf8'), { Page: value => { definition = value; }, require: name => name.endsWith('/theme') ? require('../../utils/theme') : name.endsWith('/playlist-presentation') ? require('../../utils/playlist-presentation') : ({ isTestMode: () => true }) });
   for (const [tab, expected] of [[undefined, 0], ['1', 1], ['2', 2], ['-1', 0], ['100', 0]]) {
     const page = { data: {}, setData(patch) { Object.assign(this.data, patch); }, loadWeekPlaylist(offset) { this.loaded = offset; }, checkSubStatus() {} };
     definition.onLoad.call(page, { tab });
     assert.equal(page.loaded, expected); assert.equal(page.data.activeTab, expected);
+  }
+});
+
+test('长歌名、歌手和备注分开呈现，不截断；计数固定在提示语下方且只出现一次', () => {
+  const source = { song_name: '超长歌名'.repeat(20), singer: '超长歌手'.repeat(20), special_note: '备注\n第二行' };
+  assert.deepEqual(presentation.submissionView(source), { submittedTitle: source.song_name, submittedSinger: source.singer, submittedNote: source.special_note });
+  assert.deepEqual(presentation.submissionView(null), { submittedTitle: '', submittedSinger: '', submittedNote: '' });
+  const xml = fs.readFileSync(path.join(root, 'pages/index/index.wxml'), 'utf8');
+  assert.ok(xml.includes('{{submittedTitle}}')); assert.ok(xml.includes('{{submittedSinger}}')); assert.ok(xml.includes('wx:if="{{submittedNote}}"'));
+  assert.equal(xml.includes('{{submittedInfo}}'), false);
+  const count = xml.indexOf('class="submission-count"');
+  assert.ok(count > xml.indexOf('本周无需再次提交。') && count < xml.indexOf('class="home-main"'));
+  assert.equal((xml.match(/本周已有/g) || []).length, 1);
+});
+test('旧缓存回源补齐备注；离线仍保留已提交展示，新缓存不重复查本人投稿', async () => {
+  for (const fails of [false, true]) {
+    const f = fixture({ call: async request => {
+      if (request.data && request.data.action === 'getMySubmission') {
+        if (fails) throw Error('offline');
+        return { result: { success: true, data: { song_name: '长歌名', singer: '歌手', special_note: '完整备注' } } };
+      }
+      return { result: { success: true, data: null } };
+    } });
+    f.disk.set('test_last_submission', { week_key: '2026-10-25', song_name: '长歌名', remark: '歌手' });
+    await f.page.checkTimeAndSubmission();
+    assert.equal(f.page.data.hasSubmitted, true); assert.equal(f.page.data.statusError, false);
+    assert.equal(f.page.data.submittedTitle, '长歌名'); assert.equal(f.page.data.submittedNote, fails ? '' : '完整备注');
+    if (!fails) {
+      assert.equal(f.disk.get('test_last_submission').special_note, '完整备注');
+      f.calls.length = 0; await f.page.checkTimeAndSubmission();
+      assert.equal(f.calls.some(call => call.data && call.data.action === 'getMySubmission'), false);
+    }
   }
 });

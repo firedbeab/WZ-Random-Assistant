@@ -1,7 +1,8 @@
+const theme = require('../../utils/theme');
 const { cloudCall, isTestMode } = require('../../utils/runtime');
 const { DEFAULT_TOP, DEFAULT_BOTTOM } = require('../../utils/easter-egg-photos');
 const MAX_BYTES = 2 * 1024 * 1024;
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(), allowed: false, loading: true, entries: [], revision: 0, busy: false,
     editing: false, id: '', fileID: '', imagePath: '', localPath: '', topText: '', bottomText: '', enabled: true,
@@ -120,7 +121,7 @@ Page({
   remove(e) {
     if (this.data.busy || !this.data.allowed) return;
     const id = e.currentTarget.dataset.id;
-    wx.showModal({ title: '删除这个彩蛋？', content: '条目会移除，未被其他条目使用的云端图片也会清理，此操作不可撤销。', confirmColor: '#d95656', success: async res => {
+    wx.showModal({ title: '删除这个彩蛋？', content: '条目会移除，未被其他条目使用的云端图片也会清理，此操作不可撤销。', confirmColor: theme.getNativeColors().danger, success: async res => {
       if (!res.confirm || this.data.busy) return;
       this.setData({ busy: true });
       try { await this.api({ action: 'delete', id, revision: this.data.revision }); await this.loadEntries(); wx.showToast({ title: '已删除', icon: 'success' }); }
@@ -129,4 +130,4 @@ Page({
     } });
   },
   noop() {}
-});
+}));

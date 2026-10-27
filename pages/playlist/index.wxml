@@ -1,14 +1,16 @@
+<page-meta page-style="{{appearanceStyle}}" />
 <view class="playlist-page">
   <app-navigation back="{{true}}" />
   <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 当前显示测试排期</view>
   <view class="playlist-head">
     <text class="page-title">每周歌单</text>
+    <appearance-toggle />
     <view wx:if="{{subscribed}}" class="notify-status" aria-label="本周发布提醒已开启">
-      <image class="notify-icon" src="/assets/icons/bell-muted.svg" mode="aspectFit" aria-hidden="true" />
+      <image class="notify-icon" src="{{themeIcons.bellMuted}}" mode="aspectFit" aria-hidden="true" />
       <text>本周已开启</text>
     </view>
     <button wx:else class="notify-action {{subscribing ? 'is-disabled' : ''}}" bindtap="onEnableSub" disabled="{{subscribing}}" hover-class="text-pressed" aria-label="开启本周发布提醒">
-      <image class="notify-icon" src="{{subscribing ? '/assets/icons/bell-muted.svg' : '/assets/icons/bell.svg'}}" mode="aspectFit" aria-hidden="true" />
+      <image class="notify-icon" src="{{subscribing ? themeIcons.bellMuted : themeIcons.bell}}" mode="aspectFit" aria-hidden="true" />
       <text>{{subscribing ? '开启中…' : '发布提醒'}}</text>
     </button>
   </view>

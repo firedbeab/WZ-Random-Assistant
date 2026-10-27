@@ -1,6 +1,7 @@
+const theme = require('../../utils/theme');
 const { navigationLayout } = require('../../utils/navigation-layout');
 
-Component({
+Component(theme.component({
   properties: {
     title: { type: String, value: 'WZ随机助手' },
     back: { type: Boolean, value: false },
@@ -31,4 +32,4 @@ Component({
       } else home();
     }
   }
-});
+}));

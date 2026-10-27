@@ -1,5 +1,12 @@
 {
   "navigationBarTitleText": "彩蛋管理",
   "enablePullDownRefresh": true,
-  "usingComponents": { "privacy-popup": "/components/privacy-popup/privacy-popup" }
+  "usingComponents": {
+    "privacy-popup": "/components/privacy-popup/privacy-popup",
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
+  },
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+  "backgroundColor": "@backgroundColor",
+  "backgroundTextStyle": "@backgroundTextStyle"
 }

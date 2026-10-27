@@ -1,8 +1,10 @@
 // app.js
 const { PROD_ENV_ID, runtimeInfo } = require('./utils/runtime');
+const theme = require('./utils/theme');
 
 App({
   onLaunch() {
+    theme.start();
     // 初始化云开发环境
     if (!wx.cloud) {
       console.error('请使用 2.2.3 或以上的基础库以使用云能力');
@@ -54,6 +56,8 @@ App({
       });
     }
   },
+
+  onShow() { theme.refreshSystem(); },
 
   globalData: {
     systemInfo: null,

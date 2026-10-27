@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 // components/privacy-popup/privacy-popup.js
 
 // 用模块级变量存储 resolve 回调函数
@@ -5,7 +6,7 @@
 // 不能放在 Component 顶层属性里（可能无法作为实例属性可靠访问）
 let _resolveFn = null;
 
-Component({
+Component(theme.component({
   data: {
     visible: false
   },
@@ -58,4 +59,4 @@ Component({
       this.setData({ visible: false });
     }
   }
-});
+}));

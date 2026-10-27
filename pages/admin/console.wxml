@@ -1,3 +1,5 @@
+<page-meta page-style="{{appearanceStyle}}" />
+<view class="appearance-toolbar"><appearance-toggle /></view>
 <view class="page">
   <view class="hero">
     <text class="hero-title">{{title}}</text>

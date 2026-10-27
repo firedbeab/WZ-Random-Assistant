@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 const { cloudCall } = require('../../utils/runtime');
 
 const MODE_TITLES = {
@@ -120,7 +121,7 @@ function displayEvent(item) {
   });
 }
 
-Page({
+Page(theme.page({
   data: {
     mode: 'submissions',
     title: '数据控制台',
@@ -249,7 +250,7 @@ Page({
     if (!ids.length) return wx.showToast({ title: '请先选择投稿', icon: 'none' });
     wx.showModal({
       title: `移除 ${ids.length} 条投稿`, editable: true,
-      placeholderText: '必须填写移除原因', confirmText: '移除', confirmColor: '#e53e3e',
+      placeholderText: '必须填写移除原因', confirmText: '移除', confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
         if (!res.content || !res.content.trim()) return wx.showToast({ title: '请填写原因', icon: 'none' });
@@ -324,7 +325,7 @@ Page({
     if (!draft || draft.status !== 'published') return;
     wx.showModal({
       title: '撤回已发布排期', editable: true, placeholderText: '必须填写撤回原因',
-      confirmText: '撤回', confirmColor: '#e53e3e',
+      confirmText: '撤回', confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
         if (!res.content || !res.content.trim()) return wx.showToast({ title: '请填写原因', icon: 'none' });
@@ -394,4 +395,4 @@ Page({
       } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
     }});
   }
-});
+}));

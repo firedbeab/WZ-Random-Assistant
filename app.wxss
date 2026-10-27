@@ -1,4 +1,8 @@
 @import "styles/tokens.wxss";
+@import "styles/themes.wxss";
+
+page { background: var(--bg); color: var(--text-1); }
+.appearance-toolbar { display: flex; align-items: center; justify-content: flex-end; padding: 0 var(--space-5); }
 
 /**app.wxss**/
 .container {
@@ -15,9 +19,9 @@
   width: 100%;
   box-sizing: border-box;
   padding: 12rpx 20rpx;
-  background: #fff3e0;
-  color: #c65d00;
-  border: 1rpx solid #ffd6a0;
+  background: var(--warn-weak);
+  color: var(--warn);
+  border: 1rpx solid var(--warn-weak);
   border-radius: 12rpx;
   font-size: 23rpx;
   line-height: 1.45;
@@ -27,7 +31,7 @@
 
 /* 统一提高原生输入控件占位文字的对比度，避免浅灰文字在真机上难以辨认。 */
 .form-placeholder {
-  color: #9299a1;
-  -webkit-text-fill-color: #9299a1;
+  color: var(--placeholder);
+  -webkit-text-fill-color: var(--placeholder);
   opacity: 1;
 }

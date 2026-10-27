@@ -11,13 +11,17 @@
     "pages/admin/easter-eggs"
   ],
   "window": {
-    "navigationBarTextStyle": "black",
+    "navigationBarTextStyle": "@navigationBarTextStyle",
     "navigationBarTitleText": "WZ随机助手",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+    "backgroundColor": "@backgroundColor",
+    "backgroundTextStyle": "@backgroundTextStyle"
   },
   "cloud": true,
   "renderer": "webview",
   "lazyCodeLoading": "requiredComponents",
   "sitemapLocation": "sitemap.json",
-  "__usePrivacyCheck__": true
+  "__usePrivacyCheck__": true,
+  "darkmode": true,
+  "themeLocation": "theme.json"
 }

@@ -1,3 +1,5 @@
+<page-meta page-style="{{appearanceStyle}}" />
+<view class="appearance-toolbar"><appearance-toggle /></view>
 <!-- pages/admin/admin.wxml -->
 <view class="container">
 
@@ -268,7 +270,7 @@
       <view class="test-btn red" bindtap="onToggleChannel" data-mode="close">强制关闭通道</view>
       <view class="test-btn orange" bindtap="onToggleChannel" data-mode="reset">恢复正常时间</view>
     </view>
-    <text style="display:block; text-align:center; font-size:24rpx; color:#999; margin-top:16rpx;" wx:if="{{channelMode !== undefined}}">
+    <text style="display:block; text-align:center; font-size:24rpx; color:var(--text-3); margin-top:16rpx;" wx:if="{{channelMode !== undefined}}">
       当前状态：{{channelMode === 'open' ? '强制开放中' : channelMode === 'close' ? '强制关闭（假期模式）' : '正常时间校验'}}
     </text>
   </view>

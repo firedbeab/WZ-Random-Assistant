@@ -1,9 +1,10 @@
+const theme = require('../../utils/theme');
 // 订阅消息模板 ID（学生：新活动发布提醒）
 const STUDENT_TPL_ID = 'evJj_6Kl8CNKTf5C_j2PtJ6FPmMTbBESvuZ35DfOiGA';
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 const { playlistPresentation } = require('../../utils/playlist-presentation');
 
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(),
     schedule: null,
@@ -219,4 +220,4 @@ Page({
       this.setData({ subscribing: false });
     }
   }
-});
+}));

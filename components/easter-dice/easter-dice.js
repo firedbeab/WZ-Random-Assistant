@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 const { newRound, nextRoll } = require('../../utils/dice-easter-egg');
 const photos = require('../../utils/easter-egg-photos');
 const diagnostics = require('../../utils/image-diagnostics');
@@ -40,7 +41,7 @@ function photoBoxHeightFor(detail) {
   return Math.max(PHOTO_BOX_MIN, Math.min(PHOTO_BOX_MAX, scaled));
 }
 
-Component({
+Component(theme.component({
   properties: { testMode: { type: Boolean, value: false }, superadmin: { type: Boolean, value: false } },
   data: {
     visible: false, stage: 'dice', rolling: false, face: 0, streak: 0, streakNumbers: [], dots: [], dotPulse: false,
@@ -371,4 +372,4 @@ Component({
       this.close(); this.triggerEvent('resetgate', { normal: e.currentTarget.dataset.normal === true });
     }
   }
-});
+}));

@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
 const imageAccess = require('../../utils/image-access');
 const diagnostics = require('../../utils/image-diagnostics');
@@ -23,7 +24,7 @@ function hashText(text) {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(),
     articles: [],
@@ -335,4 +336,4 @@ Page({
     list.forEach(fileID => { delete srcs[fileID]; delete errors[fileID]; imageAccess.forget(fileID); });
     this.setData({ imageSrcs: srcs, imageErrors: errors }, () => this.prepareImages(list));
   }
-});
+}));

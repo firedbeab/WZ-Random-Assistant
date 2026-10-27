@@ -1,3 +1,5 @@
+<page-meta page-style="{{appearanceStyle}}" />
+<view class="appearance-toolbar"><appearance-toggle /></view>
 <view class="egg-admin-page">
   <view class="test-mode-banner" wx:if="{{isTestMode}}">测试彩蛋 · 仅维护 test_ 配置和 test/ 图片</view>
   <block wx:if="{{allowed}}">
@@ -20,7 +22,7 @@
     <view class="photo-options"><view bindtap="chooseImage">{{imagePath ? '换一张照片' : 'JPG / PNG / WebP，最大2MB'}}</view><view wx:if="{{imagePath}}" bindtap="preview">查看大图</view></view>
     <text class="field-label">上方文字（可留空）</text><input value="{{topText}}" maxlength="40" placeholder="{{previewTop}}" placeholder-class="form-placeholder" bindinput="input" data-field="topText" disabled="{{busy}}" />
     <text class="field-label">下方文字（可留空）</text><textarea value="{{bottomText}}" maxlength="100" placeholder="今天的小幸运，是和小猫碰个面。" placeholder-class="form-placeholder" bindinput="input" data-field="bottomText" disabled="{{busy}}" />
-    <view class="enabled-field"><text>启用此条目</text><switch checked="{{enabled}}" color="#2d8057" bindchange="toggleEditor" disabled="{{busy}}" /></view>
+    <view class="enabled-field"><text>启用此条目</text><switch checked="{{enabled}}" color="{{themeColors.accent}}" bindchange="toggleEditor" disabled="{{busy}}" /></view>
     <view class="preview-label">弹窗文案预览</view><view class="text-preview"><text class="preview-top">{{previewTop}}</text><text class="preview-bottom">{{previewBottom}}</text></view>
     <view class="editor-actions"><view class="action" bindtap="closeEditor">取消</view><view class="action primary {{busy ? 'disabled' : ''}}" bindtap="save">{{busy ? '保存中…' : '保存彩蛋'}}</view></view>
   </scroll-view>

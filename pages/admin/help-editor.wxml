@@ -1,3 +1,5 @@
+<page-meta page-style="{{appearanceStyle}}" />
+<view class="appearance-toolbar"><appearance-toggle /></view>
 <view class="page" wx:if="{{!loading}}">
   <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 图片写入 test/help-images/</view>
   <view class="form-card">

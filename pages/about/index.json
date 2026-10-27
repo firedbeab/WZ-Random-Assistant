@@ -1,11 +1,13 @@
 {
   "usingComponents": {
     "privacy-popup": "../../components/privacy-popup/privacy-popup",
-    "app-navigation": "../../components/app-navigation/app-navigation"
+    "app-navigation": "../../components/app-navigation/app-navigation",
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
   },
   "navigationBarTitleText": "关于",
   "navigationStyle": "custom",
-  "navigationBarTextStyle": "black",
-  "backgroundColor": "#f4f2ef",
-  "backgroundTextStyle": "dark"
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "backgroundColor": "@backgroundColor",
+  "backgroundTextStyle": "@backgroundTextStyle",
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor"
 }

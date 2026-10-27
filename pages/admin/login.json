@@ -1,8 +1,11 @@
 {
   "usingComponents": {
-    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+    "privacy-popup": "../../components/privacy-popup/privacy-popup",
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
   },
   "navigationBarTitleText": "管理员验证",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black"
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "backgroundColor": "@backgroundColor",
+  "backgroundTextStyle": "@backgroundTextStyle"
 }

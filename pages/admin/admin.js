@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 // pages/admin/admin.js
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 
@@ -22,7 +23,7 @@ function currentWeekKey() {
   return sun.toISOString().split('T')[0];
 }
 
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(),
     // 审核相关
@@ -349,7 +350,7 @@ Page({
       editable: true,
       placeholderText: '可填写调整原因（选填）',
       confirmText: '标记删除',
-      confirmColor: '#e53e3e',
+      confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
         wx.showLoading({ title: '处理中' });
@@ -567,7 +568,7 @@ Page({
       title: '删除备注',
       content: '确定删除这条特殊备注吗？发布后的列表将不再显示该备注。',
       confirmText: '删除',
-      confirmColor: '#e53e3e',
+      confirmColor: theme.getNativeColors().danger,
       success: async (res) => {
         if (res.confirm) await this.saveSpecialNote('', '备注已删除');
       }
@@ -1219,7 +1220,7 @@ Page({
     wx.showModal({
       title: '确认撤销',
       content: `确定撤销管理员 ${preview} 的身份吗？该用户将失去管理权限。`,
-      confirmColor: '#e64340',
+      confirmColor: theme.getNativeColors().danger,
       success: async (res) => {
         if (res.confirm) {
           wx.showLoading({ title: '处理中...' });
@@ -1354,7 +1355,7 @@ Page({
       title: '删除说明',
       content: `确定删除「${title}」吗？相关图片也会一并删除。`,
       confirmText: '删除',
-      confirmColor: '#e53e3e',
+      confirmColor: theme.getNativeColors().danger,
       success: async modalRes => {
         if (!modalRes.confirm) return;
         try {
@@ -1374,4 +1375,4 @@ Page({
       }
     });
   }
-});
+}));

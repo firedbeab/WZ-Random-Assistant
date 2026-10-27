@@ -18,6 +18,7 @@ function fixture(file, options = {}) {
   vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), {
     wx, Page: value => { page = value; }, console, setTimeout, clearTimeout,
     require(name) {
+      if (name.endsWith('/theme')) return require('../../utils/theme');
       if (name.endsWith('/runtime')) return { isTestMode: () => false, storageKey: key => key, cloudCall: options.call || (async () => ({ result: { success: true } })) };
       if (name.endsWith('/image-access')) return { async resolve(fn, id) { resolved.push(id); return `https://images.invalid/${encodeURIComponent(id)}`; }, forget() {} };
       if (name.endsWith('/image-diagnostics')) return { record() {} };

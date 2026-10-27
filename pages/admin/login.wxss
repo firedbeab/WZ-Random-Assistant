@@ -1,6 +1,5 @@
-/* pages/admin/login.wxss */
 page {
-  background-color: #f6f7f9; /* 确保背景不是白色，能看见内容 */
+  background-color: var(--bg);
   height: 100vh;
 }
 
@@ -11,7 +10,7 @@ page {
   align-items: center;
 }
 
-/* 头部样式 */
+
 .header {
   text-align: center;
   margin-bottom: 80rpx;
@@ -26,29 +25,29 @@ page {
 .header .title {
   font-size: 40rpx;
   font-weight: bold;
-  color: #333; /* 强制黑色 */
+  color: var(--text-1);
   display: block;
   margin-bottom: 10rpx;
 }
 
 .header .desc {
   font-size: 26rpx;
-  color: #888;
+  color: var(--text-2);
 }
 
-/* 输入框样式 */
+
 .input-group {
   width: 100%;
   min-height: 92rpx;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--surface);
   padding: 0 28rpx;
   border-radius: 16rpx;
-  border: 2rpx solid #e0e4e8;
+  border: 2rpx solid var(--line);
   margin-bottom: 60rpx;
   display: flex;
   align-items: center;
-  box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .code-input {
@@ -56,37 +55,37 @@ page {
   height: 88rpx;
   line-height: 88rpx;
   font-size: 32rpx;
-  color: #333;
-  caret-color: #07c160;
-  -webkit-text-fill-color: #333;
+  color: var(--text-1);
+  caret-color: var(--accent);
+  -webkit-text-fill-color: var(--text-1);
   opacity: 1;
 }
 
 .toggle-btn {
   font-size: 24rpx;
-  color: #07c160;
+  color: var(--accent);
   margin-left: 20rpx;
 }
 
-/* 按钮样式 */
+
 .btn-verify {
   width: 100%;
   height: 90rpx;
   line-height: 90rpx;
-  background-color: #07c160;
-  color: #fff;
+  background-color: var(--accent);
+  color: var(--on-accent);
   border-radius: 16rpx;
   font-size: 32rpx;
   margin-bottom: 40rpx;
 }
 
 .btn-verify[disabled] {
-  background-color: #a8e6cf;
+  background-color: var(--accent-disabled);
 }
 
-/* 底部文字 */
+
 .footer {
   font-size: 22rpx;
-  color: #bbb;
+  color: var(--text-3);
   text-align: center;
 }

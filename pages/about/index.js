@@ -1,4 +1,5 @@
-Page({
+const theme = require('../../utils/theme');
+Page(theme.page({
   data: {},
 
   goHelp() {
@@ -37,4 +38,4 @@ Page({
       }
     });
   }
-});
+}));

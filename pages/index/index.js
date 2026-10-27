@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
 
 const LAST_SUBMISSION_KEY = storageKey('last_submission');
@@ -5,7 +6,7 @@ const { unlockTapCount } = require('../../utils/dice-easter-egg');
 const eggPhotos = require('../../utils/easter-egg-photos');
 const homePresentation = require('../../utils/home-presentation');
 
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(),
     userInfo: null,
@@ -30,7 +31,7 @@ Page({
     hoursLeftText: '', // 开放态剩余小时文案
     statusMsg: '',
     hasSubmitted: false,
-    submittedInfo: '',
+    ...homePresentation.submissionView(null),
     schedulePublished: false,
     totalSubmissions: 0 // 本周总提交次数
   },
@@ -102,6 +103,7 @@ Page({
     async checkTimeAndSubmission() {
       // 并发令牌：只采纳最后一次状态检查的结果，迟到的旧响应直接丢弃。
       const token = (this._statusToken = (this._statusToken || 0) + 1);
+      let hasCachedSubmission = false;
       try {
         this.clearStatusMessage();
 
@@ -157,7 +159,7 @@ Page({
             wx.removeStorageSync(LAST_SUBMISSION_KEY);
             if (token !== this._statusToken) return;
             this.setData({
-              hasSubmitted: false, submittedInfo: '', schedulePublished: true,
+              hasSubmitted: false, ...homePresentation.submissionView(null), schedulePublished: true,
               ...homePresentation.schedulePreview(publishedSchedule)
             });
             return;
@@ -176,11 +178,13 @@ Page({
         const cached = wx.getStorageSync(LAST_SUBMISSION_KEY);
         if (cached && cached.week_key === currentWeekKey && cached.song_name) {
           if (token !== this._statusToken) return;
+          hasCachedSubmission = true;
           this.setData({
             hasSubmitted: true,
-            submittedInfo: `《${cached.song_name}》- ${cached.remark}`
+            ...homePresentation.submissionView(cached)
           });
-          return; // 缓存命中，无需查库
+          // 新缓存包含明确的备注字段；旧缓存继续查本人投稿，补齐此前未保存的备注。
+          if (Object.prototype.hasOwnProperty.call(cached, 'special_note')) return;
         }
 
         // 5. 缓存未命中，查数据库
@@ -197,6 +201,7 @@ Page({
             .where({ user_id: userInfo.openid, week_key: currentWeekKey })
             .limit(1)
             .get();
+        if (this.data.isTestMode && (!res.result || !res.result.success)) throw new Error('SUBMISSION_READ_FAILED');
         const song = this.data.isTestMode
           ? (res.result && res.result.success ? res.result.data : null)
           : res.data[0];
@@ -205,15 +210,19 @@ Page({
           if (token !== this._statusToken) return;
           this.setData({
             hasSubmitted: true,
-            submittedInfo: `《${song.song_name}》- ${song.singer}`
+            ...homePresentation.submissionView(song)
+          });
+          wx.setStorageSync(LAST_SUBMISSION_KEY, {
+            week_key: currentWeekKey, song_name: song.song_name,
+            remark: song.singer || song.remark || '', special_note: song.special_note || ''
           });
         } else {
           if (token !== this._statusToken) return;
-          this.setData({ hasSubmitted: false });
+          this.setData({ hasSubmitted: false, ...homePresentation.submissionView(null) });
         }
       } catch (e) {
         console.warn('状态检查失败');
-        if (token === this._statusToken) this.setData({ statusError: true });
+        if (token === this._statusToken) this.setData({ statusError: !hasCachedSubmission });
       } finally {
         if (token === this._statusToken) this.setData({ statusReady: true });
       }
@@ -343,7 +352,8 @@ Page({
         wx.setStorageSync(LAST_SUBMISSION_KEY, {
           week_key: weekKey,
           song_name: title,
-          remark: remark
+          remark: remark,
+          special_note: specialNote
         });
         // 提交成功：作废可能还在途中的旧状态检查，避免把“已提交”又改回未提交。
         this._statusToken = (this._statusToken || 0) + 1;
@@ -355,7 +365,7 @@ Page({
           hasSubmitted: true,
           statusReady: true,
           focusedField: '',
-          submittedInfo: `《${title}》- ${remark}`,
+          ...homePresentation.submissionView({ song_name: title, singer: remark, special_note: specialNote }),
           schedulePublished: false,
           ...(typeof count === 'number' ? { totalSubmissions: count } : {})
         });
@@ -431,4 +441,4 @@ Page({
     const url = isAdmin ? '/pages/admin/admin' : '/pages/admin/login';
     wx.navigateTo({ url: url });
   }
-});
+}));

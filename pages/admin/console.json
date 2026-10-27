@@ -1,4 +1,11 @@
 {
   "navigationBarTitleText": "数据控制台",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+  "backgroundColor": "@backgroundColor",
+  "backgroundTextStyle": "@backgroundTextStyle",
+  "usingComponents": {
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
+  }
 }

@@ -32,6 +32,7 @@ const wx = {
 const context = {
   Component: value => { component = value; }, setTimeout, clearTimeout, wx,
   require(name) {
+    if (name.endsWith('/theme')) return require('../../utils/theme');
     if (name.includes('easter-cats')) return cats;
     if (name.includes('replies')) return replies;
     if (name.includes('encounters')) return encounters;

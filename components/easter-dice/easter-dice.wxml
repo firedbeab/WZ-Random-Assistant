@@ -1,4 +1,4 @@
-<view wx:if="{{visible}}" class="egg-mask">
+<view wx:if="{{visible}}" class="egg-mask" style="{{appearanceStyle}}">
   <view class="egg-backdrop" catchtap="close" catchtouchmove="noop"></view>
   <view class="egg-card {{stage === 'photo' ? 'photo-card' : ''}}" catchtap="noop">
     <view class="egg-close" catchtap="close" aria-label="关闭彩蛋" role="button">×</view>

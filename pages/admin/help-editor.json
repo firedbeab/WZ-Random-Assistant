@@ -1,6 +1,11 @@
 {
   "navigationBarTitleText": "编辑使用说明",
   "usingComponents": {
-    "privacy-popup": "../../components/privacy-popup/privacy-popup"
-  }
+    "privacy-popup": "../../components/privacy-popup/privacy-popup",
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
+  },
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+  "backgroundColor": "@backgroundColor",
+  "backgroundTextStyle": "@backgroundTextStyle"
 }

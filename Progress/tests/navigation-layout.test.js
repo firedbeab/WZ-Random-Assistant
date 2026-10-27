@@ -27,7 +27,7 @@ test('导航直接打开时回首页，正常页面栈返回，失败可退回�
   let definition, depth=1;
   const calls=[];
   vm.runInNewContext(fs.readFileSync(path.join(root,'components/app-navigation/app-navigation.js'),'utf8'),{
-    Component: value=>{definition=value;}, require:()=>({navigationLayout}), getCurrentPages:()=>Array(depth).fill({}),
+    Component: value=>{definition=value;}, require:name=>name.endsWith('/theme')?require('../../utils/theme'):({navigationLayout}), getCurrentPages:()=>Array(depth).fill({}),
     wx:{ getWindowInfo:()=>({windowWidth:390,statusBarHeight:47}),getMenuButtonBoundingClientRect:()=>({top:51,height:32,left:296}),reLaunch:args=>calls.push(args.url),navigateBack:args=>{calls.push(args.delta);args.fail();} }
   });
   const component={data:{},setData(patch){Object.assign(this.data,patch);},...definition.methods};

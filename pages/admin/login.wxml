@@ -1,3 +1,5 @@
+<page-meta page-style="{{appearanceStyle}}" />
+<view class="appearance-toolbar"><appearance-toggle /></view>
 <!-- pages/admin/login.wxml -->
 <view class="login-container">
 

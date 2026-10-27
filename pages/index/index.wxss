@@ -16,10 +16,11 @@
 .admin-link { flex: none; }
 .status-row { display: flex; align-items: center; flex-wrap: wrap; margin-top: var(--space-5); color: var(--text-2); font-size: var(--font-sm); line-height: 1.6; }
 .status-dot { flex: none; width: var(--space-1); height: var(--space-1); margin-right: var(--space-2); border-radius: var(--radius-pill); background: var(--text-3); }
-.status-dot.is-active { background: var(--accent); }
+.status-dot.is-active { background: var(--success); }
 .status-deadline { margin-left: var(--space-3); color: var(--accent); }
 .hero-title { display: block; font-size: var(--font-2xl); font-weight: 600; line-height: 1.35; margin-top: var(--space-2); }
 .hero-description { display: block; margin-top: var(--space-3); color: var(--text-2); font-size: var(--font-sm); line-height: 1.7; }
+.submission-count { display: block; margin-top: var(--space-2); color: var(--text-3); font-size: var(--font-sm); line-height: 1.7; }
 .loading-title { margin-top: var(--space-5); font-size: var(--font-xl); }
 .home-main { padding: 0 var(--space-5); }
 .request-card, .submitted-card, .playlist-preview, .waiting-card { padding: var(--space-5); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
@@ -36,9 +37,12 @@
 .primary-button { display: block; width: 100%; height: 96rpx; line-height: 96rpx; margin-top: var(--space-5); border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font-size: var(--font-lg); font-weight: 500; text-align: center; }
 .primary-button.is-loading { background: var(--accent-disabled); color: var(--on-accent); }
 .primary-pressed { background: var(--accent-pressed); }
-.form-note { display: block; text-align: center; margin-top: var(--space-3); color: var(--text-3); font-size: var(--font-sm); line-height: 1.5; }
 .card-eyebrow { display: block; color: var(--accent); font-size: var(--font-sm); font-weight: 500; }
-.submitted-song { display: block; font-size: var(--font-xl); font-weight: 500; line-height: 1.5; margin-top: var(--space-3); overflow-wrap: break-word; word-break: break-all; }
+.submitted-song { display: block; font-size: var(--font-xl); font-weight: 600; line-height: 1.5; margin-top: var(--space-3); white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
+.submitted-singer { display: block; margin-top: var(--space-2); color: var(--text-2); font-size: var(--font-md); line-height: 1.7; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
+.submitted-note { margin-top: var(--space-4); padding-left: var(--space-3); border-left: 4rpx solid var(--accent-weak); }
+.submitted-note-label { display: block; color: var(--text-3); font-size: var(--font-xs); line-height: 1.7; }
+.submitted-note-content { display: block; margin-top: var(--space-1); color: var(--text-2); font-size: var(--font-sm); line-height: 1.8; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
 .card-description { display: block; margin-top: var(--space-2); font-size: var(--font-sm); color: var(--text-2); line-height: 1.7; }
 .submitted-card .card-description { margin-top: var(--space-4); }
 .playlist-count { color: var(--text-2); font-size: var(--font-sm); }

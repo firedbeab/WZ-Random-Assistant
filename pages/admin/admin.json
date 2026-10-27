@@ -1,8 +1,11 @@
 {
   "usingComponents": {
-    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+    "privacy-popup": "../../components/privacy-popup/privacy-popup",
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
   },
   "enablePullDownRefresh": true,
-  "backgroundTextStyle": "dark",
-  "backgroundColor": "#f5f6f4"
+  "backgroundTextStyle": "@backgroundTextStyle",
+  "backgroundColor": "@backgroundColor",
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor"
 }

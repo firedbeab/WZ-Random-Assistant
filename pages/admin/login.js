@@ -1,6 +1,7 @@
+const theme = require('../../utils/theme');
 const { cloudCall, isTestMode, storageKey } = require('../../utils/runtime');
 
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(),
     adminCode: '',
@@ -79,4 +80,4 @@ Page({
       this.setData({ loading: false });
     }
   }
-});
+}));

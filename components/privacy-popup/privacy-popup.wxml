@@ -1,5 +1,5 @@
 <!-- 隐私协议弹窗 -->
-<view class="privacy-mask" wx:if="{{visible}}" catchtouchmove="true">
+<view class="privacy-mask" style="{{appearanceStyle}}" wx:if="{{visible}}" catchtouchmove="true">
   <view class="privacy-card">
     <!-- 标题 -->
     <view class="privacy-title">隐私保护指引</view>

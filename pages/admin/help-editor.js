@@ -1,3 +1,4 @@
+const theme = require('../../utils/theme');
 const { cloudCall, isTestMode } = require('../../utils/runtime');
 
 const MAX_IMAGES = 10;
@@ -10,7 +11,7 @@ const IMAGE_COMPRESSION_STEPS = [
   { quality: 42, maxSide: 1280 }
 ];
 
-Page({
+Page(theme.page({
   data: {
     isTestMode: isTestMode(),
     articleId: '',
@@ -445,4 +446,4 @@ Page({
       this.setData({ saving: false });
     }
   }
-});
+}));

@@ -1,29 +1,5 @@
-/* 公共设计变量。逐页接入，不在这里覆盖旧页面布局。当前以浅色为主。 */
+/* 公共排版与几何变量；色值来源为 utils/theme.js。 */
 page {
-  --bg: #f4f2ef;
-  --surface: #ffffff;
-  --surface-2: #edebe7;
-  --line: #e8e6e2;
-  --text-1: #1b1b1d;
-  --text-2: #5f6066;
-  --text-3: #686b63;
-  --placeholder: #85867f;
-  --accent: #28764f;
-  --accent-weak: #e8f2ec;
-  --accent-pressed: #246a48;
-  --accent-disabled: #8aab98;
-  --danger: #d64545;
-  --danger-weak: #fbeceb;
-  --warn: #946017;
-  --warn-weak: #fdf3e3;
-  --info: #2f6fb3;
-  --info-weak: #eaf1fa;
-  --on-accent: #ffffff;
-  --gradient-open-start: #e2efe7;
-  --gradient-open-mid: #eef1ea;
-  --gradient-closed-start: #eceae5;
-  --gradient-closed-mid: #f0eeea;
-  /* 固定淡出距离使长短页面和导航的相同位置取色一致，末端回到页面底色。 */
   --gradient-open: linear-gradient(180deg, var(--gradient-open-start) 0px, var(--gradient-open-mid) 180px, var(--bg) 420px);
   --gradient-closed: linear-gradient(180deg, var(--gradient-closed-start) 0px, var(--gradient-closed-mid) 180px, var(--bg) 420px);
   --font-xs: 20rpx;
@@ -44,7 +20,4 @@ page {
   --space-4: 24rpx;
   --space-5: 32rpx;
   --space-6: 48rpx;
-  --shadow-sm: 0 2rpx 8rpx rgba(60, 50, 40, .05);
-  --shadow-md: 0 8rpx 24rpx rgba(60, 50, 40, .08);
-  --focus-ring: 0 0 0 4rpx rgba(45, 128, 87, .16), 0 0 0 8rpx rgba(45, 128, 87, .06);
 }

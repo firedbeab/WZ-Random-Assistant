@@ -36,4 +36,13 @@ function schedulePreview(schedule) {
   };
 }
 
-module.exports = { nextOpenText, hoursLeftText, schedulePreview };
+function submissionView(song) {
+  const text = value => typeof value === 'string' ? value : '';
+  return {
+    submittedTitle: text(song && song.song_name),
+    submittedSinger: text(song && (song.singer || song.remark)),
+    submittedNote: text(song && (song.special_note || song.specialNote))
+  };
+}
+
+module.exports = { nextOpenText, hoursLeftText, schedulePreview, submissionView };
