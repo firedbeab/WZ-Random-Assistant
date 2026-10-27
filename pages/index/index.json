@@ -1,7 +1,12 @@
 {
   "usingComponents": {
     "privacy-popup": "../../components/privacy-popup/privacy-popup",
-    "easter-dice": "../../components/easter-dice/easter-dice"
+    "easter-dice": "../../components/easter-dice/easter-dice",
+    "app-navigation": "../../components/app-navigation/app-navigation"
   },
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f4f2ef",
+  "backgroundTextStyle": "dark",
   "enablePullDownRefresh": true
 }

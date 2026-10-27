@@ -1,7 +1,12 @@
 {
   "usingComponents": {
-    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+    "privacy-popup": "../../components/privacy-popup/privacy-popup",
+    "app-navigation": "../../components/app-navigation/app-navigation"
   },
-  "navigationBarTitleText": "本周列表",
+  "navigationBarTitleText": "每周歌单",
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f4f2ef",
+  "backgroundTextStyle": "dark",
   "enablePullDownRefresh": true
 }

@@ -1,17 +1,23 @@
 // 订阅消息模板 ID（学生：新活动发布提醒）
 const STUDENT_TPL_ID = 'evJj_6Kl8CNKTf5C_j2PtJ6FPmMTbBESvuZ35DfOiGA';
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
+const { playlistPresentation } = require('../../utils/playlist-presentation');
 
 Page({
   data: {
     isTestMode: isTestMode(),
     schedule: null,
     loading: true,
+    loadError: false,
+    showingCached: false,
+    revalidating: false,
+    subscribing: false,
+    ...playlistPresentation(null, ''),
     subscribed: false,
     // 周次标签：0=本周, 1=上周, 2=上上周
     activeTab: 0,
     tabs: [
-      { label: '最新列表', value: 0 },
+      { label: '最新一期', value: 0 },
       { label: '上一期', value: 1 },
       { label: '上上期', value: 2 }
     ]
@@ -56,26 +62,34 @@ Page({
   async loadWeekPlaylist(offset, forceRefresh) {
     const weekKey = this.getWeekKeyByOffset(offset);
     const cacheKey = storageKey(`schedule_cache_${weekKey}`);
+    const requestId = this._playlistRequestId = (this._playlistRequestId || 0) + 1;
+    this._weekRequests = this._weekRequests || {};
+    this._weekRequests[weekKey] = requestId;
 
     // 1. 优先读本地缓存，立即显示（不转圈）
     if (!forceRefresh) {
-      const cached = wx.getStorageSync(cacheKey);
+      let cached;
+      try { cached = wx.getStorageSync(cacheKey); } catch (_) {}
       if (cached) {
-        this.setData({ schedule: cached, loading: false });
+        this.setData({ schedule: cached, loading: false, loadError: false, showingCached: false, revalidating: true, ...playlistPresentation(cached, weekKey) });
         // 已发布排期现在支持超管修改或撤回；所有周次命中缓存后都静默校验云端。
         // 缓存仍负责首屏秒开，云端 revision/状态变化会随后替换或清除本地内容。
-        this.refreshFromCloud(offset, weekKey, cacheKey);
+        this.refreshFromCloud(offset, weekKey, cacheKey, requestId);
         return;
       }
     }
 
     // 2. 缓存未命中或强制刷新，请求云端
-    this.setData({ loading: true, schedule: null });
-    await this.refreshFromCloud(offset, weekKey, cacheKey);
+    this.setData({ loading: true, schedule: null, loadError: false, showingCached: false, revalidating: true, ...playlistPresentation(null, weekKey) });
+    await this.refreshFromCloud(offset, weekKey, cacheKey, requestId);
+  },
+
+  retryLoad() {
+    return this.loadWeekPlaylist(this.data.activeTab, true);
   },
 
   // 从云端拉取排期并写入缓存
-  async refreshFromCloud(offset, weekKey, cacheKey) {
+  async refreshFromCloud(offset, weekKey, cacheKey, requestId) {
     try {
       const res = this.data.isTestMode
         ? await cloudCall({
@@ -86,32 +100,35 @@ Page({
           .where({ week_key: weekKey, status: 'published' })
           .limit(1)
           .get();
+      if (this.data.isTestMode && (!res.result || !res.result.success)) throw new Error('SCHEDULE_READ_FAILED');
       const schedule = this.data.isTestMode
-        ? (res.result && res.result.success ? res.result.data : null)
+        ? res.result.data
         : res.data[0];
+      // 同一期更晚的请求优先；旧期可更新自己的缓存，但不能覆盖当前标签。
+      if (this._weekRequests[weekKey] !== requestId) return;
+      const isCurrent = this.data.activeTab === offset && this._playlistRequestId === requestId;
 
       if (schedule) {
-        wx.setStorageSync(cacheKey, schedule);
+        try { wx.setStorageSync(cacheKey, schedule); } catch (_) {}
         // 确保用户没切走标签，才更新显示
-        if (this.data.activeTab === offset) {
-          this.setData({ schedule });
+        if (isCurrent) {
+          this.setData({ schedule, loadError: false, showingCached: false, ...playlistPresentation(schedule, weekKey) });
         }
       } else {
         // 云端无数据，清除缓存
-        wx.removeStorageSync(cacheKey);
-        if (this.data.activeTab === offset) {
-          this.setData({ schedule: null });
+        try { wx.removeStorageSync(cacheKey); } catch (_) {}
+        if (isCurrent) {
+          this.setData({ schedule: null, loadError: false, showingCached: false, ...playlistPresentation(null, weekKey) });
         }
       }
     } catch (err) {
       console.warn('加载排期失败');
-      // 云端失败时，如果已有缓存则不提示（静默失败）
-      if (!this.data.schedule) {
-        wx.showToast({ title: '加载失败', icon: 'none' });
+      if (this.data.activeTab === offset && this._playlistRequestId === requestId) {
+        this.setData({ loadError: true, showingCached: !!this.data.schedule });
       }
     } finally {
-      if (this.data.activeTab === offset) {
-        this.setData({ loading: false });
+      if (this.data.activeTab === offset && this._playlistRequestId === requestId) {
+        this.setData({ loading: false, revalidating: false });
       }
     }
   },
@@ -163,11 +180,13 @@ Page({
 
   // 按钮点击：开启发布通知
   async onEnableSub() {
+    if (this.data.subscribed || this.data.subscribing) return;
     if (this.data.isTestMode) {
       this.setData({ subscribed: true });
       wx.showToast({ title: '测试环境已模拟订阅', icon: 'none' });
       return;
     }
+    this.setData({ subscribing: true });
     try {
       const db = wx.cloud.database();
       const openid = getApp().globalData.userInfo.openid;
@@ -196,6 +215,8 @@ Page({
       }
     } catch (err) {
       console.warn('订阅失败:', err);
+    } finally {
+      this.setData({ subscribing: false });
     }
   }
 });

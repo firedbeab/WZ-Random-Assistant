@@ -1,0 +1,11 @@
+:host { display: block; flex: none; }
+.app-nav-placeholder { width: 100%; flex: none; }
+.app-nav-shell { position: fixed; z-index: 100; top: 0; left: 0; width: 100%; color: var(--text-1, #1b1b1d); background: var(--gradient-closed); }
+.app-nav-shell.is-open { background: var(--gradient-open); }
+.app-nav-bar { position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.app-nav-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; line-height: 1.4; }
+.app-nav-back { position: absolute; top: 0; left: 4px; min-width: 48px; margin: 0; padding: 0 12px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 0; background: transparent; color: inherit; line-height: 1; }
+.app-nav-back::after { border: none; }
+.app-nav-chevron { width: 20px; height: 20px; }
+.app-nav-home { font-size: 13px; }
+.app-nav-pressed { opacity: .55; }

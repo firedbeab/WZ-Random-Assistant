@@ -1,6 +1,7 @@
-<view class="home-page">
+<view class="home-page {{statusReady && canSubmit && !schedulePublished ? 'is-open' : ''}}">
+  <app-navigation variant="{{statusReady && canSubmit && !schedulePublished ? 'open' : 'closed'}}" />
   <view class="test-banner" wx:if="{{isTestMode}}">测试模式 · 当前操作不会写入正式业务集合</view>
-  <view class="home-head {{statusReady && canSubmit && !schedulePublished ? 'is-open' : ''}}">
+  <view class="home-head">
     <view class="brand-row">
       <view class="brand">
         <text class="dice" style="{{diceShakeStyle}}" bindtap="onSecretDiceTap" aria-label="骰子彩蛋">🎲</text>

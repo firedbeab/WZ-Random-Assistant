@@ -150,7 +150,7 @@ test('输入焦点竞争、说明/往期入口及原提交字段契约', async (
 });
 test('往期入口参数有边界，默认仍展示最新一期', () => {
   let definition;
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/playlist/index.js'), 'utf8'), { Page: value => { definition = value; }, require: () => ({ isTestMode: () => true }) });
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/playlist/index.js'), 'utf8'), { Page: value => { definition = value; }, require: name => name.endsWith('/playlist-presentation') ? require('../../utils/playlist-presentation') : ({ isTestMode: () => true }) });
   for (const [tab, expected] of [[undefined, 0], ['1', 1], ['2', 2], ['-1', 0], ['100', 0]]) {
     const page = { data: {}, setData(patch) { Object.assign(this.data, patch); }, loadWeekPlaylist(offset) { this.loaded = offset; }, checkSubStatus() {} };
     definition.onLoad.call(page, { tab });

@@ -1,14 +1,13 @@
 /* 首页：公共变量 + 状态、主操作、辅助入口三级层次。 */
-page { background: var(--bg); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
-.home-page { min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
+.home-page { min-height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; background: var(--gradient-closed); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+.home-page.is-open { background: var(--gradient-open); }
 .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
-button { margin: 0; padding: 0; border: none; border-radius: 0; font-weight: 400; }
-button::after { border: none; }
+.text-button, .primary-button, .playlist-entry { margin: 0; padding: 0; border: none; border-radius: 0; font-weight: 400; }
+.text-button::after, .primary-button::after, .playlist-entry::after { border: none; }
 .text-button { display: inline-block; background: transparent; color: var(--text-2); font-size: var(--font-sm); line-height: 1.5; padding: var(--space-2) 0; }
 .text-pressed { opacity: .6; }
 .test-banner { padding: var(--space-2) var(--space-4); background: var(--warn-weak); color: var(--warn); font-size: var(--font-xs); text-align: center; line-height: 1.5; }
-.home-head { padding: var(--space-5) var(--space-5) var(--space-6); background: var(--gradient-closed); }
-.home-head.is-open { background: var(--gradient-open); }
+.home-head { padding: var(--space-5) var(--space-5) var(--space-6); background: transparent; }
 .brand-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
 .brand { display: flex; align-items: center; min-width: 0; }
 .dice { display: inline-block; font-size: var(--font-lg); padding: var(--space-2); margin: calc(var(--space-2) * -1); line-height: 1; flex: none; }

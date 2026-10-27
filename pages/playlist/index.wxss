@@ -1,79 +1,45 @@
-page { background: #f6f7f9; }
-.container { padding: 30rpx; }
-
-/* 周次切换标签 */
-.week-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 20rpx;
-  margin-bottom: 30rpx;
-}
-.tab-item {
-  padding: 14rpx 32rpx;
-  border-radius: 30rpx;
-  font-size: 26rpx;
-  color: #666;
-  background: #fff;
-  border: 2rpx solid #e0e0e0;
-  transition: all 0.2s;
-}
-.tab-item.active {
-  background: #07c160;
-  color: #fff;
-  border-color: #07c160;
-  font-weight: bold;
-}
-
-/* 通知订阅 */
-.notify-bar { margin-bottom: 20rpx; }
-.notify-status {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20rpx 24rpx; border-radius: 16rpx; font-size: 28rpx;
-}
-.notify-status.on { background: #e8f5e9; color: #2e7d32; }
-.notify-status.off { background: #fff3e0; color: #e65100; }
-.notify-hint { font-size: 22rpx; color: #66bb6a; }
-.notify-btn { font-size: 26rpx; color: #ff6d00; font-weight: bold; padding: 8rpx 24rpx; background: #fff; border-radius: 20rpx; }
-
-.loading, .empty { text-align: center; margin-top: 300rpx; color: #999; }
-.hint { display: block; font-size: 24rpx; margin-top: 20rpx; }
-
-/* 排期内容卡片 - 对齐管理后台审核页样式 */
-.schedule-card {
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 32rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.05);
-  min-width: 550rpx;
-}
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; padding: 0 8rpx; }
-.title { font-size: 36rpx; font-weight: bold; color: #333; }
-.time { font-size: 24rpx; color: #07c160; }
-
-.copy-tip-bar { font-size: 24rpx; color: #999; text-align: center; padding: 16rpx 0; margin-bottom: 20rpx; }
-
-.day-section { margin-bottom: 44rpx; }
-.day-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 20rpx; padding-bottom: 16rpx;
-  border-bottom: 2rpx solid #f0f0f0;
-}
-.day-title { font-size: 32rpx; font-weight: bold; color: #333; }
-.day-count { color: #bbb; font-size: 24rpx; }
-
-.song-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 24rpx 0; border-bottom: 1rpx dashed #eee;
-}
-.song-item:last-child { border-bottom: none; }
-.song-info { flex: 1; }
-.song-name { font-size: 30rpx; color: #333; display: block; }
-.song-singer { font-size: 24rpx; color: #888; margin-top: 6rpx; display: block; }
-.song-special { font-size: 24rpx; color: #888; margin-top: 6rpx; display: block; }
-.copy-hint { font-size: 20rpx; color: #ccc; flex-shrink: 0; margin-left: 10rpx; }
-
-.no-song { text-align: center; color: #bbb; font-size: 24rpx; padding: 20rpx 0; }
-
-.note { background: #fffbe6; padding: 20rpx; border-radius: 12rpx; margin-top: 20rpx; }
-.note-label { font-size: 24rpx; color: #fa8c16; font-weight: bold; display: block; margin-bottom: 8rpx; }
-.note-content { font-size: 26rpx; color: #666; }
+/* 已确认的 F.2：工具信息在卡片外，连续渐变贯穿导航和正文。 */
+.playlist-page { min-height: 100vh; box-sizing: border-box; padding-bottom: calc(44rpx + env(safe-area-inset-bottom)); background: var(--gradient-closed); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.notify-action, .tab-item, .retry { margin: 0; padding: 0; border: none; border-radius: 0; font-weight: 400; line-height: 1.5; }
+.notify-action::after, .tab-item::after, .retry::after { border: none; }
+.text-pressed { opacity: .6; }
+.test-mode-banner { border: none; border-radius: 0; font-size: var(--font-xs); font-weight: 400; }
+.playlist-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 36rpx var(--space-5) 0; }
+.page-title { font-size: var(--font-2xl); font-weight: 600; line-height: 1.4; }
+.notify-action, .notify-status { display: flex; align-items: center; justify-content: flex-end; gap: 12rpx; min-height: 88rpx; padding-left: var(--space-3); background: transparent; color: var(--accent); font-size: var(--font-sm); white-space: nowrap; }
+.notify-status { color: var(--text-2); }
+.notify-action.is-disabled { color: var(--text-2) !important; background: transparent !important; }
+.notify-icon { flex: none; width: 28rpx; height: 28rpx; }
+.playlist-tools { padding: 0 var(--space-5) 40rpx; }
+.week-tabs { display: flex; justify-content: flex-start; gap: var(--space-6); margin-top: 26rpx; }
+.tab-item { position: relative; min-height: 88rpx; padding: 26rpx 0 28rpx; background: transparent; color: var(--text-2); font-size: var(--font-md); white-space: nowrap; }
+.tab-item.active { color: var(--accent); font-weight: 600; }
+.tab-item.active::after { position: absolute; content: ''; top: auto; height: 4rpx; width: auto; left: 0; right: 0; bottom: 8rpx; transform: none; border-radius: 4rpx; background: var(--accent); }
+.period-meta { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); margin-top: var(--space-4); color: var(--text-2); font-size: var(--font-sm); }
+.period-count { flex: none; }
+.copy-tip { display: block; margin-top: 20rpx; color: var(--text-3); font-size: 22rpx; line-height: 1.6; }
+.schedule-card { margin: 0 var(--space-5); padding: 0 var(--space-5) var(--space-6); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.day-section { padding-top: var(--space-6); }
+.day-header { display: flex; align-items: center; gap: 20rpx; margin-bottom: var(--space-3); }
+.day-title { font-size: 26rpx; font-weight: 600; color: var(--text-2); }
+.day-date { font-size: var(--font-sm); color: var(--text-3); }
+.day-line { height: 1rpx; flex: 1; margin-left: 8rpx; background: var(--line); }
+.song-item { display: flex; align-items: flex-start; gap: 20rpx; padding: var(--space-4) 0; }
+.song-item:active { background: var(--surface-2); }
+.song-number { display: flex; align-items: center; justify-content: center; flex: none; width: 48rpx; height: 48rpx; margin-top: 2rpx; border-radius: var(--radius-pill); background: var(--accent-weak); color: var(--accent); font-size: var(--font-sm); }
+.song-info { flex: 1; min-width: 0; }
+.song-name { display: block; font-size: var(--font-song); font-weight: 600; line-height: 1.5; overflow-wrap: break-word; word-break: break-all; }
+.song-singer { display: block; margin-top: var(--space-1); color: var(--text-2); font-size: 26rpx; line-height: 1.5; overflow-wrap: break-word; word-break: break-all; }
+.song-special { display: flex; align-items: baseline; gap: var(--space-3); margin-top: 18rpx; padding-left: 18rpx; border-left: 4rpx solid var(--accent-weak); color: var(--text-2); font-size: var(--font-sm); line-height: 1.8; }
+.special-label { flex: none; color: var(--text-3); font-size: 22rpx; }
+.special-content { min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
+.no-song { display: block; padding: 20rpx 0 16rpx 68rpx; color: var(--text-3); font-size: 26rpx; line-height: 1.7; }
+.note { margin-top: 56rpx; padding-top: 40rpx; border-top: 1rpx solid var(--line); }
+.note-label { display: block; color: var(--text-2); font-size: 26rpx; font-weight: 600; }
+.note-content { display: block; margin-top: var(--space-3); color: var(--text-2); font-size: var(--font-sm); line-height: 1.85; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
+.cache-hint { display: block; padding-top: 40rpx; font-size: var(--font-sm); line-height: 1.7; color: var(--text-3); }
+.state { padding: 100rpx 0 120rpx; }
+.state-title { display: block; font-size: var(--font-lg); font-weight: 500; line-height: 1.5; }
+.state-description { display: block; margin-top: var(--space-4); font-size: 26rpx; line-height: 1.85; color: var(--text-2); }
+.retry { margin-top: var(--space-4); min-height: 88rpx; padding: 20rpx 0; color: var(--accent); background: transparent; font-size: 26rpx; text-align: left; }
