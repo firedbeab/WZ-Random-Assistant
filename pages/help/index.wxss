@@ -13,6 +13,7 @@
 .help-image-wrap { position: relative; width: calc(50% - 8rpx); height: 220rpx; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-2); }
 .help-image-wrap.single { width: 100%; height: 340rpx; }
 .help-image { width: 100%; height: 100%; background: var(--surface-2); }
+.image-more { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .5); color: var(--on-accent); font-size: var(--font-md); font-weight: 600; }
 .image-failed { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; padding: 0 var(--space-3); background: rgba(0, 0, 0, .55); color: var(--on-accent); font-size: 22rpx; line-height: 1.6; text-align: center; }
 .image-hint { display: block; margin-top: 20rpx; color: var(--text-3); font-size: 22rpx; line-height: 1.8; text-align: center; }
 .retry-btn { min-height: 88rpx; margin-top: var(--space-4); padding: 20rpx 0; color: var(--accent); font-size: 26rpx; line-height: 1.8; }

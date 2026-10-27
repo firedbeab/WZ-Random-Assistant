@@ -235,8 +235,24 @@ async function authChecks() {
   check(f.state.calls.length, 0, '无身份不访问数据库');
 }
 
+async function helpImageLimitChecks() {
+  const { state, main } = fixture('manageHelpContent', { role: 'superadmin' });
+  const images = Array.from({ length: 10 }, (_, i) => `cloud://mock-env.bucket/help/image-${i}.jpg`);
+  const event = { action: 'save', title: '多图说明', content: '完整正文', images, newImageIDs: images, isPublished: false };
+  const saved = await main(event);
+  check(saved.success, true, '允许十张图片保存草稿并校验新图');
+  assert.deepEqual(state.rows.get('help_articles')[0].images, images); checks++;
+  const rejected = await main({ ...event, images: [...images, 'cloud://mock-env.bucket/help/extra.jpg'] });
+  check(rejected.success, false, '服务端拒绝第十一张');
+  check(rejected.message, '每条说明最多添加10张图片', '超限说明明确');
+  check(state.rows.get('help_articles').length, 1, '超限请求不写入新条目');
+  const unauthorized = fixture('manageHelpContent');
+  check((await unauthorized.main(event)).code, 'FORBIDDEN', '扩容不放宽超管写权限');
+}
+
 (async () => {
   await imageChecks('manageEasterEggs'); await imageChecks('manageHelpContent');
+  await helpImageLimitChecks();
   await cleanupChecks(); await counterChecks(); await authChecks();
   console.log(`PASS: ${checks} backend hotfix assertions; legacy contracts, published-only signed access, roles/scopes, safe logs, cleanup guards, counters and auth failure handling`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

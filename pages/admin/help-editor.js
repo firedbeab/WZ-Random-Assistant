@@ -1,6 +1,6 @@
 const { cloudCall, isTestMode } = require('../../utils/runtime');
 
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 10;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const TARGET_IMAGE_SIZE = Math.floor(1.8 * 1024 * 1024);
 const IMAGE_COMPRESSION_STEPS = [
@@ -21,6 +21,7 @@ Page({
     isPublished: false,
     loading: true,
     saving: false,
+    choosingImages: false,
     showPreview: false,
     dirty: false
   },
@@ -203,11 +204,13 @@ Page({
   },
 
   async chooseImages() {
+    if (this.data.choosingImages || this.data.saving) return;
     const remaining = MAX_IMAGES - this.data.images.length;
     if (remaining <= 0) {
-      wx.showToast({ title: '最多上传5张图片', icon: 'none' });
+      wx.showToast({ title: '每条说明最多添加10张图片', icon: 'none' });
       return;
     }
+    this.setData({ choosingImages: true });
     try {
       // 主动触发微信隐私授权流程，避免直接调用图片接口时只得到模糊失败信息。
       await this.requestPrivacyAuthorization();
@@ -215,14 +218,14 @@ Page({
       let res;
       if (typeof wx.chooseMedia === 'function') {
         res = await wx.chooseMedia({
-          count: remaining,
+          count: Math.min(remaining, 9),
           mediaType: ['image'],
           sizeType: ['compressed'],
           sourceType: ['album', 'camera']
         });
       } else {
         res = await wx.chooseImage({
-          count: remaining,
+          count: Math.min(remaining, 9),
           sizeType: ['compressed'],
           sourceType: ['album', 'camera']
         });
@@ -237,7 +240,8 @@ Page({
         wx.showLoading({ title: '正在压缩图片...', mask: true });
       }
       try {
-        for (const file of selectedFiles) {
+        // 每批至多九张，兼容旧选择器；允许继续添加到总数十张。
+        for (const file of selectedFiles.slice(0, Math.min(remaining, 9))) {
           try {
             const prepared = await this.prepareSelectedImage(file);
             if (!prepared) {
@@ -255,7 +259,7 @@ Page({
         wx.hideLoading();
       }
       if (accepted.length > 0) {
-        this.markDirty({ images: this.data.images.concat(accepted) });
+        this.markDirty({ images: this.data.images.concat(accepted.slice(0, Math.max(0, MAX_IMAGES - this.data.images.length))) });
       }
       if (rejected) {
         wx.showToast({ title: '部分图片压缩后仍超过2MB', icon: 'none', duration: 2500 });
@@ -292,6 +296,8 @@ Page({
       } else {
         wx.showToast({ title: '无法打开图片选择器', icon: 'none' });
       }
+    } finally {
+      this.setData({ choosingImages: false });
     }
   },
 
@@ -350,6 +356,10 @@ Page({
   },
 
   validateForm() {
+    if (this.data.images.length > MAX_IMAGES) {
+      wx.showToast({ title: '每条说明最多添加10张图片', icon: 'none' });
+      return false;
+    }
     if (!this.data.title.trim()) {
       wx.showToast({ title: '请输入标题', icon: 'none' });
       return false;
@@ -378,7 +388,7 @@ Page({
   },
 
   async saveArticle(isPublished) {
-    if (this.data.saving || !this.validateForm()) return;
+    if (this.data.saving || this.data.choosingImages || !this.validateForm()) return;
     this.setData({ saving: true });
     wx.showLoading({ title: '保存中...' });
     const uploadedFileIDs = [];

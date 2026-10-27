@@ -149,7 +149,8 @@
   .guide-body p:last-child { margin-bottom: 0; }
   .guide-body strong { color: var(--text-1); font-weight: 600; }
   .image-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
-  .demo-image { border: none; border-radius: 7px; background: var(--surface-2); color: var(--text-2); padding: 16px 8px; min-height: 100px; font-size: 12px; line-height: 1.7; }
+  .demo-image { position: relative; overflow: hidden; border: none; border-radius: 7px; background: var(--surface-2); color: var(--text-2); padding: 16px 8px; min-height: 100px; font-size: 12px; line-height: 1.7; }
+  .demo-image-more { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; background: #0008; font-size: 14px; font-weight: 600; }
   .demo-image svg { width: 30px; height: 30px; display: block; margin: 0 auto 8px; color: var(--accent); }
   .image-hint { text-align: center; font-size: 11px; margin-top: 10px !important; color: var(--text-3); }
   .image-retry { display: block; width: 100%; min-height: 88px; margin-top: 14px; padding: 16px; border: none; border-radius: 7px; color: var(--text-2); background: var(--surface-2); font-size: 12px; }
@@ -160,7 +161,7 @@
   .entry-list { margin-top: 14px; padding: 0 16px; }
   .info-entry { display: flex; width: 100%; min-height: 74px; align-items: center; justify-content: space-between; gap: 14px; border: none; background: transparent; padding: 16px 0; color: var(--text-1); text-align: left; }
   .info-entry + .info-entry { border-top: 1px solid var(--line); }
-  .entry-label { display: block; font-size: 14px; font-weight: 500; line-height: 1.6; }
+  .entry-label { display: block; font-size: 16px; font-weight: 600; line-height: 1.6; }
   .entry-caption { display: block; font-size: 12px; color: var(--text-2); margin-top: 5px; line-height: 1.7; }
   .info-entry .chevron { transform: rotate(-90deg); }
   .info-footer { margin-top: auto; padding: 18px 0 4px; text-align: center; color: var(--text-3); font-size: 11px; line-height: 1.8; }
@@ -174,6 +175,10 @@
   .lightbox-sheet { width: 100%; padding: 32px 20px; border-radius: 10px; color: var(--text-1); background: var(--surface); text-align: center; }
   .lightbox-sheet h2 { font-size: 18px; margin: 0 0 16px; }
   .lightbox-sheet p { color: var(--text-2); font-size: 14px; line-height: 1.9; margin: 0; }
+  .gallery-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; gap: 12px; }
+  .gallery-controls button { min-height: 44px; padding: 8px; background: transparent; color: var(--accent); border: none; font-size: 14px; }
+  .gallery-controls button:disabled { opacity: .4; }
+  #imagePosition { color: var(--text-2); font-size: 13px; }
 </style></head>
 <body>
 <main class="workbench">
@@ -196,7 +201,7 @@
 
     <div class="screen-scroll" id="screenScroll"><header class="info-head"><h1 id="pageTitle">使用说明</h1><p class="info-desc" id="pageDesc">点开条目，查看规则和操作方法。</p></header><div class="info-content" id="infoContent" aria-live="polite"></div></div>
     <div class="safe-area" aria-hidden="true"><span class="home-indicator"></span></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="示例图片预览" hidden><button type="button" class="lightbox-close" id="closeLightbox" aria-label="关闭图片预览">×</button><div class="lightbox-sheet"><h2 id="imageTitle">示例图片</h2><p>填写本周点歌 → 提交<br>等待抽取与审核 → 查看已发布歌单</p></div></div>
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="示例图片预览" hidden><button type="button" class="lightbox-close" id="closeLightbox" aria-label="关闭图片预览">×</button><div class="lightbox-sheet"><h2 id="imageTitle">示例图片</h2><p>填写本周点歌 → 提交<br>等待抽取与审核 → 查看已发布歌单</p><div class="gallery-controls"><button type="button" id="previousImage">上一张</button><span id="imagePosition" aria-live="polite"></span><button type="button" id="nextImage">下一张</button></div></div></div>
   </div></section>
 </main>
 <script>
@@ -211,14 +216,16 @@
     {title:'特殊备注怎么填写',summary:'原版、现场版等补充要求',paragraphs:['可以补充希望使用的版本或其他必要说明。请保持简洁，最终安排以广播站审核结果为准。']},
     {title:'图片与常见问题',summary:'查看示意图片与加载失败重试',paragraphs:['说明中的图片可以点开查看。这里的图片仅为交互样例，正式页面继续显示管理员维护的真实说明图片。'],images:true}
   ];
-  let expanded=0, toastTimer, imageFailed=true;
+  let expanded=0, toastTimer, imageFailed=true, imageIndex=0, touchX=null;
+  const demoImages=Array.from({length:10},(_,i)=>'说明示例图片 '+(i+1));
   function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
   function toast(text){clearTimeout(toastTimer);byId('toast').textContent=text;byId('toast').classList.add('visible');toastTimer=setTimeout(()=>byId('toast').classList.remove('visible'),2400);}
   function closeImage(){byId('lightbox').hidden=true;}
+  function showImage(index){imageIndex=Math.max(0,Math.min(demoImages.length-1,index));byId('imageTitle').textContent=demoImages[imageIndex];byId('imagePosition').textContent=(imageIndex+1)+' / '+demoImages.length;byId('previousImage').disabled=imageIndex===0;byId('nextImage').disabled=imageIndex===demoImages.length-1;}
   function state(title,description,retry){const node=el('section','status-view');node.append(el('h2','',title),el('p','',description));if(retry){const b=el('button','retry','重新加载 ›');b.type='button';b.addEventListener('click',()=>{byId('stateSelect').value='ready';render();toast('说明示例已重新加载');});node.append(b);}content.append(node);}
   function imageGrid(body){
     if(byId('stateSelect').value==='imageFail'&&imageFailed){const retry=el('button','image-retry','图片加载失败，点击重试');retry.type='button';retry.addEventListener('click',()=>{imageFailed=false;render();toast('示例图片已恢复');});body.append(retry);return;}
-    const grid=el('div','image-grid');['填写点歌示例','查看歌单示例'].forEach(title=>{const b=el('button','demo-image');b.type='button';b.innerHTML=picture; b.append(el('span','',title));b.addEventListener('click',()=>{byId('imageTitle').textContent=title;byId('lightbox').hidden=false;byId('closeLightbox').focus();});grid.append(b);});body.append(grid,el('p','image-hint','点击图片可全屏查看（示例）'));
+    const grid=el('div','image-grid');demoImages.slice(0,4).forEach((title,index)=>{const b=el('button','demo-image');b.type='button';b.innerHTML=picture;b.append(el('span','',title));if(index===3)b.append(el('span','demo-image-more','还有 '+(demoImages.length-4)+' 张'));b.addEventListener('click',()=>{showImage(index);byId('lightbox').hidden=false;byId('closeLightbox').focus();});grid.append(b);});body.append(grid,el('p','image-hint','共 10 张，点开后可左右滑动查看全部图片（示例）'));
   }
   function help(){
     const mode=byId('stateSelect').value;
@@ -250,6 +257,9 @@
   byId('widthSelect').addEventListener('change',e=>{byId('device').style.width=e.target.value+'px';});
   const darkMedia=window.matchMedia('(prefers-color-scheme:dark)');function applyTheme(){const choice=byId('themeSelect').value;document.documentElement.dataset.theme=choice==='system'?(darkMedia.matches?'dark':'light'):choice;}
   byId('themeSelect').addEventListener('change',applyTheme);darkMedia.addEventListener('change',applyTheme);byId('closeLightbox').addEventListener('click',closeImage);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImage();});
+  byId('previousImage').addEventListener('click',()=>showImage(imageIndex-1));byId('nextImage').addEventListener('click',()=>showImage(imageIndex+1));
+  document.addEventListener('keydown',e=>{if(byId('lightbox').hidden)return;if(e.key==='ArrowLeft')showImage(imageIndex-1);if(e.key==='ArrowRight')showImage(imageIndex+1);});
+  byId('lightbox').addEventListener('touchstart',e=>{touchX=e.touches.length===1?e.touches[0].clientX:null;},{passive:true});byId('lightbox').addEventListener('touchend',e=>{if(touchX!==null&&e.changedTouches.length){const delta=e.changedTouches[0].clientX-touchX;if(Math.abs(delta)>40)showImage(imageIndex+(delta<0?1:-1));}touchX=null;});
   applyTheme();render();
 })();
 </script></body></html>

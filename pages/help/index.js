@@ -6,6 +6,7 @@ const CACHE_KEY = storageKey('help_articles_cache_v1');
 const IMAGE_CACHE_KEY = storageKey('help_image_file_cache_v1');
 const IMAGE_CACHE_DIR = `${wx.env.USER_DATA_PATH}/help-image-cache`;
 const MAX_IMAGE_CACHE_BYTES = 12 * 1024 * 1024;
+const THUMBNAIL_LIMIT = 4;
 
 function getImageExtension(fileID) {
   const match = String(fileID).match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
@@ -293,7 +294,8 @@ Page({
 
   // 缩略图优先用本地缓存，其次用短时签名地址；都拿不到就记录一次失败，等用户手动重试。
   async prepareImages(fileIDs) {
-    const list = (Array.isArray(fileIDs) ? fileIDs : []).filter(id => typeof id === 'string' && id);
+    // 只为页面实际展示的前四张准备缩略图，全部原图仍由 previewImage 提供滑动浏览。
+    const list = (Array.isArray(fileIDs) ? fileIDs : []).filter(id => typeof id === 'string' && id).slice(0, THUMBNAIL_LIMIT);
     if (!list.length) return;
     const srcs = Object.assign({}, this.data.imageSrcs);
     const errors = Object.assign({}, this.data.imageErrors);

@@ -6,7 +6,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 10;
 const SAFETY_CHUNK_LENGTH = 1500;
 const IMAGE_URL_MAX_AGE = 600;
 const recentErrors = new Map();
@@ -342,6 +342,9 @@ exports.main = async (event) => {
     }
 
     if (action === 'save') {
+      if (Array.isArray(event.images) && event.images.length > MAX_IMAGES) {
+        return failure('每条说明最多添加10张图片');
+      }
       const articleId = normalizeText(event.articleId || '', 64, false);
       const title = normalizeText(event.title, 40, true);
       const summary = normalizeText(event.summary || '', 80, false);

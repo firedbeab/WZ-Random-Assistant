@@ -8,7 +8,7 @@
 .info-entry { display: flex; align-items: center; justify-content: space-between; gap: 28rpx; width: 100%; min-height: 148rpx; padding: var(--space-5) 0; box-sizing: border-box; }
 .info-entry + .info-entry { border-top: 1rpx solid var(--line); }
 .entry-text { min-width: 0; flex: 1; }
-.entry-label { display: block; font-size: var(--font-md); font-weight: 500; line-height: 1.6; }
+.entry-label { display: block; font-size: var(--font-lg); font-weight: 600; line-height: 1.6; }
 .entry-caption { display: block; margin-top: 10rpx; color: var(--text-2); font-size: var(--font-sm); line-height: 1.7; }
 .entry-arrow { transform: rotate(-90deg); }
 /* 自然流中的底部页脚：短页贴近下沿，长页接在正文后，不遮挡内容。 */

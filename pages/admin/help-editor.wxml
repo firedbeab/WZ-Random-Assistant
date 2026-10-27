@@ -24,9 +24,9 @@
     <view class="image-heading">
       <view>
         <text class="field-label">说明图片</text>
-        <text class="image-subtitle">最多5张，超过2MB将自动压缩</text>
+        <text class="image-subtitle">每条最多10张，可分批添加；超过2MB将自动压缩</text>
       </view>
-      <text class="image-total">{{images.length}}/5</text>
+      <text class="image-total">{{images.length}}/10</text>
     </view>
 
     <view class="editor-image-list" wx:if="{{images.length > 0}}">
@@ -40,7 +40,7 @@
       </view>
     </view>
 
-    <button class="choose-image-btn" bindtap="chooseImages" disabled="{{images.length >= 5}}">＋ 上传图片</button>
+    <button class="choose-image-btn" bindtap="chooseImages" disabled="{{images.length >= 10 || choosingImages || saving}}" loading="{{choosingImages}}">＋ 上传图片</button>
   </view>
 
   <view class="preview-card" wx:if="{{showPreview}}">
@@ -49,15 +49,21 @@
     <text class="preview-summary" wx:if="{{summary}}">{{summary}}</text>
     <text class="preview-content">{{content || '未填写详细说明'}}</text>
     <view class="preview-images" wx:if="{{images.length > 0}}">
-      <image class="preview-image {{images.length === 1 ? 'single' : ''}}" wx:for="{{images}}" wx:key="url" src="{{item.url}}" mode="aspectFill" bindtap="previewImage" data-url="{{item.url}}"></image>
+      <block wx:for="{{images}}" wx:key="url">
+        <view class="preview-image-wrap {{images.length === 1 ? 'single' : ''}}" wx:if="{{index < 4}}" bindtap="previewImage" data-url="{{item.url}}">
+          <image class="preview-image" src="{{item.url}}" mode="aspectFill"></image>
+          <view class="preview-image-more" wx:if="{{index === 3 && images.length > 4}}">还有 {{images.length - 4}} 张</view>
+        </view>
+      </block>
     </view>
+    <text class="preview-image-hint" wx:if="{{images.length > 4}}">共 {{images.length}} 张，点开后可左右滑动查看全部图片</text>
   </view>
 
   <view class="bottom-spacer"></view>
   <view class="bottom-actions">
     <button class="action-btn preview" bindtap="togglePreview">{{showPreview ? '收起预览' : '预览'}}</button>
-    <button class="action-btn draft" bindtap="onSaveDraft" disabled="{{saving}}">保存草稿</button>
-    <button class="action-btn publish" bindtap="onPublish" disabled="{{saving}}">发布</button>
+    <button class="action-btn draft" bindtap="onSaveDraft" disabled="{{saving || choosingImages}}">保存草稿</button>
+    <button class="action-btn publish" bindtap="onPublish" disabled="{{saving || choosingImages}}">发布</button>
   </view>
 </view>
 
