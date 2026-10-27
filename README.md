@@ -46,7 +46,7 @@
 
 - 当前界面约定：[DESIGN.md](DESIGN.md)。布局方向先讨论、再看 HTML 样稿、确认后才接入正式小程序。
 - 歌单平铺历史对照：[E-playlist-flat.html](Progress/design/mockups/E-playlist-flat.html)（E.2）。保留固定数据演示，不连接业务云端；当前页面采用 F.3，深色基础已接入本地代码，待真机验收与发布。
-- 管理后台排版样稿（H 版，待评审）：[H-admin-shell.html](Progress/design/mockups/H-admin-shell.html)。管理员与超管双视角，页签收敛、发布收进底部抽屉；固定示例，不接云端，页面代码未改。
+- 管理后台排版样稿（H 版第二稿，待评审）：[H-admin-shell.html](Progress/design/mockups/H-admin-shell.html) 是一级框架（页头恒定、页签按角色分 2 / 4 个、审核与验证码、控制台、管理入口）；[H-admin-pages.html](Progress/design/mockups/H-admin-pages.html) 是三级页面（说明编辑、投稿详情、排期详情、计数器详情）。两者可互相跳转，固定示例，不接云端，页面代码未改。
 - 已确认歌单样稿：[F-playlist-card.html](Progress/design/mockups/F-playlist-card.html)（F.3）。F.2 已接入，F.3 补齐日期标题层级与无卡片状态；首页与歌单共用连续渐变和自定义顶部导航。代码完成不代表已发布，HTML 深色仍为预览；E.2 保留作历史对照。
 - 已确认并接入的说明/关于：[G-info-pages.html](Progress/design/mockups/G-info-pages.html)。HTML 保留为固定样例；正式页面已接入浅深色与统一渐变、导航及内容面，隐私指引与署名位于底部。模拟器主要页面已检查，真机及发布待完成。
 - 操作图标使用统一SVG路径，按当前语义色生成数据地址；照片不反色，不引入图标库或字体包。

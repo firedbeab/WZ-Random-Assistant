@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WZ 随机助手 · H 版管理后台三级页预览</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f2ef; --surface: #fff; --surface-2: #edebe7; --surface-3: #e2e5df;
+    --text-1: #1b1b1d; --text-2: #5f6066; --text-3: #686b63;
+    --line: #e0e3dc; --line-strong: #c6cec5;
+    --accent: #28764f; --accent-weak: #e8f2ec; --on-accent: #fff;
+    --success: #217346; --success-weak: #e8f2ec;
+    --danger: #bd3535; --danger-weak: #fbeceb; --on-danger: #fff;
+    --warn: #805711; --warn-weak: #fdf3e3;
+    --info: #2f6fb3; --info-weak: #eaf1fa;
+    --shadow-sm: 0 1px 4px rgba(60, 50, 40, .05);
+    --shadow-md: 0 8px 24px rgba(60, 50, 40, .08);
+    --shadow-sheet: 0 -10px 40px rgba(0, 0, 0, .12);
+    --tint-start: #e2efe7; --tint-mid: #eef1ea;
+    --wash: linear-gradient(180deg, var(--tint-start) 0px, var(--tint-mid) 160px, var(--bg) 360px);
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-card: 10px;
+    --toast-bg: #30352f; --toast-text: #fff;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #141a16; --surface: #1f2722; --surface-2: #2a352e; --surface-3: #344139;
+    --text-1: #f1f3ef; --text-2: #c0c9c0; --text-3: #a5b2a6;
+    --line: #3d4b41; --line-strong: #59695c;
+    --accent: #7ed5a1; --accent-weak: #233d2e; --on-accent: #102218;
+    --success: #81d9a3; --success-weak: #233d2e;
+    --danger: #ffaaa5; --danger-weak: #432a29; --on-danger: #301311;
+    --warn: #efc77b; --warn-weak: #3b311e;
+    --info: #99c5f3; --info-weak: #233346;
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, .2);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, .28);
+    --shadow-sheet: 0 -10px 40px rgba(0, 0, 0, .5);
+    --tint-start: #1c2b22; --tint-mid: #18231c;
+    --toast-bg: #dce9df; --toast-text: #19231c;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 样稿工作台 */
+  .workbench { min-height: 100vh; display: grid; grid-template-columns: 268px minmax(320px, 430px); align-items: start; justify-content: center; gap: 72px; padding: 40px 28px 56px; }
+  .design-notes { padding-top: 30px; }
+  .eyebrow { display: block; color: var(--accent); font-size: 12px; letter-spacing: .08em; font-weight: 600; }
+  .design-notes h1 { font-size: 28px; line-height: 1.32; margin: 14px 0 14px; font-weight: 600; letter-spacing: -.5px; }
+  .intro { margin: 0; color: var(--text-2); font-size: 13.5px; line-height: 1.85; }
+  .controls { margin-top: 28px; }
+  .control-label { display: block; margin: 18px 0 8px; color: var(--text-2); font-size: 12px; font-weight: 600; }
+  select { width: 100%; min-height: 44px; padding: 10px 12px; border: none; border-radius: 7px; background: var(--surface); color: var(--text-1); }
+  .details { margin-top: 26px; color: var(--text-3); font-size: 12px; line-height: 1.85; }
+  .details p { margin: 12px 0; }
+  .details b { color: var(--text-2); font-weight: 600; }
+  .preview-stage { display: flex; justify-content: center; min-width: 0; }
+
+  /* 手机框 */
+  .device { position: relative; width: 390px; max-width: 100%; height: 844px; max-height: calc(100dvh - 80px); min-height: 500px; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border-radius: 28px; box-shadow: 0 16px 60px rgba(47, 42, 35, .10); }
+  .status-bar { flex: none; height: 39px; display: flex; align-items: center; justify-content: space-between; padding: 9px 24px 0; font-size: 12px; font-weight: 600; }
+  .status-icons { display: flex; align-items: center; gap: 6px; }
+  .status-icons svg { display: block; }
+  .native-nav { flex: none; min-height: 49px; display: grid; grid-template-columns: 76px 1fr 76px; align-items: center; padding: 0 16px; }
+  .nav-back { font-size: 26px; line-height: 1; font-family: sans-serif; }
+  .nav-title { text-align: center; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .native-capsule { justify-self: end; width: 72px; height: 28px; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--line-strong); display: flex; justify-content: space-evenly; align-items: center; font-size: 16px; }
+  .capsule-dot { position: relative; width: 13px; height: 13px; border: 2px solid currentColor; border-radius: 50%; }
+  .capsule-dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: currentColor; }
+  .screen-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; background: var(--wash); scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+  .safe-area { flex: none; height: 22px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; background: var(--bg); }
+  .home-indicator { display: block; width: 122px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+  .bar-host { flex: none; }
+
+  /* 页头：三级页只保留返回行 + 16px 标题 + 12px 副标题 */
+  .page-head { padding: 2px 16px 0; }
+  .back-row { display: inline-flex; align-items: center; gap: 3px; min-height: 44px; margin-left: -4px; padding: 0 10px 0 4px; border: none; border-radius: 8px; background: transparent; color: var(--accent); font-size: 13px; line-height: 1.4; text-align: left; }
+  .back-row:active { background: var(--accent-weak); }
+  .back-row .ic { width: 17px; height: 17px; flex: none; }
+  .page-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; letter-spacing: 0; overflow-wrap: anywhere; }
+  .page-sub { margin: 3px 0 0; color: var(--text-2); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+  .page-body { padding: 12px 16px 20px; }
+
+  /* 卡片 */
+  .card { border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-sm); }
+  .card + .card { margin-top: 10px; }
+  .card-pad { padding: 12px 14px; }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .card-title { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.5; }
+  .card-note { margin: 4px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 1.6; }
+  .count-pill { flex: none; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--text-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .tiny-note { margin: 8px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.65; }
+
+  /* 表单 */
+  .field { margin-top: 14px; }
+  .field:first-child { margin-top: 0; }
+  .field-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .field-label { color: var(--text-2); font-size: 12px; font-weight: 600; }
+  .field-count { color: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .field-input, .field-area { display: block; width: 100%; margin-top: 7px; padding: 10px 11px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-1); font-family: inherit; font-size: 14px; line-height: 1.55; }
+  .field-input { min-height: 44px; }
+  .field-area { min-height: 106px; max-height: 360px; overflow-y: auto; resize: none; }
+  .field-input::placeholder, .field-area::placeholder { color: var(--text-3); }
+  .field-input[type="number"] { font-variant-numeric: tabular-nums; }
+  .field-input::-webkit-outer-spin-button, .field-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* 说明图片 */
+  .img-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .img-cell { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .img-slot { position: relative; display: grid; place-items: center; aspect-ratio: 3 / 2; background: var(--surface-2); color: var(--text-3); }
+  .img-slot .ic { width: 22px; height: 22px; opacity: .55; }
+  .img-index { position: absolute; left: 6px; top: 5px; padding: 1px 4px; border-radius: 4px; background: var(--surface); color: var(--text-3); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .img-acts { display: flex; border-top: 1px solid var(--line); }
+  .act { flex: 1; min-width: 0; min-height: 44px; padding: 0 2px; border: none; background: transparent; color: var(--text-2); font-size: 11.5px; white-space: nowrap; }
+  .act + .act { border-left: 1px solid var(--line); }
+  .act:active { background: var(--surface-2); }
+  .act[disabled] { color: var(--text-3); opacity: .45; cursor: default; }
+  .act.danger { color: var(--danger); }
+  .act.accent { color: var(--accent); font-weight: 600; }
+  .img-dead { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 4px; background: var(--surface-2); color: var(--text-3); font-size: 12px; }
+  .img-dead .act { flex: none; padding: 0 10px; }
+  .upload-btn { display: flex; width: 100%; min-height: 44px; margin-top: 10px; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); background: transparent; color: var(--accent); font-size: 13px; }
+  .upload-btn:active { background: var(--accent-weak); }
+  .upload-btn[disabled] { color: var(--text-3); border-color: var(--line); cursor: default; }
+  .upload-btn .ic { width: 15px; height: 15px; }
+
+  /* 折叠 + 预览 */
+  .fold-head { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 8px; padding: 10px 14px; border: none; background: transparent; color: var(--text-1); font-size: 13px; font-weight: 600; text-align: left; }
+  .fold-head .ic { width: 16px; height: 16px; flex: none; color: var(--text-3); transition: transform .2s; }
+  .fold-head[aria-expanded="true"] .ic { transform: rotate(180deg); }
+  .fold-hint { margin-left: auto; color: var(--text-3); font-size: 11.5px; font-weight: 400; }
+  .pv-body { padding: 12px 14px 14px; border-top: 1px solid var(--line); }
+  .pv-title { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+  .pv-summary { margin: 4px 0 0; color: var(--text-2); font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+  .pv-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 0; color: var(--text-2); font-size: 12.5px; line-height: 1.75; overflow-wrap: anywhere; }
+  .pv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 10px; }
+  .pv-cell { position: relative; display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border-radius: 6px; background: var(--surface-2); color: var(--text-3); }
+  .pv-cell .ic { width: 15px; height: 15px; opacity: .5; }
+  .pv-more { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .45); color: #fff; font-size: 11px; font-weight: 600; }
+  .pv-hint { margin: 8px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.6; }
+
+  /* 状态标签 */
+  .flag { display: inline-block; max-width: 100%; padding: 3px 7px; border-radius: 5px; font-size: 11px; line-height: 1.45; white-space: nowrap; }
+  .flag-info { background: var(--info-weak); color: var(--info); }
+  .flag-success { background: var(--success-weak); color: var(--success); }
+  .flag-outline { background: transparent; box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
+  .flag-warn { background: var(--warn-weak); color: var(--warn); }
+  .flag-danger { background: var(--danger-weak); color: var(--danger); }
+  .flag-muted { background: var(--surface-2); color: var(--text-3); }
+  .status-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .flag-btn { display: inline-flex; min-height: 44px; align-items: center; gap: 3px; padding: 0 10px; border: none; border-radius: 8px; font-size: 12px; white-space: nowrap; }
+  .flag-btn .ic { width: 12px; height: 12px; }
+  .flag-btn[aria-selected="true"] { font-weight: 600; box-shadow: inset 0 0 0 1.5px currentColor; }
+
+  /* 键值行 */
+  .kv { margin-top: 10px; border-top: 1px solid var(--line); }
+  .kv-row { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 10px; padding: 8px 0; border: none; border-bottom: 1px solid var(--line); background: transparent; text-align: left; font-size: 13.5px; }
+  .kv-row:last-child { border-bottom: none; }
+  button.kv-row { border-radius: 0; }
+  button.kv-row:active { opacity: .6; }
+  .kv-k { flex: none; width: 62px; color: var(--text-3); font-size: 12px; }
+  .kv-v { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .kv-v.muted { color: var(--text-3); }
+  .kv-row .ic { flex: none; width: 15px; height: 15px; color: var(--accent); }
+  .kv-row.static .kv-v { color: var(--text-2); font-size: 12.5px; }
+  .sub-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sub-week { color: var(--text-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .inline-note { display: flex; align-items: flex-start; gap: 6px; margin: 12px 0 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); font-size: 11.5px; line-height: 1.6; }
+  .inline-note .ic { flex: none; width: 14px; height: 14px; margin-top: 1px; color: var(--accent); }
+
+  /* 排期 */
+  .meta-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; color: var(--text-2); font-size: 12.5px; }
+  .meta-line .sep { color: var(--text-3); }
+  .range-line { margin: 8px 0 0; color: var(--text-3); font-size: 11.5px; }
+  .day { padding: 0 14px; }
+  .day + .day { border-top: 1px solid var(--line); }
+  .day-head { display: flex; align-items: baseline; gap: 6px; min-height: 40px; padding-top: 9px; }
+  .day-title { margin: 0; font-size: 13px; font-weight: 700; }
+  .day-date { color: var(--text-3); font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
+  .day-count { margin-left: auto; color: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .song { padding: 7px 0 9px; }
+  .song + .song { border-top: 1px solid var(--line); }
+  .song-name { display: block; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+  .song-singer { display: block; margin-top: 1px; color: var(--text-2); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .song-note { margin: 5px 0 0; padding-left: 8px; border-left: 2px solid var(--line-strong); color: var(--text-3); font-size: 11.5px; line-height: 1.65; overflow-wrap: anywhere; }
+  .day-empty { margin: 0; padding: 4px 0 12px; color: var(--text-3); font-size: 12px; }
+  .day:last-child { padding-bottom: 10px; }
+  .admin-note { margin: 8px 0 0; color: var(--text-2); font-size: 12.5px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* 计数器 */
+  .hero-card { padding: 16px 14px 14px; }
+  .hero-label { display: block; color: var(--text-2); font-size: 12px; }
+  .hero-num { display: block; margin: 2px 0 0; font-size: 40px; font-weight: 700; line-height: 1.12; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .hero-sub { display: block; margin-top: 4px; color: var(--text-3); font-size: 11.5px; line-height: 1.6; }
+  .recon { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .recon-item { padding: 10px 11px; border-radius: var(--radius-sm); background: var(--surface-2); }
+  .recon-label { display: block; color: var(--text-3); font-size: 11px; }
+  .recon-value { display: block; margin-top: 2px; font-size: 20px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .recon-value.warn { color: var(--warn); }
+  .recon-note { margin: 8px 0 0; color: var(--text-2); font-size: 11.5px; line-height: 1.65; }
+  .census { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .census-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .census-num { color: var(--text-1); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .recent { margin: 10px 0 0; padding: 0; list-style: none; }
+  .recent li { padding: 10px 0; border-top: 1px solid var(--line); }
+  .recent li:first-child { padding-top: 0; border-top: none; }
+  .recent-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .recent-time { color: var(--text-1); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .recent-op { color: var(--text-3); font-size: 11.5px; }
+  .recent-reason { margin: 3px 0 0; color: var(--text-2); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+  .risk { display: flex; align-items: flex-start; gap: 6px; margin: 10px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 1.6; }
+  .risk .ic { flex: none; width: 14px; height: 14px; margin-top: 1px; }
+
+  /* 底部操作条 */
+  .warn-strip { margin: 0; padding: 8px 14px; border-top: 1px solid var(--warn-weak); background: var(--warn-weak); color: var(--warn); font-size: 11.5px; line-height: 1.5; }
+  .bar-note { margin: 0; padding: 8px 14px 0; background: var(--surface); color: var(--text-3); font-size: 11.5px; line-height: 1.55; }
+  .action-bar { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-top: 1px solid var(--line); background: var(--surface); }
+  .btn { flex: none; min-height: 44px; padding: 0 16px; border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .btn:active { filter: brightness(.96); }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary[disabled] { background: var(--line-strong); color: var(--bg); cursor: default; filter: none; }
+  .btn-danger { background: var(--danger); color: var(--on-danger); }
+  .btn-danger[disabled] { background: var(--surface-2); color: var(--text-3); cursor: default; filter: none; }
+  .btn-quiet { background: var(--surface); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--line-strong); }
+  .btn-danger-outline { background: var(--surface); color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
+  .btn-danger-outline[disabled] { color: var(--text-3); box-shadow: inset 0 0 0 1px var(--line-strong); cursor: default; filter: none; }
+  .btn-block { display: block; width: 100%; margin-top: 12px; }
+  .action-bar .btn:last-child { flex: 1; }
+  .action-bar.reverse .btn:first-child { flex: 1; }
+  .action-bar.reverse .btn:last-child { flex: 0 0 auto; }
+
+  /* 底部抽屉 */
+  .sheet-mask { position: absolute; inset: 0; background: rgba(0, 0, 0, .42); opacity: 0; pointer-events: none; transition: opacity .22s; z-index: 20; }
+  .sheet-mask.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 21; max-height: 78%; display: flex; flex-direction: column; padding: 8px 18px calc(16px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; background: var(--surface); box-shadow: var(--shadow-sheet); transform: translateY(102%); transition: transform .24s cubic-bezier(.2, .8, .3, 1); }
+  .sheet.open { transform: translateY(0); }
+  .sheet-grip { width: 34px; height: 4px; margin: 2px auto 10px; border-radius: 2px; background: var(--line-strong); }
+  .sheet-title { margin: 0; font-size: 17px; font-weight: 700; }
+  .sheet-sub { margin: 5px 0 0; color: var(--text-2); font-size: 12.5px; line-height: 1.6; }
+  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; margin: 12px -4px 0; padding: 0 4px; }
+  .sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .sum-row:first-child { border-top: none; }
+  .sum-row .sum-label { color: var(--text-2); }
+  .sum-row .sum-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sum-row .sum-value.warn-text { color: var(--warn); }
+  .impact { margin: 10px 0 0; padding-left: 16px; color: var(--text-2); font-size: 12px; line-height: 1.7; }
+  .impact li + li { margin-top: 4px; }
+  .sheet-note { display: block; margin: 14px 0 6px; color: var(--text-2); font-size: 12px; font-weight: 600; }
+  .sheet-input { width: 100%; min-height: 76px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-1); font-family: inherit; font-size: 13.5px; line-height: 1.7; resize: none; }
+  .sheet-input::placeholder { color: var(--text-3); }
+  .sheet-error { display: flex; gap: 7px; margin-top: 10px; padding: 9px 11px; border-radius: var(--radius-sm); background: var(--warn-weak); color: var(--warn); font-size: 12px; line-height: 1.6; }
+  .sheet-error .ic { flex: none; width: 14px; height: 14px; margin-top: 1px; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .sheet-actions .btn { flex: 1; min-width: 0; }
+  .sheet-actions .btn:last-child { flex: 1.4; }
+
+  /* 提示条 */
+  .toast { position: absolute; left: 24px; right: 24px; bottom: 96px; z-index: 30; padding: 10px 14px; border-radius: 10px; background: var(--toast-bg); color: var(--toast-text); font-size: 12.5px; line-height: 1.55; text-align: center; opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.visible { opacity: 1; transform: translateY(0); }
+  .device.no-bar .toast { bottom: 44px; }
+
+  @media (max-width: 860px) {
+    .workbench { grid-template-columns: minmax(0, 1fr); gap: 30px; padding: 24px 18px 40px; }
+    .design-notes { padding-top: 0; grid-row: 2; }
+    .preview-stage { grid-row: 1; }
+    .design-notes h1 { font-size: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toast, .sheet, .sheet-mask { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="workbench">
+  <aside class="design-notes" aria-label="样稿预览控制">
+    <span class="eyebrow">WZ 随机助手 · 管理后台 H 版 · 三级页</span>
+    <h1>三级页，<br>先把层级压下来。</h1>
+    <p class="intro">四个页面都从二级列表点进来，所以顶部只留一条 44px 的返回行、16px 标题和一行副标题；内容仍是一张白色卡片接一张，操作收在底部一条。</p>
+    <div class="controls">
+      <label class="control-label" for="pageSelect">预览页面</label>
+      <select id="pageSelect">
+        <option value="help">A · 说明编辑</option>
+        <option value="sub">B · 投稿详情</option>
+        <option value="schedule">C · 排期详情</option>
+        <option value="counter">D · 计数器详情</option>
+      </select>
+      <label class="control-label" for="widthSelect">预览宽度</label>
+      <select id="widthSelect">
+        <option value="390">390px · 常规手机</option>
+        <option value="375">375px · 小一号</option>
+        <option value="320">320px · 窄屏检查</option>
+        <option value="430">430px · 大屏手机</option>
+      </select>
+      <label class="control-label" for="themeSelect">预览外观</label>
+      <select id="themeSelect">
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+        <option value="system">跟随系统</option>
+      </select>
+    </div>
+    <div class="details">
+      <p><b>层级</b>：一级「管理后台」→ 二级「管理」页签 → 这里是三级页。标题只到 16px，比页签（14px）大一点、比一级页头（24px）小，靠返回行说明来路。</p>
+      <p><b>A 说明编辑</b>：管理 › 说明管理 › 编辑进入。保存草稿与发布都会写 <b>help_articles</b>（标题、折叠摘要、正文、图片顺序、is_published）；草稿只把 is_published 置为 false。</p>
+      <p><b>B 投稿详情</b>：数据控制台 › 投稿 › 编辑进入。信息区只读（点一行跳到下面的输入框），保存写 <b>submissions</b>（song_name / singer / special_note，改歌名会重建判重键）；移除改 status 并回写 submission_counters。</p>
+      <p><b>C 排期详情</b>：数据控制台 › 排期 › 点开进入。撤回会写 <b>schedules</b> 的 status 与 revision，并在 system_events 留一条记录；已发出的订阅通知无法撤回。</p>
+      <p><b>D 计数器详情</b>：数据控制台 › 计数器 › 点开进入。保存写 <b>submission_counters</b>（count / update_reason / updated_by），同时写审计日志。</p>
+      <p>本样稿为固定示例，不连云端：输入、删除、撤回、调整都只在浏览器里演示，刷新即还原。</p>
+    </div>
+  </aside>
+
+  <section class="preview-stage" aria-label="管理后台三级页手机预览">
+    <div class="device" id="device">
+      <div class="status-bar" aria-hidden="true">
+        <span class="num">9:41</span>
+        <span class="status-icons">
+          <svg width="15" height="12" viewBox="0 0 15 12" aria-hidden="true"><path d="M1 11V8h2v3zm4 0V6h2v5zm4 0V3h2v8zm4 0V0h2v11z" fill="currentColor"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" aria-hidden="true"><path d="M1 4q7-6 14 0M4 7q4-4 8 0M7 10q1-1 2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg width="23" height="12" viewBox="0 0 23 12" aria-hidden="true"><rect x="1" y="1" width="18" height="10" rx="2" fill="none" stroke="currentColor"/><rect x="3" y="3" width="14" height="6" rx="1" fill="currentColor"/><path d="M21 4v4" stroke="currentColor" stroke-width="2"/></svg>
+        </span>
+      </div>
+      <div class="native-nav">
+        <span class="nav-back" aria-hidden="true">‹</span>
+        <span class="nav-title">WZ随机助手</span>
+        <span class="native-capsule" aria-hidden="true"><span>•••</span><span class="capsule-dot"></span></span>
+      </div>
+
+      <div class="screen-scroll" id="screenScroll"></div>
+      <div class="bar-host" id="barHost"></div>
+      <div class="safe-area" aria-hidden="true"><span class="home-indicator"></span></div>
+
+      <div class="sheet-mask" id="sheetMask"></div>
+      <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+        <div class="sheet-grip" aria-hidden="true"></div>
+        <h2 class="sheet-title" id="sheetTitle"></h2>
+        <p class="sheet-sub" id="sheetSub"></p>
+        <div class="sheet-body" id="sheetBody"></div>
+        <div class="sheet-actions" id="sheetActions"></div>
+      </section>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const byId = id => document.getElementById(id);
+  const esc = v => String(v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const svg = path => '<svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
+
+  const IC = {
+    back: svg('<path d="M11.6 4.8 6.4 10l5.2 5.2"/>'),
+    chev: svg('<path d="m5.5 7.5 4.5 4.5 4.5-4.5"/>'),
+    plus: svg('<path d="M10 4.5v11M4.5 10h11"/>'),
+    pic: svg('<rect x="2.5" y="3.5" width="15" height="13" rx="2"/><circle cx="7" cy="7.6" r="1.2"/><path d="m3 14 4.2-4.2L11 13.6l2.6-2.6 3.4 3.4"/>'),
+    edit: svg('<path d="M12.8 3.6 16.4 7.2 7.6 16H4v-3.6z"/><path d="m11.4 5 3.6 3.6"/>'),
+    info: svg('<circle cx="10" cy="10" r="7.2"/><path d="M10 9v4.4M10 6.6h.01"/>'),
+    check: svg('<path d="m4.6 10.4 3.5 3.5 7.3-7.3"/>'),
+    alert: svg('<path d="M10 3.2 17.4 16.8H2.6z"/><path d="M10 8v3.6M10 14.2h.01"/>')
+  };
+
+  const STATUS = {
+    pending: { label: '待抽', cls: 'flag-info', desc: '已提交，等待周日晚 20:00 抽取。' },
+    selected: { label: '已入选', cls: 'flag-success', desc: '已抽中并进入本期排期。' },
+    carryover: { label: '候补', cls: 'flag-outline', desc: '来自历史候补，本周未抽中但保留资格。' },
+    overflow: { label: '已超额', cls: 'flag-warn', desc: '超出本周名额，记录保留但不入选。' },
+    rejected: { label: '未通过', cls: 'flag-danger', desc: '审核不通过，不进入抽取。' },
+    removed: { label: '已移除', cls: 'flag-muted', desc: '管理员移除，可随时恢复并加回计数。' }
+  };
+  const SCHED_STATUS = {
+    pending: { label: '待审核', cls: 'flag-info' },
+    published: { label: '已发布', cls: 'flag-success' },
+    withdrawn: { label: '已撤回', cls: 'flag-muted' }
+  };
+
+  const state = {
+    page: 'help',
+    help: {
+      title: '如何提交本周点歌并写备注',
+      summary: '开放时间、填写内容与提交次数',
+      content: '每周日 8:00–20:00 开放点歌，每人每周可提交一次。填写本周验证码、歌名与歌手，特殊备注可以补充版本或其他必要说明。提交后以页面显示的状态为准，不需要重复提交。图片是操作示意，最多 10 张。',
+      images: ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].map((id, i) => ({ id, label: '示意图片 ' + (i + 1) })),
+      deleted: new Set(),
+      previewOpen: true,
+      savedAt: '10-24 21:08'
+    },
+    sub: {
+      name: '夜曲',
+      singer: '周杰伦',
+      note: '希望播放原版，晚上 9 点后更有氛围',
+      original: { name: '夜曲', singer: '周杰伦', note: '希望播放原版，晚上 9 点后更有氛围' },
+      status: 'pending',
+      week: '2026-10-25',
+      time: '2026-10-25 14:32',
+      user: 'oMdx…3f2a'
+    },
+    sched: {
+      week: '2026-10-25',
+      status: 'published',
+      revision: 3,
+      note: '本周因运动会调整：周四不安排播放；周五延长 10 分钟，用于补播本周没播完的曲目。',
+      days: [
+        { label: '周一', date: '10.26', items: [
+          { name: '稻香', singer: '周杰伦', note: '希望播放原版，送给认真生活的人。' },
+          { name: '海阔天空', singer: 'Beyond', note: '' }
+        ] },
+        { label: '周二', date: '10.27', items: [
+          { name: '平凡之路', singer: '朴树', note: '' },
+          { name: '晴天', singer: '周杰伦', note: '点给高二（3）班，午休时段播放。' }
+        ] },
+        { label: '周三', date: '10.28', items: [
+          { name: '起风了', singer: '买辣椒也用券', note: '' },
+          { name: '夜空中最亮的星', singer: '逃跑计划', note: '高三晚自习前播放，音量略低。' }
+        ] },
+        { label: '周四', date: '10.29', items: [] },
+        { label: '周五', date: '10.30', items: [
+          { name: '倔强', singer: '五月天', note: '' },
+          { name: '光年之外', singer: 'G.E.M. 邓紫棋', note: '' }
+        ] }
+      ]
+    },
+    counter: {
+      week: '2026-10-25',
+      count: 157,
+      stored: 155,
+      statuses: { pending: 12, selected: 20, carryover: 38, overflow: 45, rejected: 32, removed: 8 },
+      input: '157',
+      reason: '',
+      recent: [
+        { time: '2026-10-26 09:12', op: '张老师 · admin_…7f21', reason: '手动抽取后计数偏低 2 次，按现存非 removed 记录校准。' },
+        { time: '2026-10-19 22:40', op: '李老师 · admin_…c04e', reason: '清理测试投稿后回写，已同步核对用户端显示。' }
+      ]
+    },
+    sheet: null
+  };
+
+  let toastTimer;
+  function toast(message) {
+    const node = byId('toast');
+    node.textContent = message;
+    node.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => node.classList.remove('visible'), 2600);
+  }
+  function setText(id, value) {
+    const node = byId(id);
+    if (node) node.textContent = value;
+  }
+
+  /* ---------- 片段 ---------- */
+  const pageHead = (back, title, sub) => `
+    <header class="page-head">
+      <button class="back-row" type="button" data-act="back" data-back="${esc(back)}">
+        ${IC.back}<span>返回 ${esc(back)}</span>
+      </button>
+      <h1 class="page-title">${esc(title)}</h1>
+      <p class="page-sub">${esc(sub)}</p>
+    </header>`;
+
+  const flag = key => {
+    const item = STATUS[key] || STATUS.pending;
+    return `<span class="flag ${item.cls}">${item.label}</span>`;
+  };
+
+  function field(opts) {
+    const { id, label, value, max, model, area, placeholder } = opts;
+    const len = String(value).length;
+    return `
+      <div class="field">
+        <div class="field-row">
+          <label class="field-label" for="${id}">${label}</label>
+          <span class="field-count" id="${id}Count">${len}/${max}</span>
+        </div>
+        ${area
+          ? `<textarea class="field-area" id="${id}" rows="4" maxlength="${max}" data-model="${model}" placeholder="${placeholder}">${esc(value)}</textarea>`
+          : `<input class="field-input" id="${id}" type="text" maxlength="${max}" value="${esc(value)}" data-model="${model}" placeholder="${placeholder}" autocomplete="off">`}
+      </div>`;
+  }
+
+  /* ---------- A 说明编辑 ---------- */
+  function imgCell(img, i) {
+    const h = state.help;
+    const dead = h.deleted.has(img.id);
+    return `
+      <div class="img-cell">
+        <div class="img-slot">
+          <span class="img-index num">${String(i + 1).padStart(2, '0')}</span>
+          ${IC.pic}
+        </div>
+        <div class="img-acts">
+          <button class="act" type="button" data-act="img-left" data-id="${img.id}" ${dead || i === 0 ? 'disabled' : ''}>左移</button>
+          <button class="act" type="button" data-act="img-right" data-id="${img.id}" ${dead || i === h.images.length - 1 ? 'disabled' : ''}>右移</button>
+          <button class="act danger" type="button" data-act="img-del" data-id="${img.id}" ${dead ? 'disabled' : ''}>删除</button>
+        </div>
+        ${dead ? `<div class="img-dead"><span>已删除</span><button class="act accent" type="button" data-act="img-undo" data-id="${img.id}">撤销</button></div>` : ''}
+      </div>`;
+  }
+
+  function renderHelp() {
+    const h = state.help;
+    const shown = h.images.filter(img => !h.deleted.has(img.id));
+    const n = shown.length;
+    const head = shown.slice(0, 4);
+    const canPublish = h.title.trim().length > 0;
+    return `
+      ${pageHead('说明管理', '编辑说明', `第 2 条 · 草稿 · ${h.savedAt} 保存`)}
+      <div class="page-body">
+        <section class="card">
+          <div class="card-pad">
+            ${field({ id: 'helpTitle', label: '标题', value: h.title, max: 40, model: 'help.title', placeholder: '例如：如何提交歌曲' })}
+            ${field({ id: 'helpSummary', label: '折叠摘要（选填）', value: h.summary, max: 80, model: 'help.summary', placeholder: '用一句话概括本条说明' })}
+            ${field({ id: 'helpContent', label: '详细说明', value: h.content, max: 5000, model: 'help.content', area: true, placeholder: '输入详细内容，支持换行和分段' })}
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">说明图片</h2>
+                <p class="card-note">每条最多 10 张，可分批添加；超过 2MB 自动压缩。</p>
+              </div>
+              <span class="count-pill" id="imgCount">${n}/10</span>
+            </div>
+            <div class="img-grid">${h.images.map(imgCell).join('')}</div>
+            <button class="upload-btn" type="button" data-act="img-add" ${n >= 10 ? 'disabled' : ''}>${IC.plus}<span>上传图片</span></button>
+          </div>
+        </section>
+
+        <section class="card" id="previewCard">
+          <button class="fold-head" type="button" data-act="pv-toggle" aria-expanded="${h.previewOpen}" aria-controls="pvBody">
+            <span>用户端预览</span>
+            <span class="fold-hint">${n} 张图片</span>
+            ${IC.chev}
+          </button>
+          <div class="pv-body" id="pvBody" ${h.previewOpen ? '' : 'hidden'}>
+            <p class="pv-title" id="pvTitle">${esc(h.title || '未填写标题')}</p>
+            <p class="pv-summary" id="pvSummary" ${h.summary ? '' : 'hidden'}>${esc(h.summary)}</p>
+            <p class="pv-text" id="pvText">${esc(h.content || '未填写详细说明')}</p>
+            ${head.length ? `<div class="pv-grid">${head.map((img, idx) => `
+              <div class="pv-cell">${IC.pic}${idx === 3 && n > 4 ? `<span class="pv-more">还有 ${n - 4} 张</span>` : ''}</div>`).join('')}</div>` : ''}
+            ${n > 4 ? `<p class="pv-hint">共 ${n} 张，点开后可左右滑动查看全部图片</p>` : ''}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function barHelp() {
+    const h = state.help;
+    const ok = h.title.trim().length > 0;
+    return `
+      <p class="warn-strip" id="publishWarn" ${ok ? 'hidden' : ''}>标题不能为空，填写后才能发布到用户端</p>
+      <div class="action-bar">
+        <button class="btn btn-quiet" type="button" data-act="pv-jump">预览</button>
+        <button class="btn btn-quiet" type="button" data-act="save-draft">保存草稿</button>
+        <button class="btn btn-primary" type="button" id="publishBtn" data-act="publish" ${ok ? '' : 'disabled'}>发布</button>
+      </div>`;
+  }
+
+  /* ---------- B 投稿详情 ---------- */
+  function statusChips(current) {
+    return Object.keys(STATUS).map(key => {
+      const item = STATUS[key];
+      const on = current === key;
+      return `<button class="flag-btn ${item.cls}" type="button" role="option" aria-selected="${on}" data-act="set-status" data-status="${key}">${on ? IC.check : ''}${item.label}</button>`;
+    }).join('');
+  }
+
+  function renderSub() {
+    const s = state.sub;
+    const st = STATUS[s.status];
+    const dirty = s.name.trim() !== s.original.name.trim();
+    const canSave = s.name.trim().length > 0;
+    return `
+      ${pageHead('投稿列表', '投稿详情', `${s.week} 期 · 提交于 ${s.time}`)}
+      <div class="page-body">
+        <section class="card">
+          <div class="card-pad">
+            <div class="sub-top">
+              <span class="flag ${st.cls}" id="subFlag">${st.label}</span>
+              <span class="sub-week">${s.week} 期</span>
+            </div>
+            <div class="kv">
+              <button class="kv-row" type="button" data-act="focus" data-target="subName">
+                <span class="kv-k">歌名</span><span class="kv-v" id="kvName">${esc(s.name || '—')}</span>${IC.edit}
+              </button>
+              <button class="kv-row" type="button" data-act="focus" data-target="subSinger">
+                <span class="kv-k">歌手</span><span class="kv-v" id="kvSinger">${esc(s.singer || '—')}</span>${IC.edit}
+              </button>
+              <button class="kv-row" type="button" data-act="focus" data-target="subNote">
+                <span class="kv-k">特殊备注</span><span class="kv-v ${s.note ? '' : 'muted'}" id="kvNote">${esc(s.note || '未填写')}</span>${IC.edit}
+              </button>
+              <div class="kv-row static">
+                <span class="kv-k">提交时间</span><span class="kv-v num">${s.time}</span>
+              </div>
+              <div class="kv-row static">
+                <span class="kv-k">用户</span><span class="kv-v num">${s.user}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <h2 class="card-title">编辑内容</h2>
+            <p class="card-note">保存后立即对用户端生效；歌名与歌手会重建判重键。</p>
+            <div class="field">
+              <div class="field-row">
+                <label class="field-label" for="subName">歌名</label>
+                <span class="field-count" id="subNameCount">${s.name.length}/40</span>
+              </div>
+              <input class="field-input" id="subName" type="text" maxlength="40" value="${esc(s.name)}" data-model="sub.name" placeholder="请输入曲目名称" autocomplete="off">
+            </div>
+            <div class="field">
+              <div class="field-row">
+                <label class="field-label" for="subSinger">歌手 / 补充说明</label>
+                <span class="field-count" id="subSingerCount">${s.singer.length}/40</span>
+              </div>
+              <input class="field-input" id="subSinger" type="text" maxlength="40" value="${esc(s.singer)}" data-model="sub.singer" placeholder="请输入歌手或补充说明" autocomplete="off">
+            </div>
+            <div class="field">
+              <div class="field-row">
+                <label class="field-label" for="subNote">特殊备注（可留空）</label>
+                <span class="field-count" id="subNoteCount">${s.note.length}/50</span>
+              </div>
+              <input class="field-input" id="subNote" type="text" maxlength="50" value="${esc(s.note)}" data-model="sub.note" placeholder="没有备注可留空" autocomplete="off">
+            </div>
+            <p class="inline-note" id="dedupeNote" ${dirty ? '' : 'hidden'}>${IC.info}<span>保存后会重新生成同名判重键，历史记录不受影响。</span></p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <h2 class="card-title">状态</h2>
+            <p class="card-note">${esc(st.desc)}</p>
+            <div class="status-list" role="listbox" aria-label="投稿状态示例切换">
+              ${statusChips(s.status)}
+            </div>
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function barSub() {
+    const s = state.sub;
+    const canSave = s.name.trim().length > 0;
+    return `
+      <p class="warn-strip" id="subWarn" ${canSave ? 'hidden' : ''}>歌名不能为空，保存前请先填写</p>
+      <div class="action-bar">
+        ${s.status === 'removed' ? '<button class="btn btn-quiet" type="button" data-act="restore">恢复</button>' : ''}
+        <button class="btn btn-danger" type="button" data-act="ask-remove" ${s.status === 'removed' ? 'disabled' : ''}>移除</button>
+        <button class="btn btn-primary" type="button" id="subSave" data-act="save-sub" ${canSave ? '' : 'disabled'}>保存</button>
+      </div>`;
+  }
+
+  /* ---------- C 排期详情 ---------- */
+  function renderSchedule() {
+    const d = state.sched;
+    const st = SCHED_STATUS[d.status];
+    const total = d.days.reduce((sum, day) => sum + day.items.length, 0);
+    return `
+      ${pageHead('排期列表', '排期详情', `周一 10.26 – 周五 10.30 · 共 ${total} 首`)}
+      <div class="page-body">
+        <section class="card">
+          <div class="card-pad">
+            <div class="meta-line">
+              <span class="num">${d.week} 期</span>
+              <span class="sep">·</span>
+              <span class="flag ${st.cls}">${st.label}</span>
+              <span class="sep">·</span>
+              <span class="num">修订 ${d.revision}</span>
+            </div>
+            <p class="range-line">发布于 10-26 周一 00:00 · 已推送订阅通知 3 条</p>
+          </div>
+        </section>
+
+        <section class="card">
+          ${d.days.map(day => `
+            <section class="day">
+              <div class="day-head">
+                <h2 class="day-title">${day.label}</h2>
+                <span class="day-date">${day.date}</span>
+                <span class="day-count">${day.items.length ? day.items.length + ' 首' : '—'}</span>
+              </div>
+              ${day.items.length ? day.items.map(item => `
+                <article class="song">
+                  <span class="song-name">${esc(item.name)}</span>
+                  <span class="song-singer">${esc(item.singer)}</span>
+                  ${item.note ? `<p class="song-note">${esc(item.note)}</p>` : ''}
+                </article>`).join('') : '<p class="day-empty">当天暂无安排</p>'}
+            </section>`).join('')}
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <h2 class="card-title">当周备注</h2>
+            <p class="admin-note">${esc(d.note || '没有当周备注')}</p>
+            <p class="tiny-note">发布后这段文字显示在歌单底部，用户端只读。</p>
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function barSchedule() {
+    const d = state.sched;
+    const published = d.status === 'published';
+    const note = d.status === 'withdrawn'
+      ? '已撤回，学生端显示上一期；重新发布请走发布流程。'
+      : '待审核的排期还不能撤回，改完内容直接保存即可。';
+    return `
+      ${published ? '' : `<p class="bar-note" id="schedNote">${note}</p>`}
+      <div class="action-bar reverse">
+        <button class="btn btn-quiet" type="button" data-act="back" data-back="排期列表">返回</button>
+        <button class="btn btn-danger-outline" type="button" data-act="ask-withdraw" ${published ? '' : 'disabled'}>撤回本期</button>
+      </div>`;
+  }
+
+  /* ---------- D 计数器详情 ---------- */
+  function renderCounter() {
+    const c = state.counter;
+    const diff = c.count - c.stored;
+    const sum = Object.keys(c.statuses).reduce((n, key) => n + c.statuses[key], 0);
+    return `
+      ${pageHead('计数器', '计数器详情', '仅超级管理员可调整 · 所有调整写入审计日志')}
+      <div class="page-body">
+        <section class="card hero-card">
+          <span class="hero-label">本周提交次数</span>
+          <strong class="hero-num" id="counterValue">${c.count}</strong>
+          <span class="hero-sub">按北京时间 ${c.week} 周统计</span>
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <h2 class="card-title">与现存记录对照</h2>
+            <div class="recon">
+              <div class="recon-item">
+                <span class="recon-label">有效记录</span>
+                <span class="recon-value">${c.stored}</span>
+              </div>
+              <div class="recon-item">
+                <span class="recon-label">差额</span>
+                <span class="recon-value warn">${diff >= 0 ? '+' : ''}${diff}</span>
+              </div>
+            </div>
+            <p class="recon-note">差额来自移除与超限：这部分提交已经不再算有效记录，但提交时已经记入周计数，所以显示值通常略高。</p>
+            <div class="census">
+              ${Object.keys(STATUS).map(key => `
+                <div class="census-row">
+                  <span class="flag ${STATUS[key].cls}">${STATUS[key].label}</span>
+                  <span class="census-num">${c.statuses[key]}</span>
+                </div>`).join('')}
+            </div>
+            <p class="tiny-note">状态合计 ${sum} 条，与有效记录一致。</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <h2 class="card-title">最近调整</h2>
+            <ol class="recent" id="recentList">
+              ${c.recent.map(row => `
+                <li>
+                  <div class="recent-head">
+                    <span class="recent-time">${row.time}</span>
+                    <span class="recent-op">${esc(row.op)}</span>
+                  </div>
+                  <p class="recent-reason">${esc(row.reason)}</p>
+                </li>`).join('')}
+            </ol>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-pad">
+            <h2 class="card-title">手动调整</h2>
+            <p class="card-note">保存后立即改为新值，并写一条审计记录。</p>
+            <div class="field">
+              <div class="field-row">
+                <label class="field-label" for="counterInput">调整后的计数</label>
+                <span class="field-count">0–100000</span>
+              </div>
+              <input class="field-input" id="counterInput" type="number" min="0" max="100000" inputmode="numeric" value="${esc(c.input)}" data-model="counter.input" placeholder="请输入新的计数">
+            </div>
+            <div class="field">
+              <div class="field-row">
+                <label class="field-label" for="counterReason">调整原因</label>
+                <span class="field-count" id="counterReasonCount">${c.reason.length}/100</span>
+              </div>
+              <input class="field-input" id="counterReason" type="text" maxlength="100" value="${esc(c.reason)}" data-model="counter.reason" placeholder="必须填写，会写入审计日志">
+            </div>
+            <button class="btn btn-primary btn-block" type="button" id="counterSave" data-act="save-counter" ${c.reason.trim() && c.input !== '' ? '' : 'disabled'}>保存调整</button>
+            <p class="risk">${IC.info}<span>调整只影响用户端显示，不改变投稿记录。</span></p>
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function barCounter() { return ''; }
+
+  const RENDER = { help: renderHelp, sub: renderSub, schedule: renderSchedule, counter: renderCounter };
+  const BAR = { help: barHelp, sub: barSub, schedule: barSchedule, counter: barCounter };
+
+  /* ---------- 渲染 ---------- */
+  function autosizeArea() {
+    const area = byId('helpContent');
+    if (!area) return;
+    area.style.height = 'auto';
+    area.style.height = Math.min(area.scrollHeight + 2, 360) + 'px';
+  }
+
+  function render() {
+    const scroll = byId('screenScroll');
+    const top = scroll.scrollTop;
+    scroll.innerHTML = RENDER[state.page]();
+    const bar = BAR[state.page]();
+    byId('barHost').innerHTML = bar;
+    byId('device').classList.toggle('no-bar', bar.trim() === '');
+    autosizeArea();
+    scroll.scrollTop = top;
+  }
+
+  function scrollToCard(id) {
+    const scroll = byId('screenScroll');
+    const card = byId(id);
+    if (!scroll || !card) return;
+    const a = scroll.getBoundingClientRect();
+    const b = card.getBoundingClientRect();
+    scroll.scrollTop += (b.top - a.top) - 8;
+  }
+
+  /* ---------- 文本同步 ---------- */
+  function syncHelp() {
+    const h = state.help;
+    setText('helpTitleCount', h.title.length + '/40');
+    setText('helpSummaryCount', h.summary.length + '/80');
+    setText('helpContentCount', h.content.length + '/5000');
+    setText('pvTitle', h.title || '未填写标题');
+    const summary = byId('pvSummary');
+    if (summary) { summary.textContent = h.summary; summary.hidden = !h.summary; }
+    setText('pvText', h.content || '未填写详细说明');
+    const ok = h.title.trim().length > 0;
+    const warn = byId('publishWarn');
+    const btn = byId('publishBtn');
+    if (warn) warn.hidden = ok;
+    if (btn) btn.disabled = !ok;
+  }
+
+  function syncSub() {
+    const s = state.sub;
+    setText('subNameCount', s.name.length + '/40');
+    setText('subSingerCount', s.singer.length + '/40');
+    setText('subNoteCount', s.note.length + '/50');
+    setText('kvName', s.name || '—');
+    setText('kvSinger', s.singer || '—');
+    setText('kvNote', s.note || '未填写');
+    const kvNote = byId('kvNote');
+    if (kvNote) kvNote.classList.toggle('muted', !s.note);
+    const dedupe = byId('dedupeNote');
+    if (dedupe) dedupe.hidden = s.name.trim() === s.original.name.trim();
+    const ok = s.name.trim().length > 0;
+    const warn = byId('subWarn');
+    const btn = byId('subSave');
+    if (warn) warn.hidden = ok;
+    if (btn) btn.disabled = !ok;
+  }
+
+  function syncCounter() {
+    const c = state.counter;
+    setText('counterReasonCount', c.reason.length + '/100');
+    const n = Number(c.input);
+    const valid = c.reason.trim().length > 0 && c.input !== '' && Number.isInteger(n) && n >= 0 && n <= 100000;
+    const btn = byId('counterSave');
+    if (btn) btn.disabled = !valid;
+  }
+
+  /* ---------- 抽屉 ---------- */
+  function openSheet(config) {
+    state.sheet = config;
+    byId('sheetTitle').textContent = config.title;
+    byId('sheetSub').textContent = config.sub;
+    byId('sheetBody').innerHTML = config.body;
+    byId('sheetActions').innerHTML = config.actions;
+    byId('sheetMask').classList.add('open');
+    byId('sheet').classList.add('open');
+    byId('sheet').setAttribute('aria-hidden', 'false');
+    setTimeout(() => {
+      const input = byId('sheetInput');
+      if (input) input.focus({ preventScroll: true });
+    }, 80);
+  }
+
+  function closeSheet() {
+    state.sheet = null;
+    byId('sheetMask').classList.remove('open');
+    byId('sheet').classList.remove('open');
+    byId('sheet').setAttribute('aria-hidden', 'true');
+  }
+
+  function openRemoveSheet() {
+    const s = state.sub;
+    openSheet({
+      kind: 'remove',
+      title: '移除这条投稿',
+      sub: `${s.name || '未命名'} · ${s.singer || '未填歌手'} · ${s.week} 期`,
+      body: `
+        <div class="sum-row"><span class="sum-label">该周有效计数</span><span class="sum-value">${state.counter.count} → ${state.counter.count - 1}</span></div>
+        <div class="sum-row"><span class="sum-label">用户本周提交次数</span><span class="sum-value">不受影响</span></div>
+        <ul class="impact">
+          <li>记录不删除，状态改为「已移除」，之后可以在详情里恢复。</li>
+          <li>恢复时会把该周计数加回 1 次。</li>
+          <li>用户端不再显示这条投稿，也不参与本期抽取。</li>
+        </ul>
+        <span class="sheet-note">移除原因（必填，写入审计日志）</span>
+        <textarea class="sheet-input" id="sheetInput" maxlength="100" placeholder="例：重复投稿，保留提交时间更早的一条"></textarea>`,
+      actions: `
+        <button class="btn btn-quiet" type="button" data-act="sheet-cancel">取消</button>
+        <button class="btn btn-danger" type="button" id="sheetConfirm" data-act="sheet-ok" disabled>确认移除</button>`
+    });
+  }
+
+  function openWithdrawSheet() {
+    const d = state.sched;
+    openSheet({
+      kind: 'withdraw',
+      title: '撤回本期排期',
+      sub: `${d.week} 期 · 修订 ${d.revision} · 已发布`,
+      body: `
+        <div class="sum-row"><span class="sum-label">本期曲目</span><span class="sum-value">8 首 · 5 天</span></div>
+        <div class="sum-row"><span class="sum-label">已发送的订阅通知</span><span class="sum-value warn-text">无法撤回</span></div>
+        <p class="sheet-note">撤回原因（必填，写入审计日志）</p>
+        <textarea class="sheet-input" id="sheetInput" maxlength="100" placeholder="例：周三活动调整，需要重排后再发"></textarea>
+        <div class="sheet-error">${IC.alert}<span>撤回后学生端恢复为上一期歌单；已经发出的订阅通知无法撤回。</span></div>`,
+      actions: `
+        <button class="btn btn-quiet" type="button" data-act="sheet-cancel">取消</button>
+        <button class="btn btn-danger" type="button" id="sheetConfirm" data-act="sheet-ok" disabled>确认撤回</button>`
+    });
+  }
+
+  /* ---------- 动作 ---------- */
+  document.addEventListener('click', event => {
+    const node = event.target.closest('[data-act]');
+    if (!node || node.disabled) return;
+    const act = node.dataset.act;
+
+    if (act === 'back') {
+      const target = { help: 'help', sub: 'data', schedule: 'data', counter: 'data' }[state.page] || 'manage';
+      window.location.href = 'H-admin-shell.html?page=' + target;
+      return;
+    }
+
+    if (act === 'pv-toggle') {
+      state.help.previewOpen = !state.help.previewOpen;
+      render();
+      if (state.help.previewOpen) scrollToCard('previewCard');
+      return;
+    }
+    if (act === 'pv-jump') {
+      if (!state.help.previewOpen) { state.help.previewOpen = true; render(); }
+      scrollToCard('previewCard');
+      return;
+    }
+    if (act === 'img-left' || act === 'img-right') {
+      const h = state.help;
+      const index = h.images.findIndex(img => img.id === node.dataset.id);
+      const target = act === 'img-left' ? index - 1 : index + 1;
+      if (index < 0 || target < 0 || target >= h.images.length) return;
+      const [item] = h.images.splice(index, 1);
+      h.images.splice(target, 0, item);
+      render();
+      return;
+    }
+    if (act === 'img-del') { state.help.deleted.add(node.dataset.id); render(); return; }
+    if (act === 'img-undo') { state.help.deleted.delete(node.dataset.id); render(); return; }
+    if (act === 'img-add') {
+      const h = state.help;
+      const live = h.images.length - h.deleted.size;
+      if (live >= 10) { toast('每条最多 10 张图片'); return; }
+      h.images.push({ id: 'p' + Date.now(), label: '新增图片' });
+      render();
+      toast('预览：已添加 1 张示例图片，超过 2MB 会自动压缩');
+      return;
+    }
+    if (act === 'save-draft') { toast('预览：草稿已保存，用户端仍显示上一版'); return; }
+    if (act === 'publish') {
+      if (!state.help.title.trim()) { toast('标题不能为空'); return; }
+      state.help.savedAt = '10-26 14:20';
+      render();
+      toast('预览：已发布，用户端「使用说明」第 2 条立即更新');
+      return;
+    }
+
+    if (act === 'focus') {
+      const target = byId(node.dataset.target);
+      if (target) { target.focus({ preventScroll: false }); target.scrollIntoView({ block: 'center' }); }
+      return;
+    }
+    if (act === 'set-status') {
+      state.sub.status = node.dataset.status;
+      render();
+      toast('预览：状态改为「' + STATUS[state.sub.status].label + '」');
+      return;
+    }
+    if (act === 'restore') {
+      state.sub.status = 'pending';
+      state.counter.count += 1;
+      render();
+      toast('预览：已恢复，该周计数 +1');
+      return;
+    }
+    if (act === 'save-sub') {
+      if (!state.sub.name.trim()) { toast('歌名不能为空'); return; }
+      state.sub.original = { name: state.sub.name, singer: state.sub.singer, note: state.sub.note };
+      render();
+      toast('预览：已保存，判重键按新歌名重建');
+      return;
+    }
+    if (act === 'ask-remove') { openRemoveSheet(); return; }
+
+    if (act === 'ask-withdraw') { openWithdrawSheet(); return; }
+
+    if (act === 'save-counter') {
+      const c = state.counter;
+      const next = Number(c.input);
+      if (!Number.isInteger(next) || next < 0 || next > 100000) { toast('请输入 0–100000 的整数'); return; }
+      if (!c.reason.trim()) { toast('请填写调整原因'); return; }
+      const before = c.count;
+      c.count = next;
+      c.recent.unshift({ time: '2026-10-26 14:20', op: '当前管理员 · admin_…4b1d', reason: c.reason.trim() });
+      c.input = String(next);
+      c.reason = '';
+      render();
+      toast(`预览：计数 ${before} → ${next}，已写入审计日志`);
+      return;
+    }
+
+    if (act === 'sheet-cancel') { closeSheet(); return; }
+    if (act === 'sheet-ok') {
+      const kind = state.sheet ? state.sheet.kind : '';
+      if (kind === 'remove') {
+        state.sub.status = 'removed';
+        closeSheet();
+        render();
+        toast('预览：已移除，恢复后会把计数加回');
+        return;
+      }
+      if (kind === 'withdraw') {
+        state.sched.status = 'withdrawn';
+        state.sched.revision += 1;
+        closeSheet();
+        render();
+        toast('预览：已撤回，学生端恢复上一期，订阅通知无法撤回');
+        return;
+      }
+    }
+  });
+
+  document.addEventListener('input', event => {
+    const node = event.target;
+    if (node.id === 'sheetInput') {
+      const confirm = byId('sheetConfirm');
+      if (confirm) confirm.disabled = !node.value.trim();
+      return;
+    }
+    const model = node.dataset ? node.dataset.model : '';
+    if (!model) return;
+    const parts = model.split('.');
+    state[parts[0]][parts[1]] = node.value;
+    if (parts[0] === 'help') syncHelp();
+    else if (parts[0] === 'sub') syncSub();
+    else if (parts[0] === 'counter') syncCounter();
+    if (parts[0] === 'help' && parts[1] === 'content') autosizeArea();
+  });
+
+  byId('sheetMask').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeSheet(); });
+
+  /* ---------- 控件 ---------- */
+  byId('pageSelect').addEventListener('change', event => {
+    state.page = event.target.value;
+    closeSheet();
+    render();
+    byId('screenScroll').scrollTop = 0;
+  });
+  byId('widthSelect').addEventListener('change', event => {
+    byId('device').style.width = event.target.value + 'px';
+  });
+
+  const darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
+  function applyTheme() {
+    const choice = byId('themeSelect').value;
+    document.documentElement.dataset.theme = choice === 'system' ? (darkMedia.matches ? 'dark' : 'light') : choice;
+  }
+  byId('themeSelect').addEventListener('change', applyTheme);
+  darkMedia.addEventListener('change', applyTheme);
+
+  const params = new URLSearchParams(window.location.search);
+  const initialPage = params.get('page');
+  if (initialPage && ['help', 'sub', 'schedule', 'counter'].includes(initialPage)) {
+    state.page = initialPage;
+    byId('pageSelect').value = initialPage;
+  }
+
+  applyTheme();
+  render();
+  byId('screenScroll').scrollTop = 0;
+})();
+</script>
+</body>
+</html>
