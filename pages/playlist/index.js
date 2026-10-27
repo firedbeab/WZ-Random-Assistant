@@ -17,6 +17,7 @@ Page(theme.page({
     subscribed: false,
     // 周次标签：0=本周, 1=上周, 2=上上周
     activeTab: 0,
+    renderedWeeks: [0],
     tabs: [
       { label: '最新一期', value: 0 },
       { label: '上一期', value: 1 },
@@ -26,7 +27,9 @@ Page(theme.page({
 
   onLoad(options = {}) {
     const activeTab = ['1', '2'].includes(options.tab) ? Number(options.tab) : 0;
-    this.setData({ activeTab });
+    this._prefetchEnabled = true;
+    this._prefetchStarted = false;
+    this.setData({ activeTab, renderedWeeks: [activeTab] });
     this.loadWeekPlaylist(activeTab, false);
     this.checkSubStatus();
   },
@@ -52,10 +55,57 @@ Page(theme.page({
 
   // 切换周次标签
   switchWeek(e) {
-    const value = Number(e.currentTarget.dataset.value);
-    if (value === this.data.activeTab) return;
-    this.setData({ activeTab: value });
-    this.loadWeekPlaylist(value, false);
+    return this.selectWeek(Number(e.currentTarget.dataset.value));
+  },
+
+  // 点击和滑动复用同一读取路径，保留缓存校验及迟到响应保护。
+  selectWeek(value) {
+    if (!Number.isInteger(value) || value < 0 || value >= this.data.tabs.length || value === this.data.activeTab) return;
+    // 只渲染选中期次；换 key 重启单段淡入，避免原生多步动画停在透明状态。
+    this.setData({ activeTab: value, renderedWeeks: [value] });
+    return this.loadWeekPlaylist(value, false);
+  },
+
+  onPlaylistTouchStart(e) {
+    this.onPlaylistTouchCancel();
+    const touch = e.touches && e.touches.length === 1 && e.touches[0];
+    // 留出左缘系统返回手势，不拦截页面原生纵向滚动。
+    if (!touch || !Number.isFinite(touch.clientX) || !Number.isFinite(touch.clientY) || touch.clientX < 24) return;
+    this._playlistTouch = { x: touch.clientX, y: touch.clientY, time: e.timeStamp };
+  },
+
+  onPlaylistTouchMove(e) {
+    const start = this._playlistTouch;
+    if (!start) return;
+    const touch = e.touches && e.touches.length === 1 && e.touches[0];
+    if (!touch || !Number.isFinite(touch.clientX) || !Number.isFinite(touch.clientY)) return this.onPlaylistTouchCancel();
+    const dx = Math.abs(touch.clientX - start.x), dy = Math.abs(touch.clientY - start.y);
+    // 一旦开始纵向滚动，本次触摸就不再切期。
+    if (dy > 12 && dy >= dx) this.onPlaylistTouchCancel();
+  },
+
+  onPlaylistTouchEnd(e) {
+    const start = this._playlistTouch;
+    this.onPlaylistTouchCancel();
+    const touch = e.changedTouches && e.changedTouches.length === 1 && e.changedTouches[0];
+    if (!start || !touch || !Number.isFinite(touch.clientX) || !Number.isFinite(touch.clientY)) return;
+    const dx = touch.clientX - start.x, dy = touch.clientY - start.y;
+    const duration = e.timeStamp - start.time;
+    if (!Number.isFinite(duration) || duration < 0 || duration > 600 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    return this.selectWeek(this.data.activeTab + (dx < 0 ? 1 : -1));
+  },
+
+  onPlaylistTouchCancel() {
+    this._playlistTouch = null;
+  },
+
+  onHide() {
+    this.onPlaylistTouchCancel();
+  },
+
+  onUnload() {
+    this._prefetchEnabled = false;
+    this.onPlaylistTouchCancel();
   },
 
   // 按 week_key 加载指定周的排期
@@ -63,7 +113,7 @@ Page(theme.page({
   async loadWeekPlaylist(offset, forceRefresh) {
     const weekKey = this.getWeekKeyByOffset(offset);
     const cacheKey = storageKey(`schedule_cache_${weekKey}`);
-    const requestId = this._playlistRequestId = (this._playlistRequestId || 0) + 1;
+    const requestId = this._playlistRequestId = this._scheduleRequestSequence = (this._scheduleRequestSequence || 0) + 1;
     this._weekRequests = this._weekRequests || {};
     this._weekRequests[weekKey] = requestId;
 
@@ -89,22 +139,39 @@ Page(theme.page({
     return this.loadWeekPlaylist(this.data.activeTab, true);
   },
 
+  async fetchPublishedSchedule(weekKey) {
+    const res = this.data.isTestMode
+      ? await cloudCall({ name: 'getUserInfo', data: { action: 'getPublishedSchedule', weekKey } })
+      : await wx.cloud.database().collection(collectionName('schedules'))
+        .where({ week_key: weekKey, status: 'published' }).limit(1).get();
+    if (this.data.isTestMode && (!res.result || !res.result.success)) throw new Error('SCHEDULE_READ_FAILED');
+    return this.data.isTestMode ? res.result.data : res.data[0];
+  },
+
+  // 当前期次完成后，每次进入页面只预取另外两期一次，不改变当前展示/加载状态。
+  prefetchOtherWeeks(currentOffset) {
+    if (!this._prefetchEnabled || this._prefetchStarted) return;
+    this._prefetchStarted = true;
+    return Promise.all(this.data.tabs.filter(tab => tab.value !== currentOffset).map(async tab => {
+      const weekKey = this.getWeekKeyByOffset(tab.value);
+      // 已被用户主动访问的期次由其前台请求负责，后台不再发起竞争请求。
+      if (this._weekRequests[weekKey]) return;
+      const cacheKey = storageKey(`schedule_cache_${weekKey}`);
+      const requestId = this._scheduleRequestSequence = (this._scheduleRequestSequence || 0) + 1;
+      this._weekRequests[weekKey] = requestId;
+      try {
+        const schedule = await this.fetchPublishedSchedule(weekKey);
+        if (!this._prefetchEnabled || this._weekRequests[weekKey] !== requestId) return;
+        if (schedule) wx.setStorageSync(cacheKey, schedule);
+        else wx.removeStorageSync(cacheKey);
+      } catch (_) { /* 静默保留已有缓存；切到该期时仍会正常读取并校验。 */ }
+    }));
+  },
+
   // 从云端拉取排期并写入缓存
   async refreshFromCloud(offset, weekKey, cacheKey, requestId) {
     try {
-      const res = this.data.isTestMode
-        ? await cloudCall({
-          name: 'getUserInfo',
-          data: { action: 'getPublishedSchedule', weekKey }
-        })
-        : await wx.cloud.database().collection(collectionName('schedules'))
-          .where({ week_key: weekKey, status: 'published' })
-          .limit(1)
-          .get();
-      if (this.data.isTestMode && (!res.result || !res.result.success)) throw new Error('SCHEDULE_READ_FAILED');
-      const schedule = this.data.isTestMode
-        ? res.result.data
-        : res.data[0];
+      const schedule = await this.fetchPublishedSchedule(weekKey);
       // 同一期更晚的请求优先；旧期可更新自己的缓存，但不能覆盖当前标签。
       if (this._weekRequests[weekKey] !== requestId) return;
       const isCurrent = this.data.activeTab === offset && this._playlistRequestId === requestId;
@@ -130,12 +197,14 @@ Page(theme.page({
     } finally {
       if (this.data.activeTab === offset && this._playlistRequestId === requestId) {
         this.setData({ loading: false, revalidating: false });
+        if (!this.data.loadError) this._prefetchTask = this.prefetchOtherWeeks(offset);
       }
     }
   },
 
   // 长按复制内容信息
   copyItem(e) {
+    this.onPlaylistTouchCancel();
     const { name = '', singer = '', note = '' } = e.currentTarget.dataset;
     const item = note
       ? `${name} - ${singer}\n备注：${note}`

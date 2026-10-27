@@ -9,19 +9,29 @@
 .egg-title { display: block; margin-top: 14rpx; color: var(--text-1); font-size: 37rpx; font-weight: 700; line-height: 1.4; }
 .egg-subtitle { display: block; margin-top: 12rpx; color: var(--text-3); font-size: 23rpx; line-height: 1.6; }
 .dice-arena { position: relative; height: 280rpx; display: flex; align-items: center; justify-content: center; perspective: 1000rpx; }
-.dice-halo { position: absolute; width: 220rpx; height: 220rpx; border-radius: 50%; background: radial-gradient(circle, var(--accent-weak), rgba(231, 246, 236, 0)); }
+/* 骰子是固定的浅色实物材质，保留原配色，不随页面主题或浅深模式换色。 */
+.dice-halo { position: absolute; width: 220rpx; height: 220rpx; border-radius: 50%; background: radial-gradient(circle, var(--accent-weak), transparent 70%); }
 .dice-lift { width: 134rpx; height: 134rpx; transform-style: preserve-3d; }
 .dice-cube { position: relative; width: 134rpx; height: 134rpx; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.17, .67, .24, 1); }
-.dice-face { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10rpx; padding: 23rpx; border: 2rpx solid var(--line); border-radius: 20rpx; background: var(--surface-2); box-sizing: border-box; backface-visibility: hidden; box-shadow: inset 0 -5rpx 12rpx rgba(52, 90, 65, .06); }
+/* 内芯封住圆角面片后方的空隙，外层仍保留原来的 20rpx 圆角与点阵。 */
+.dice-core { position: absolute; inset: 8rpx; transform-style: preserve-3d; pointer-events: none; }
+.dice-core-face { position: absolute; inset: 0; background: #f4f8f2; backface-visibility: hidden; }
+.core-face-1 { transform: translateZ(59rpx); }
+.core-face-2 { transform: rotateY(90deg) translateZ(59rpx); }
+.core-face-3 { transform: rotateX(90deg) translateZ(59rpx); background: #fffdf6; }
+.core-face-4 { transform: rotateX(-90deg) translateZ(59rpx); }
+.core-face-5 { transform: rotateY(-90deg) translateZ(59rpx); }
+.core-face-6 { transform: rotateY(180deg) translateZ(59rpx); }
+.dice-face { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10rpx; padding: 23rpx; border: 2rpx solid #e1e9e3; border-radius: 20rpx; background: #fffdfa; box-sizing: border-box; backface-visibility: hidden; box-shadow: inset 0 -5rpx 12rpx rgba(52, 90, 65, .06); }
 .face-1 { transform: translateZ(67rpx); }
-.face-2 { transform: rotateY(90deg) translateZ(67rpx); background: var(--surface-2); }
-.face-3 { transform: rotateX(90deg) translateZ(67rpx); background: var(--surface-2); }
+.face-2 { transform: rotateY(90deg) translateZ(67rpx); background: #f4f8f2; }
+.face-3 { transform: rotateX(90deg) translateZ(67rpx); background: #fffdf6; }
 .face-4 { transform: rotateX(-90deg) translateZ(67rpx); }
-.face-5 { transform: rotateY(-90deg) translateZ(67rpx); background: var(--surface-2); }
+.face-5 { transform: rotateY(-90deg) translateZ(67rpx); background: #f4f8f2; }
 .face-6 { transform: rotateY(180deg) translateZ(67rpx); }
-.dice-pip { width: 100%; height: 100%; visibility: hidden; border-radius: 50%; background: var(--accent); box-shadow: inset 0 2rpx 3rpx rgba(0, 0, 0, .12); }
+.dice-pip { width: 100%; height: 100%; visibility: hidden; border-radius: 50%; background: #2d7451; box-shadow: inset 0 2rpx 3rpx rgba(0, 0, 0, .12); }
 .pip-visible { visibility: visible; }
-.face-1 .dice-pip { background: var(--warn); }
+.face-1 .dice-pip { background: #dc7e65; }
 .dice-shadow { position: absolute; bottom: 33rpx; width: 142rpx; height: 24rpx; border-radius: 50%; background: rgba(38, 80, 51, .13); filter: blur(8rpx); }
 .is-rolling .dice-lift { animation: dice-hop .92s ease-out; }
 .is-rolling .dice-shadow { animation: shadow-hop .92s ease-out; }

@@ -1,5 +1,8 @@
 /* 已确认的 F.2：工具信息在卡片外，连续渐变贯穿导航和正文。 */
-.playlist-page { min-height: 100vh; box-sizing: border-box; padding-bottom: calc(44rpx + env(safe-area-inset-bottom)); background: var(--gradient-closed); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+.playlist-page { display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box; padding-bottom: calc(44rpx + env(safe-area-inset-bottom)); background: var(--gradient-closed); color: var(--text-1); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+.playlist-content { flex: 1; }
+.week-panel { animation: week-fade-in 320ms ease-out; }
+@keyframes week-fade-in { from { opacity: .65; } to { opacity: 1; } }
 .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 .notify-action, .tab-item, .retry { margin: 0; padding: 0; border: none; border-radius: 0; font-weight: 400; line-height: 1.5; }
 .notify-action::after, .tab-item::after, .retry::after { border: none; }
@@ -26,8 +29,8 @@
 .day-title { font-size: 26rpx; font-weight: 600; color: var(--text-2); }
 .day-date { font-size: var(--font-sm); color: var(--text-3); }
 .day-line { height: 1rpx; flex: 1; margin-left: 8rpx; background: var(--line); }
-.song-item { display: flex; align-items: flex-start; gap: 20rpx; padding: var(--space-4) 0; }
-.song-item:active { background: var(--surface-2); }
+.song-item { display: flex; align-items: flex-start; gap: 20rpx; margin: 0 calc(-1 * var(--space-2)); padding: var(--space-4) var(--space-2); border-radius: var(--radius-md); }
+.song-pressed { background: var(--surface-2); }
 .song-number { display: flex; align-items: center; justify-content: center; flex: none; width: 48rpx; height: 48rpx; margin-top: 2rpx; border-radius: var(--radius-pill); background: var(--accent-weak); color: var(--accent); font-size: var(--font-sm); }
 .song-info { flex: 1; min-width: 0; }
 .song-name { display: block; font-size: var(--font-song); font-weight: 600; line-height: 1.5; overflow-wrap: break-word; word-break: break-all; }

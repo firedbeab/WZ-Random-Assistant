@@ -10,6 +10,9 @@
         catchtap="onDiceTap" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd" aria-label="投掷骰子" role="button">
         <view class="dice-halo"></view><view class="dice-shadow"></view>
         <view class="dice-lift"><view class="dice-cube" style="{{cubeStyle}}">
+          <view class="dice-core" aria-hidden="true">
+            <view wx:for="{{faces}}" wx:for-item="coreFace" wx:key="value" class="dice-core-face core-face-{{coreFace.value}}"></view>
+          </view>
           <view wx:for="{{faces}}" wx:for-item="faceItem" wx:key="value" class="dice-face face-{{faceItem.value}}">
             <view wx:for="{{faceItem.dots}}" wx:key="slot" class="dice-pip {{item.visible ? 'pip-visible' : ''}}"></view>
           </view>

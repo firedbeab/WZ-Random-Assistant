@@ -40,7 +40,7 @@
 
   <view class="info-footer">
     <button class="info-button privacy-link" hover-class="info-pressed" bindtap="openPrivacy">隐私保护指引</button>
-    <text class="attribution">@发牌的小度</text>
+    <text class="attribution">WZ随机助手 | @发牌的小度</text>
   </view>
 </view>
 

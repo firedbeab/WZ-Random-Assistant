@@ -56,7 +56,8 @@
 .retry-link { color: var(--accent); margin-top: var(--space-2); }
 .playlist-entry { box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); margin-top: var(--space-4); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-sm); text-align: left; line-height: 1.5; }
 .entry-pressed { background: var(--surface-2); }
-.entry-icon { display: flex; align-items: center; justify-content: center; flex: none; width: 64rpx; height: 64rpx; border-radius: var(--radius-md); background: var(--accent-weak); color: var(--accent); font-size: var(--font-lg); }
+.entry-icon { display: flex; align-items: center; justify-content: center; flex: none; width: 64rpx; height: 64rpx; border-radius: var(--radius-md); background: var(--accent-weak); }
+.entry-icon-image { display: block; width: 36rpx; height: 36rpx; }
 .entry-content { flex: 1; min-width: 0; }
 .entry-title { display: block; font-size: var(--font-md); font-weight: 500; color: var(--text-1); }
 .entry-description { display: block; margin-top: var(--space-1); font-size: var(--font-sm); color: var(--text-2); }

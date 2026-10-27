@@ -100,7 +100,7 @@
       </view>
     </block>
     <button class="playlist-entry" wx:if="{{!schedulePublished || !statusReady || statusError}}" bindtap="goPlaylist" hover-class="entry-pressed">
-      <text class="entry-icon">♪</text>
+      <view class="entry-icon"><image class="entry-icon-image" src="{{themeIcons.musicList}}" mode="aspectFit" aria-hidden="true" /></view>
       <view class="entry-content">
         <text class="entry-title">查看已发布歌单</text>
         <text class="entry-description">查看本期、上一期和上上期</text>
@@ -108,7 +108,7 @@
       <text class="entry-arrow">›</text>
     </button>
     <button class="playlist-entry" wx:else bindtap="goHistory" hover-class="entry-pressed">
-      <text class="entry-icon">↶</text>
+      <view class="entry-icon"><image class="entry-icon-image" src="{{themeIcons.history}}" mode="aspectFit" aria-hidden="true" /></view>
       <view class="entry-content">
         <text class="entry-title">往期歌单</text>
         <text class="entry-description">回看上一期和上上期</text>

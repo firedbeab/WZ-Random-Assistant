@@ -14,6 +14,7 @@
       <text>{{subscribing ? '开启中…' : '发布提醒'}}</text>
     </button>
   </view>
+  <view class="playlist-content" bindtouchstart="onPlaylistTouchStart" bindtouchmove="onPlaylistTouchMove" bindtouchend="onPlaylistTouchEnd" bindtouchcancel="onPlaylistTouchCancel">
   <view class="playlist-tools">
     <view class="week-tabs" role="tablist" aria-label="选择歌单期次">
       <button wx:for="{{tabs}}" wx:key="value" class="tab-item {{activeTab === item.value ? 'active' : ''}}" bindtap="switchWeek" data-value="{{item.value}}" role="tab" aria-selected="{{activeTab === item.value}}" hover-class="text-pressed">{{item.label}}</button>
@@ -22,8 +23,9 @@
       <text class="period-range num">{{periodRange}}</text>
       <text class="period-count num" wx:if="{{schedule && !loading}}">共 {{playlistTotal}} 首</text>
     </view>
-    <text class="copy-tip" wx:if="{{schedule && !loading && playlistTotal > 0}}">长按曲目，复制完整信息</text>
+    <text class="copy-tip" wx:if="{{schedule && !loading && playlistTotal > 0}}">左右滑动切换期次 · 长按曲目复制</text>
   </view>
+  <view class="week-panel" wx:for="{{renderedWeeks}}" wx:key="*this">
   <view class="state" wx:if="{{loading}}">
     <text class="state-title">正在加载歌单…</text>
     <text class="state-description">正在获取该期安排，请稍候。</text>
@@ -45,7 +47,7 @@
           <text class="day-date num">{{day.dateText}}</text>
           <view class="day-line"></view>
         </view>
-        <view class="song-item" wx:for="{{day.songs}}" wx:key="key" wx:for-item="song" bindlongpress="copyItem" data-name="{{song.title}}" data-singer="{{song.singer}}" data-note="{{song.note}}">
+        <view class="song-item" wx:for="{{day.songs}}" wx:key="key" wx:for-item="song" hover-class="song-pressed" hover-start-time="80" hover-stay-time="120" bindlongpress="copyItem" data-name="{{song.title}}" data-singer="{{song.singer}}" data-note="{{song.note}}">
           <text class="song-number num">{{song.number}}</text>
           <view class="song-info">
             <text class="song-name">{{song.title}}</text>
@@ -62,6 +64,8 @@
         <text class="note-label">广播站说明</text>
         <text class="note-content">{{playlistNote}}</text>
       </view>
+  </view>
+  </view>
   </view>
 </view>
 

@@ -34,7 +34,9 @@
           <image class="info-chevron article-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
         </button>
 
-        <view class="article-body" wx:if="{{item._opened}}" hidden="{{expandedId !== item._id}}">
+        <view class="article-body-wrap {{expandedId === item._id ? 'is-open' : ''}}" aria-hidden="{{expandedId !== item._id}}">
+        <view class="article-body-clip">
+        <view class="article-body" wx:if="{{item._opened}}">
           <text class="article-content" user-select>{{item.content}}</text>
           <view class="image-grid" wx:if="{{item.images.length > 0}}">
             <block
@@ -75,6 +77,8 @@
             </block>
           </view>
           <text class="image-hint" wx:if="{{item.images.length > 0}}">{{item.images.length > 4 ? '共 ' + item.images.length + ' 张，点开后可左右滑动查看全部图片' : '点击图片可全屏查看'}}</text>
+        </view>
+        </view>
         </view>
       </view>
     </view>

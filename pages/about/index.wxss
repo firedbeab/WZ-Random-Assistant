@@ -12,6 +12,6 @@
 .entry-caption { display: block; margin-top: 10rpx; color: var(--text-2); font-size: var(--font-sm); line-height: 1.7; }
 .entry-arrow { transform: rotate(-90deg); }
 /* 自然流中的底部页脚：短页贴近下沿，长页接在正文后，不遮挡内容。 */
-.info-footer { margin-top: auto; padding: 36rpx var(--space-5) var(--space-1); text-align: center; color: var(--text-3); }
+.info-footer { display: flex; flex-direction: column; align-items: center; flex: none; margin-top: auto; padding: 36rpx var(--space-5) var(--space-1); text-align: center; color: var(--text-3); }
 .privacy-link { display: inline-flex; align-items: center; justify-content: center; min-height: 88rpx; padding: var(--space-3) var(--space-4); color: var(--accent); font-size: 26rpx; line-height: 1.8; }
 .attribution { display: block; font-size: 22rpx; line-height: 1.8; }

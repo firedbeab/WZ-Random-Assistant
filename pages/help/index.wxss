@@ -7,7 +7,12 @@
 .article-title { display: block; font-size: 30rpx; font-weight: 600; line-height: 1.6; overflow-wrap: break-word; word-break: break-all; }
 .article-summary { display: block; margin-top: 10rpx; color: var(--text-2); font-size: var(--font-sm); line-height: 1.75; overflow-wrap: break-word; word-break: break-all; }
 .expanded .article-arrow { transform: rotate(180deg); }
+.article-arrow { transition: transform 240ms ease; }
+.article-body-wrap { display: grid; grid-template-rows: 0fr; opacity: 0; pointer-events: none; transition: grid-template-rows 320ms ease, opacity 240ms ease; }
+.article-body-wrap.is-open { grid-template-rows: 1fr; opacity: 1; pointer-events: auto; }
+.article-body-clip { min-height: 0; overflow: hidden; }
 .article-body { padding-bottom: 40rpx; }
+.article-body::before { content: ''; display: block; width: 80rpx; height: 3rpx; margin-bottom: var(--space-4); border-radius: var(--radius-pill); background: var(--line-strong); }
 .article-content { display: block; color: var(--text-2); font-size: var(--font-md); line-height: 1.9; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all; }
 .image-grid { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
 .help-image-wrap { position: relative; width: calc(50% - 8rpx); height: 220rpx; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-2); }
