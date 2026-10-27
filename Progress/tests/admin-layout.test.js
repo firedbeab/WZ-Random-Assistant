@@ -19,6 +19,7 @@ function page(file) {
     Page(value) { definition = value; }, wx, console: { warn() {} },
     setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
     require(name) {
+      if (name.includes('schedule-conflict')) return require('../../utils/schedule-conflict');
       if (name.includes('admin-feedback')) return { ...require('../../utils/admin-feedback'),
         showModal: async (page, options) => { api.modal = options; return { confirm: api.confirm, content: api.content || '' }; } };
       if (name.includes('theme')) return { page: value => value, getNativeColors: () => ({ accent: '#287e56', danger: '#a00' }) };
@@ -104,7 +105,7 @@ test('排期默认只读，取消编辑需确认且恢复已保存副本，刷�
 test('排期保存保留原revision/五日参数，失败保留草稿，成功才退出编辑', async () => {
   const p = page('console.js'), a = p.instance;
   a.setData({ scheduleDraft: { _id: 's1', revision: 7, day1: [{ song_name: '曲目', singer: '歌手' }], admin_note: '说明' }, scheduleEditing: true, scheduleDirty: true });
-  p.api.response = { success: false, message: '版本过期' }; await a.saveSchedule();
+  p.api.response = { success: false, message: '网络暂时不可用' }; await a.saveSchedule();
   assert.equal(a.data.scheduleEditing, true); assert.equal(a.data.scheduleDirty, true); assert.equal(a.data.scheduleSaving, false);
   const request = p.calls[0]; assert.equal(request.name, 'superAdminConsole'); assert.equal(request.data.action, 'updateSchedule');
   assert.equal(request.data.revision, 7); assert.equal(request.data.adminNote, '说明'); assert.equal(Object.keys(request.data.days).length, 5);
@@ -137,16 +138,86 @@ test('空歌单说明必填、过长说明和变化后的排期不能直接发�
   await a.confirmPublish({ detail: { value: { publishNote: '  ' } } }); assert.match(a.data.publishError, /填写/);
   await a.confirmPublish({ detail: { value: { publishNote: '长'.repeat(101) } } }); assert.match(a.data.publishError, /100/);
   a.setData({ 'schedule.revision': 2 });
-  await a.confirmPublish({ detail: { value: { publishNote: '空排期原因' } } }); assert.match(a.data.publishError, /变化/); assert.equal(p.calls.length, 0);
+  await a.confirmPublish({ detail: { value: { publishNote: '空排期原因' } } }); assert.equal(a.data.scheduleConflict, true); assert.match(p.api.modal.content, /其他管理员/); assert.equal(p.calls.length, 0);
 });
 
-test('发布失败保持抽屉和说明，过期时刷新而不以旧版本重试', async () => {
+test('发布失败保持说明，过期时明确提醒并等待用户刷新，不静默刷新或重试', async () => {
   const p = page('admin.js'), a = p.instance;
   a.setData({ schedule: { _id: 's', revision: 2 }, dayCounts: [{ active: 1 }], activeSongCount: 1 }); a.onPublish();
   p.api.response = { success: false, message: '暂不可发布' }; await a.confirmPublish({ detail: { value: { publishNote: '保留说明' } } });
   assert.equal(a.data.showPublishDrawer, true); assert.equal(a.data.note, '保留说明'); assert.equal(a.data.publishing, false);
   p.api.response = { success: false, message: '版本已过期' }; await a.confirmPublish();
-  assert.equal(a.data.showPublishDrawer, false); assert.equal(p.calls.at(-1).data.action, 'getPending');
+  assert.equal(a.data.showPublishDrawer, false); assert.equal(a.data.scheduleConflict, true);
+  assert.equal(p.calls.length, 2); assert.match(p.api.modal.content, /其他管理员/);
+  assert.equal(p.api.modal.confirmText, '刷新歌单');
+  p.api.modal.success({confirm:false}); a.onPublish(); assert.equal(p.calls.length,2);
+  p.api.response={success:true,data:null};await p.api.modal.success({confirm:true});
+  assert.equal(p.calls.at(-1).data.action,'getPending');assert.equal(a.data.scheduleConflict,false);
+});
+
+test('移除、撤销、跳过、异常、备注统一识别旧歌单，确认刷新后不重放旧操作', async () => {
+  for (const action of ['remove','restore','skip','exception','note']) {
+    const p=page('admin.js'),a=p.instance,song={song_name:'旧曲目',special_note:'原备注'};
+    a.setData({schedule:{_id:'s',revision:3,day1:[song]},dayCounts:[{active:1}],activeSongCount:1});
+    p.api.response={success:false,message:'页面数据已过期，请刷新后重试'};
+    const e=event({day:0,songIndex:0,song});
+    if(action==='remove'){a.setData({'auditSelections.day0':['0']});a.onRemoveSelectedFromDay(e);await p.api.modal.success({confirm:true});}
+    if(action==='restore')await a.onRestoreRemoval(e);
+    if(action==='skip'){a.onSkipDay(e);await p.api.modal.success({confirm:true});}
+    if(action==='exception'){a.onException(e);await a.confirmException();}
+    if(action==='note'){a.onOpenNote(e);a.setData({noteText:'自己的草稿'});await a.saveSpecialNote('自己的草稿','已保存');}
+    assert.equal(a.data.scheduleConflict,true,action);assert.match(p.api.modal.content,/其他管理员/);assert.equal(p.calls.length,1);
+    p.api.modal.success({confirm:false});assert.equal(p.calls.length,1);
+    if(action==='note'){assert.equal(a.data.noteText,'自己的草稿');assert.equal(a.data.showNoteModal,true);}
+    p.api.response={success:true,data:{_id:'s',revision:4,day1:[{song_name:'新曲目'}]}};
+    await a.refreshConflictedSchedule();assert.equal(a.data.scheduleConflict,false);assert.equal(a.data.schedule.day1[0].song_name,'新曲目');
+    assert.equal(p.calls.length,2);assert.equal(p.calls[1].data.action,'getPending');
+  }
+});
+
+test('排期详情冲突保留草稿，取消或刷新失败不丢内容，刷新成功后解除写入阻止', async () => {
+  const p=page('console.js'),a=p.instance;
+  a.setData({scheduleDraft:{_id:'s',revision:2,day1:[{song_name:'自己的草稿'}]},scheduleEditing:true,scheduleDirty:true});
+  p.api.response={success:false,message:'记录状态已变化，请刷新后重试'};await a.saveSchedule();
+  assert.equal(a.data.scheduleConflict,true);assert.match(p.api.modal.content,/未保存/);p.api.modal.success({confirm:false});
+  await a.saveSchedule();assert.equal(p.calls.length,1);
+  await p.api.modal.success({confirm:true});assert.equal(a.data.scheduleConflict,true);assert.equal(a.data.scheduleDirty,true);
+  assert.equal(a.data.scheduleDraft.day1[0].song_name,'自己的草稿');
+  p.api.response={success:true,data:{_id:'s',revision:3,day1:[{song_name:'服务器最新'}]}};
+  await a.refreshConflictedSchedule(true);assert.equal(a.data.scheduleConflict,false);assert.equal(a.data.scheduleDirty,false);
+  assert.equal(a.data.scheduleDraft.revision,3);assert.equal(a.data.scheduleDraft.day1[0].song_name,'服务器最新');
+});
+
+test('歌单冲突识别不把验证码到期、权限和网络错误当成他人编辑', () => {
+  const c=require('../../utils/schedule-conflict');
+  for(const message of ['验证码已过期','没有权限','网络异常'])assert.equal(c.isConflict(message),false);
+  for(const message of ['版本已过期','该排期已发布或状态已变更','项目索引无效'])assert.equal(c.isConflict(new Error(message)),true);
+});
+
+test('确认弹窗打开后本地排期已变化，不能套用新版本号修改旧索引', async () => {
+  for(const action of ['remove','skip','note','exception']) {
+    const p=page('admin.js'),a=p.instance,song={song_name:'原曲目'};
+    a.setData({schedule:{_id:'s',revision:1,day1:[song]}});const e=event({day:0,songIndex:0,song});
+    if(action==='remove'){a.setData({'auditSelections.day0':['0']});a.onRemoveSelectedFromDay(e);}
+    if(action==='skip')a.onSkipDay(e);
+    if(action==='note')a.onOpenNote(e);
+    if(action==='exception')a.onException(e);
+    a.setData({schedule:{_id:'s',revision:2,day1:[{song_name:'另一首曲目'}]}});
+    if(action==='remove'||action==='skip')await p.api.modal.success({confirm:true});
+    if(action==='note')await a.saveSpecialNote('旧曲目备注','已保存');
+    if(action==='exception')await a.confirmException();
+    assert.equal(p.calls.length,0,action);assert.equal(a.data.scheduleConflict,true);
+  }
+});
+
+test('撤回已发布歌单遇到状态变化时同样明确提醒，不静默重试', async () => {
+  const p=page('console.js'),a=p.instance;
+  a.setData({scheduleDraft:{_id:'s',revision:4,status:'published'}});
+  p.api.response={success:false,message:'页面数据已过期，请刷新后重试'};
+  a.withdrawSchedule();await p.api.modal.success({confirm:true,content:'节目调整'});
+  assert.equal(a.data.scheduleConflict,true);assert.match(p.api.modal.content,/其他管理员/);
+  assert.equal(p.calls.length,1);assert.equal(p.calls[0].data.action,'withdrawSchedule');
+  assert.equal(p.calls[0].data.revision,4);assert.equal(p.calls[0].data.reason,'节目调整');
 });
 
 test('底部批量入口直接进入跨日勾选，取消退出并清除选择', () => {
@@ -202,7 +273,7 @@ test('批量部分失败立即停止，不跳过失败继续操作其它日期',
   p.api.handler = request => request.data.action === 'getPending' ? { success: true, data: schedule } : request.data.dayIndex === 1 ? { success: false, message: '版本过期' } : { success: true };
   await a.confirmBulkRemoval();
   assert.equal(p.calls.filter(call => call.data.action === 'removeItems').length, 2); assert.equal(a.data.batchRemoving, false);
-  assert.match(a.data._adminFeedbackMessage, /已确认标记 1 首/); assert.match(a.data.batchResultMessage, /未确认/);
+  assert.equal(a.data.scheduleConflict,true);assert.match(p.api.modal.content,/其他管理员/);assert.match(a.data.batchResultMessage,/未确认/);
 });
 
 test('批量后逐首撤销、再次选择取消及单独移除，计数始终取当前排期', async () => {

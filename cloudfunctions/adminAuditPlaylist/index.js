@@ -661,6 +661,7 @@ exports.main = async (event, context) => {
     if (note !== undefined && (typeof note !== 'string' || note.length > 50)) {
       return { success: false, message: '备注不能超过50个字符' };
     }
+    let tx;
     try {
       // 文本安全检查（管理员备注也需过审）
       if (note && note.trim()) {
@@ -679,17 +680,22 @@ exports.main = async (event, context) => {
         }
       }
 
-      const plRes = await db.collection(schedulesCollection).doc(playlistId).get();
+      tx = await db.startTransaction();
+      const plRes = await tx.collection(schedulesCollection).doc(playlistId).get();
       const schedule = plRes.data;
       if (schedule.status !== 'pending') {
-        return { success: false, message: '排期已发布，无法修改' };
+        throw new Error('排期状态已变更');
       }
 
+      if (event.revision !== undefined && (Number(event.revision) || 1) !== (Number(schedule.revision) || 1)) {
+        throw new Error('页面数据已过期，请刷新后重试');
+      }
       const dayKey = `day${dayIndex + 1}`;
       if (!Array.isArray(schedule[dayKey]) || songIndex < 0 || songIndex >= schedule[dayKey].length) {
-        return { success: false, message: '项目不存在' };
+        throw new Error('项目索引无效');
       }
       if (schedule[dayKey][songIndex].audit_state === 'pending_remove') {
+        await tx.rollback(); tx = null;
         return { success: false, message: '待删除项目请先撤销删除状态' };
       }
 
@@ -697,13 +703,15 @@ exports.main = async (event, context) => {
       const previousNote = schedule[dayKey][songIndex].special_note || '';
       schedule[dayKey][songIndex].special_note = savedNote;
 
-      await db.collection(schedulesCollection).doc(playlistId).update({
+      await tx.collection(schedulesCollection).doc(playlistId).update({
         data: {
           [dayKey]: schedule[dayKey],
           revision: (Number(schedule.revision) || 1) + 1,
           updated_at: db.serverDate()
         }
       });
+
+      await tx.commit(); tx = null;
 
       await appendSystemEvent(scope, {
         action: 'schedule.update_note', operator_openid: OPENID,
@@ -715,11 +723,12 @@ exports.main = async (event, context) => {
       return {
         success: true,
         message: '备注已更新',
-        data: { special_note: savedNote }
+        data: { special_note: savedNote, revision: (Number(schedule.revision) || 1) + 1 }
       };
     } catch (err) {
+      if (tx) { try { await tx.rollback(); } catch (_) { /* 保留原错误。 */ } }
       console.warn('[审核] 更新备注失败:', err.message || '未知错误');
-      return { success: false, message: '更新失败，请稍后重试' };
+      return { success: false, message: safeOperationMessage(err, '更新失败，请稍后重试') };
     }
   }
 

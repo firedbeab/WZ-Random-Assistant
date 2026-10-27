@@ -16,3 +16,7 @@
 .privacy-link { display: inline-flex; align-items: center; justify-content: center; min-height: 88rpx; padding: var(--space-3) var(--space-4); color: var(--accent); font-size: 26rpx; line-height: 1.8; }
 .attribution { display: block; font-size: 22rpx; line-height: 1.8; }
 .entry-label { color: var(--text-1); }
+.info-page { padding-bottom: calc(16rpx + env(safe-area-inset-bottom)); }
+.info-footer { padding: 32rpx var(--space-5) 0; gap: 0; }
+.privacy-link { align-items: flex-end; padding: 0 var(--space-4) 4rpx; line-height: 1.5; }
+.attribution { margin-top: 4rpx; line-height: 1.5; }

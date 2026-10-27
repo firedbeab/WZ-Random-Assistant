@@ -3,6 +3,7 @@
   <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
   <view class="sub-heading"><button class="sub-back" bindtap="backToManagement" aria-label="返回控制台"><image src="{{themeIcons.back}}" /></button><text>{{title}}</text></view><text class="hero-sub">{{subtitle}}</text>
   <view class="loading" wx:if="{{loading}}">正在加载...</view>
+  <view class="schedule-conflict" wx:if="{{mode === 'schedules' && scheduleDraft && scheduleConflict}}"><text class="conflict-title">歌单状态已更新</text><text>可能有其他管理员此前编辑、发布或撤回了歌单。当前草稿仍保留，请刷新核对最新状态。</text><button bindtap="refreshConflictedSchedule" disabled="{{scheduleSaving}}">刷新歌单</button></view>
 
   <block wx:if="{{mode === 'submissions'}}">
     <view class="toolbar">

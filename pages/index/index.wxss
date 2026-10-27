@@ -49,6 +49,7 @@
 .preview-row { display: flex; align-items: center; gap: var(--space-3); padding-top: var(--space-4); }
 .song-number { display: flex; align-items: center; justify-content: center; flex: none; width: var(--space-6); height: var(--space-6); border-radius: var(--radius-pill); background: var(--accent-weak); color: var(--accent); font-size: var(--font-sm); }
 .preview-song { flex: 1; min-width: 0; }
+.preview-row-faded { position: relative; }.preview-row-faded::after { content: ''; position: absolute; top: var(--space-4); left: 0; right: 0; bottom: 0; pointer-events: none; background: linear-gradient(180deg, transparent 0%, var(--surface) 100%); }
 .song-title { display: block; color: var(--text-1); font-size: var(--font-md); font-weight: 500; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .song-singer { display: block; color: var(--text-2); font-size: var(--font-sm); line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .song-day { color: var(--text-3); font-size: var(--font-xs); flex: none; }

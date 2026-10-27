@@ -1,4 +1,5 @@
 const feedback = require('../../utils/admin-feedback');
+const conflict = require('../../utils/schedule-conflict');
 const theme = require('../../utils/theme');
 const { cloudCall, isTestMode } = require('../../utils/runtime');
 
@@ -143,6 +144,7 @@ Page(theme.page(feedback.page({
     editSubmission: null,
     schedules: [],
     scheduleDraft: null,
+    scheduleConflict: false,
     scheduleEditing: false,
     scheduleDirty: false,
     scheduleSaving: false,
@@ -323,13 +325,13 @@ Page(theme.page(feedback.page({
 
   async loadSchedules() {
     const result = await this.call('listSchedules');
-    this.setData({ schedules: result.data || [], scheduleDraft: null, scheduleEditing: false, scheduleDirty: false });
+    this.setData({ schedules: result.data || [], scheduleDraft: null, scheduleConflict: false, scheduleEditing: false, scheduleDirty: false });
   },
   async openSchedule(e) {
     try {
       const result = await this.call('getSchedule', { id: e.currentTarget.dataset.id });
       this._savedSchedule = JSON.parse(JSON.stringify(result.data));
-      this.setData({ scheduleDraft: result.data, scheduleEditing: false, scheduleDirty: false });
+      this.setData({ scheduleDraft: result.data, scheduleConflict: false, scheduleEditing: false, scheduleDirty: false });
     } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
   },
   confirmDiscardSchedule(continueAction) {
@@ -341,6 +343,31 @@ Page(theme.page(feedback.page({
     };
     if (!this.data.scheduleDirty) return discard();
     feedback.showModal(this, { title: '放弃未保存修改？', content: '本次修改尚未保存。', confirmText: '放弃修改', success: result => { if (result.confirm) discard(); } });
+  },
+  notifyScheduleConflict() {
+    this.setData({ scheduleConflict: true });
+    feedback.showModal(this, { title: conflict.TITLE,
+      content: conflict.MESSAGE + (this.data.scheduleDirty ? '\n刷新将放弃本页未保存的修改；选择“稍后”可保留草稿查看。' : ''),
+      confirmText: '刷新歌单', cancelText: '稍后', success: result => { if (result.confirm) return this.refreshConflictedSchedule(true); } });
+  },
+  handleScheduleError(error) {
+    if (!conflict.isConflict(error)) return false;
+    this.notifyScheduleConflict(); return true;
+  },
+  async refreshConflictedSchedule(discardConfirmed) {
+    const draft = this.data.scheduleDraft;
+    if (!draft || this.data.scheduleSaving) return;
+    if (this.data.scheduleDirty && discardConfirmed !== true) {
+      return feedback.showModal(this, { title: '刷新歌单？', content: '刷新成功后会替换本页未保存的修改；刷新失败仍保留草稿。', confirmText: '刷新歌单', success: result => { if (result.confirm) return this.refreshConflictedSchedule(true); } });
+    }
+    this.setData({ scheduleSaving: true });
+    try {
+      const result = await this.call('getSchedule', { id: draft._id });
+      this._savedSchedule = JSON.parse(JSON.stringify(result.data));
+      this.setData({ scheduleDraft: result.data, scheduleConflict: false, scheduleEditing: false, scheduleDirty: false });
+      if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
+    } catch (err) { feedback.showToast(this, { title: '未能刷新歌单，请稍后重试。', icon: 'none' }); }
+    finally { this.setData({ scheduleSaving: false }); }
   },
   closeSchedule() { this.confirmDiscardSchedule(() => this.setData({ scheduleDraft: null, scheduleEditing: false })); },
   startScheduleEdit() {
@@ -377,6 +404,7 @@ Page(theme.page(feedback.page({
     this.setData({ [`scheduleDraft.${day}`]: list });
   },
   async saveSchedule() {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
     const draft = this.data.scheduleDraft;
     if (!draft || this.data.scheduleSaving) return;
     const days = {};
@@ -391,10 +419,11 @@ Page(theme.page(feedback.page({
       this._savedSchedule = JSON.parse(JSON.stringify(this.data.scheduleDraft));
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       feedback.showToast(this, { title: '排期已保存', icon: 'success' });
-    } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
+    } catch (err) { if (!this.handleScheduleError(err)) feedback.showToast(this, { title: err.message, icon: 'none' }); }
     finally { this.setData({ scheduleSaving: false }); feedback.hideLoading(this); }
   },
   withdrawSchedule() {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
     const draft = this.data.scheduleDraft;
     if (!draft || draft.status !== 'published') return;
     feedback.showModal(this, {
@@ -408,7 +437,7 @@ Page(theme.page(feedback.page({
           this.setData({ scheduleDraft: null });
           await this.loadSchedules();
           feedback.showToast(this, { title: '已撤回', icon: 'success' });
-        } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
+        } catch (err) { if (!this.handleScheduleError(err)) feedback.showToast(this, { title: err.message, icon: 'none' }); }
       }
     });
   },

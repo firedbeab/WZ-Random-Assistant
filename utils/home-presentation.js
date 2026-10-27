@@ -29,7 +29,7 @@ function schedulePreview(schedule) {
     });
   }
   return {
-    previewSongs: songs.slice(0, 3),
+    previewSongs: songs.slice(0, 4),
     previewTotal: songs.length,
     previewWeekText: schedule && typeof schedule.week_key === 'string' ? schedule.week_key.replace(/-/g, '.') : '',
     previewNote: schedule && typeof schedule.admin_note === 'string' ? schedule.admin_note : ''

@@ -77,11 +77,10 @@
       <!-- 只展示服务端确认已发布的本期排期。 -->
       <view class="playlist-preview" wx:if="{{schedulePublished}}">
         <view class="section-heading">
-          <text class="section-title">本期歌单</text>
+          <text class="section-title num">{{previewWeekText ? previewWeekText + '期' : '已发布排期'}}</text>
           <text class="playlist-count num">共 {{previewTotal}} 首</text>
         </view>
-        <text class="card-description num" wx:if="{{previewWeekText}}">{{previewWeekText}} 期</text>
-        <view class="preview-row" wx:for="{{previewSongs}}" wx:key="key">
+        <view class="preview-row {{index === 3 ? 'preview-row-faded' : ''}}" wx:for="{{previewSongs}}" wx:key="key">
           <text class="song-number num">{{index + 1}}</text>
           <view class="preview-song">
             <text class="song-title">{{item.title}}</text>
@@ -90,7 +89,6 @@
           <text class="song-day">{{item.day}}</text>
         </view>
         <text class="empty-description" wx:if="{{previewTotal === 0}}">本期暂无曲目安排</text>
-        <text class="schedule-note" wx:if="{{previewNote}}">{{previewNote}}</text>
         <button class="primary-button preview-button" bindtap="goPlaylist" hover-class="primary-pressed">{{previewTotal > 0 ? '查看完整歌单' : '查看本期详情'}} ›</button>
       </view>
       <view class="waiting-card" wx:elif="{{!canSubmit && !hasSubmitted}}">

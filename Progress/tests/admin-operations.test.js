@@ -12,7 +12,7 @@ function loadAdminFn(seed) {
     submissions: seed.submissions || {},
     exceptions: [],
     events: [],
-    updates: []
+    updates: [], transactions: []
   };
   const command = {
     in: value => ({ __op: 'in', value }),
@@ -89,6 +89,7 @@ function loadAdminFn(seed) {
         async commit() { tx.committed = true; },
         async rollback() { tx.rolledBack = true; }
       };
+      state.transactions.push(tx);
       return tx;
     }
   };
@@ -201,5 +202,18 @@ function loadAdminFn(seed) {
     check(fn.state.submissions.a.status, 'selected', '保留的投稿状态不应被改动');
   }
 
-  console.log(`PASS: ${checks} admin operation assertions; skip-day to carryover, revision guard on skip/publish, empty list requires note, normal publish keeps其它项`);
+  // 7) 两位管理员先后用同一旧版本保存备注，后者必须拒绝，旧客户端缺省版本仍兼容。
+  {
+    const fn=loadAdminFn({schedules:{s1:{_id:'s1',status:'pending',revision:5,day1:[{song_name:'A',special_note:'原备注'}]}}});
+    let result=await fn.main({action:'updateNote',playlistId:'s1',dayIndex:0,songIndex:0,note:'管理员甲',revision:5});
+    check(result.success,true,'最新备注可保存');check(result.data.revision,6,'返回真实新版本');
+    check(fn.state.transactions[0].committed,true,'备注保存使用事务提交');
+    result=await fn.main({action:'updateNote',playlistId:'s1',dayIndex:0,songIndex:0,note:'管理员乙',revision:5});
+    check(result.success,false,'旧版本不能覆盖另一管理员备注');check(result.message,'页面数据已过期，请刷新后重试','保留可识别冲突提示');
+    check(fn.state.schedules.s1.day1[0].special_note,'管理员甲','冲突保留最新备注');
+    check(fn.state.transactions[1].rolledBack,true,'冲突事务回滚');
+    result=await fn.main({action:'updateNote',playlistId:'s1',dayIndex:0,songIndex:0,note:'旧客户端'});
+    check(result.success,true,'兼容旧客户端未传版本');check(fn.state.schedules.s1.revision,7,'旧客户端写入仍推进版本');
+  }
+  console.log(`PASS: ${checks} admin operation assertions; skip-day, publish, transactional note revision and legacy compatibility`);
 })().catch(err => { console.error(err); process.exit(1); });

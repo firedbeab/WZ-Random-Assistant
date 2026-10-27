@@ -14,9 +14,10 @@
   <view class="sub-heading" wx:else><button class="sub-back" bindtap="switchTab" data-tab="manage" aria-label="返回管理"><image src="{{themeIcons.back}}" /></button><text>{{currentTab === 'admins' ? '管理员与通行码' : currentTab === 'help' ? '说明管理' : '数据管理'}}</text><button class="new-entry-button" wx:if="{{currentTab === 'help'}}" bindtap="onAddHelpArticle">＋ 新建</button></view>
   <view class="panel-stage {{panelVisible ? 'panel-visible' : ''}}">
   <view class="tab-panel" wx:if="{{currentTab === 'audit'}}">
+    <view class="schedule-conflict" wx:if="{{scheduleConflict}}"><text class="conflict-title">歌单状态已更新</text><text>可能有其他管理员此前编辑或发布了歌单。请刷新查看最新状态，重新核对后再操作。</text><button bindtap="refreshConflictedSchedule" disabled="{{auditLoading}}">{{auditLoading ? '刷新中…' : '刷新歌单'}}</button></view>
     <view class="audit-tools"><button class="tips-button {{showAuditTips ? 'expanded' : ''}}" bindtap="toggleAuditTips" aria-expanded="{{showAuditTips}}"><text>审核要点</text><image src="{{themeIcons.chevron}}" /></button></view>
     <view class="notice-expand {{showAuditTips ? 'expanded' : ''}}"><view class="notice-inner"><view class="notice-card"><text>检查重复曲目、可播放性及名称内容。异常处理会尝试替补；标记移除不补位，发布前可撤销。</text></view></view></view>
-    <view class="audit-period-row" wx:if="{{schedule}}"><view class="audit-period">排期周次 <text>{{scheduleWeekKey}}</text></view><text class="period-copy-hint">长按复制歌曲信息</text></view><text class="batch-hint" wx:if="{{schedule && !auditError && pendingRemovalCount}}">已标记 {{pendingRemovalCount}} 首待移除，发布前可撤销。</text><text class="batch-error" wx:if="{{batchResultMessage}}">{{batchResultMessage}}</text>
+    <view class="audit-period-row" wx:if="{{schedule}}"><view class="audit-period">排期周次 <text>{{scheduleWeekKey}}</text></view><text class="period-copy-hint">长按复制歌曲信息</text></view><text class="batch-hint" wx:if="{{schedule && !auditError && !scheduleConflict && pendingRemovalCount}}">已标记 {{pendingRemovalCount}} 首待移除，发布前可撤销。</text><text class="batch-error" wx:if="{{batchResultMessage}}">{{batchResultMessage}}</text>
     <view class="week-warning" wx:if="{{schedule && !scheduleIsCurrentWeek}}">这是 {{scheduleWeekKey}} 的排期，不是本周（{{thisWeekKey}}），发布前请确认。</view>
     <view class="week-warning" wx:if="{{schedule && schedule.carryover_only}}">本周没有新投稿，曲目全部来自历史候补。</view>
     <view class="state-message" wx:if="{{auditLoading && !schedule}}"><text>正在加载排期</text><text class="hint">请稍候。</text></view>
@@ -39,7 +40,7 @@
           </view>
         </block>
       </view>
-      <view class="audit-bottom"><view class="bottom-copy"><text>{{batchMode ? '已选 '+batchSelectedCount+' 首' : activeSongCount+' 首 · 5 天'}}</text><text class="bottom-hint">{{batchMode ? '不补位，发布前可撤销' : pendingRemovalCount ? pendingRemovalCount+' 首待移除' : '核对后向用户发布'}}</text></view><view class="bottom-buttons"><button class="batch-entry" bindtap="openBatchRemoval" disabled="{{batchRemoving || publishing}}">{{batchMode ? '取消移除' : '批量移除'}}</button><button class="btn-remove-selected" wx:if="{{batchMode}}" bindtap="openBulkConfirm" disabled="{{!batchSelectedCount || batchRemoving}}">移除 {{batchSelectedCount}} 首</button><button class="btn-publish" wx:else bindtap="onPublish" disabled="{{publishing}}">发布歌单</button></view></view>
+      <view class="audit-bottom"><view class="bottom-copy"><text>{{scheduleConflict ? '需刷新核对' : batchMode ? '已选 '+batchSelectedCount+' 首' : activeSongCount+' 首 · 5 天'}}</text><text class="bottom-hint">{{scheduleConflict ? '当前数量不是最新状态' : batchMode ? '不补位，发布前可撤销' : pendingRemovalCount ? pendingRemovalCount+' 首待移除' : '核对后向用户发布'}}</text></view><view class="bottom-buttons"><button class="batch-entry" bindtap="openBatchRemoval" disabled="{{batchRemoving || publishing}}">{{batchMode ? '取消移除' : '批量移除'}}</button><button class="btn-remove-selected" wx:if="{{batchMode}}" bindtap="openBulkConfirm" disabled="{{!batchSelectedCount || batchRemoving}}">移除 {{batchSelectedCount}} 首</button><button class="btn-publish" wx:else bindtap="onPublish" disabled="{{publishing}}">发布歌单</button></view></view>
     </block>
     <view class="state-message" wx:else><text>暂无待审核排期</text><text class="hint">请等待周日 20:00 自动抽取。</text></view>
   </view>

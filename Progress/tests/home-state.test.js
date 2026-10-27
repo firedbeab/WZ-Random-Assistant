@@ -37,11 +37,13 @@ test('剩余时间在最后一分钟准确，不在窗口内伪造倒计时', ()
   assert.equal(presentation.hoursLeftText(bj('2026-10-25T20:00:00')), '');
   assert.equal(presentation.hoursLeftText(bj('2026-10-26T10:00:00')), '');
 });
-test('预览按播出日排序，最多三首，总数不硬编码，空排期保留说明', () => {
+test('预览按播出日排序，最多四首真实曲目，不足四首不补行，总数不硬编码', () => {
   const schedule = { week_key: '2026-10-25', day1: [{ song_name: '甲', singer: 'A' }, null], day2: [{ song_name: '乙' }, { song_name: '丙' }], day5: [{ song_name: '丁' }] };
   const preview = presentation.schedulePreview(schedule);
   assert.equal(preview.previewTotal, 4);
-  assert.deepEqual(preview.previewSongs.map(s => s.title), ['甲', '乙', '丙']);
+  assert.deepEqual(preview.previewSongs.map(s => s.title), ['甲', '乙', '丙', '丁']);
+  assert.equal(preview.previewSongs[3].day,'周五');
+  assert.equal(presentation.schedulePreview({day1:[{song_name:'一'}]}).previewSongs.length,1);
   assert.equal(preview.previewSongs[1].day, '周二');
   assert.equal(preview.previewWeekText, '2026.10.25');
   assert.equal(presentation.schedulePreview({ admin_note: '本周暂停播出' }).previewNote, '本周暂停播出');

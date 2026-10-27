@@ -1,4 +1,5 @@
 const feedback = require('../../utils/admin-feedback');
+const conflict = require('../../utils/schedule-conflict');
 const theme = require('../../utils/theme');
 // pages/admin/admin.js
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
@@ -55,6 +56,7 @@ Page(theme.page(feedback.page({
     activeSongCount: 0,
     auditLoading: false,
     auditError: '',
+    scheduleConflict: false,
     showAuditTips: false,
     showPublishNote: false,
     showPublishDrawer: false,
@@ -288,6 +290,7 @@ Page(theme.page(feedback.page({
       auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
   },
   openSongActions(e) {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
     const { song, day, songIndex } = e.currentTarget.dataset;
     this.setData({ showSongDrawer: true, actionSong: song, actionDay: Number(day), actionSongIndex: Number(songIndex) });
   },
@@ -307,6 +310,7 @@ Page(theme.page(feedback.page({
     });
   },
   openBatchRemoval() {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
     if (!this.data.schedule || this.data.batchRemoving) return;
     this.setData({ batchMode: !this.data.batchMode, batchSelectedCount: 0, batchResultMessage: '', bulkDay: -1,
       auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
@@ -376,6 +380,26 @@ Page(theme.page(feedback.page({
 
   // ========== 审核相关方法 ==========
 
+  notifyScheduleConflict() {
+    this.setData({ scheduleConflict: true, showPublishDrawer: false, showBulkConfirmDrawer: false,
+      showSongDrawer: false });
+    feedback.showModal(this, { title: conflict.TITLE, content: conflict.MESSAGE,
+      confirmText: '刷新歌单', cancelText: '稍后', success: result => { if (result.confirm) return this.refreshConflictedSchedule(); } });
+  },
+  handleScheduleError(error) {
+    if (!conflict.isConflict(error)) return false;
+    this.notifyScheduleConflict(); return true;
+  },
+  async refreshConflictedSchedule() {
+    if (this.data.auditLoading) return;
+    await this.loadPlaylist(false);
+    if (!this.data.scheduleConflict) this.setData({ showModal: false, showNoteModal: false });
+  },
+  checkScheduleSnapshot(saved) {
+    if (this.data.scheduleConflict || !conflict.matches(saved, this.data.schedule)) { this.notifyScheduleConflict(); return false; }
+    return true;
+  },
+
   // 写操作成功后：服务端必然把 revision +1，本地立即同步，避免紧接着的操作带着旧版本号提交。
   bumpRevision() {
     const schedule = this.data.schedule;
@@ -399,7 +423,7 @@ Page(theme.page(feedback.page({
       if (res.result.success) {
         const schedule = res.result.data;
         if (!schedule) {
-          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, pendingRemovalCount: 0, batchResultMessage: '', bulkDay: -1 });
+          this.setData({ schedule: null, scheduleConflict: false, scheduleWeekKey: '', activeSongCount: 0, pendingRemovalCount: 0, batchResultMessage: '', bulkDay: -1 });
           return;
         }
         const pendingRemovalCount = ['day1', 'day2', 'day3', 'day4', 'day5']
@@ -412,6 +436,7 @@ Page(theme.page(feedback.page({
         });
         this.setData({
           schedule,
+          scheduleConflict: false,
           pendingRemovalCount,
           batchResultMessage: '',
           dayCounts,
@@ -428,7 +453,7 @@ Page(theme.page(feedback.page({
         });
       } else {
         if (res.result.message === '暂无待审核排期') {
-          this.setData({ schedule: null, scheduleWeekKey: '', activeSongCount: 0, pendingRemovalCount: 0, batchResultMessage: '', bulkDay: -1 });
+          this.setData({ schedule: null, scheduleConflict: false, scheduleWeekKey: '', activeSongCount: 0, pendingRemovalCount: 0, batchResultMessage: '', bulkDay: -1 });
           return;
         }
         this.setData({ auditError: res.result.message || '请稍后重试' });
@@ -444,6 +469,8 @@ Page(theme.page(feedback.page({
   },
 
   onException(e) {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
+    this._exceptionSnapshot = conflict.snapshot(this.data.schedule);
     this.setData({
       showModal: true,
       modalSong: e.currentTarget.dataset.song,
@@ -466,6 +493,8 @@ Page(theme.page(feedback.page({
   },
 
   onSkipDay(e) {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
+    const saved = conflict.snapshot(this.data.schedule);
     const dayIndex = e.currentTarget.dataset.day;
     const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
     feedback.showModal(this, {
@@ -473,6 +502,7 @@ Page(theme.page(feedback.page({
       content: `「${dayLabel}」将不安排曲目，现有曲目转回候补。此操作没有一键撤销，确定继续吗？`,
       success: async (res) => {
         if (res.confirm) {
+          if (!this.checkScheduleSnapshot(saved)) return;
           feedback.showLoading(this, { title: '处理中' });
           try {
             const ret = await cloudCall({
@@ -488,10 +518,10 @@ Page(theme.page(feedback.page({
               toastLater(this, { title: ret.result.message, icon: 'success' });
               await this.refreshAfterWrite();
             } else {
-              toastLater(this, { title: ret.result.message, icon: 'none' });
+              if (!this.handleScheduleError(ret.result.message)) toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            toastLater(this, { title: '操作失败', icon: 'none' });
+            if (!this.handleScheduleError(err)) toastLater(this, { title: '操作失败', icon: 'none' });
           } finally {
             feedback.hideLoading(this);
           }
@@ -526,11 +556,9 @@ Page(theme.page(feedback.page({
   async confirmBulkRemoval(e) {
     const snapshot = this._bulkSnapshot, schedule = this.data.schedule;
     if (!snapshot || !schedule || !this.data.showBulkConfirmDrawer || this.data.batchRemoving) return;
-    if (snapshot.id !== schedule._id || snapshot.revision !== schedule.revision) {
-      this.setData({ batchResultMessage: '排期已经变化，请刷新后重新选择。', showBulkConfirmDrawer: false }); return;
-    }
+    if (!this.checkScheduleSnapshot(snapshot)) return;
     const reason = e && e.detail && e.detail.value && e.detail.value.removalReason || '当天安排调整';
-    let revision = schedule.revision, confirmed = 0, message = '', failed = false;
+    let revision = schedule.revision, confirmed = 0, message = '', failed = false, conflicted = false;
     this.setData({ batchRemoving: true });
     try {
       for (const group of snapshot.groups) {
@@ -545,18 +573,22 @@ Page(theme.page(feedback.page({
       message = `已标记 ${confirmed} 首，发布前可撤销。`;
     } catch (err) {
       failed = true;
+      conflicted = conflict.isConflict(err);
       message = `已确认标记 ${confirmed} 首；其余结果未确认，请刷新核对。${err.message || ''}`;
     } finally {
       this._bulkSnapshot = null;
-      await this.loadPlaylist(false);
+      if (!conflicted) await this.loadPlaylist(false);
       this.setData({ batchRemoving: false, showBulkConfirmDrawer: false, batchMode: false, batchSelectedCount: 0,
         batchResultMessage: failed ? '部分操作未确认，请刷新核对排期。' : '', auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
         auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
-      feedback.showToast(this, { title: message, icon: failed ? 'none' : 'success', duration: failed ? 5000 : 2800 });
+      if (conflicted) this.notifyScheduleConflict();
+      else feedback.showToast(this, { title: message, icon: failed ? 'none' : 'success', duration: failed ? 5000 : 2800 });
     }
   },
 
   onRemoveSelectedFromDay(e) {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
+    const saved = conflict.snapshot(this.data.schedule);
     const dayIndex = Number(e.currentTarget.dataset.day);
     const selected = this.data.auditSelections[`day${dayIndex}`] || [];
     if (!selected.length) {
@@ -573,6 +605,7 @@ Page(theme.page(feedback.page({
       confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
+        if (!this.checkScheduleSnapshot(saved)) return;
         feedback.showLoading(this, { title: '处理中' });
         try {
           const ret = await cloudCall({
@@ -591,7 +624,7 @@ Page(theme.page(feedback.page({
           await this.refreshAfterWrite();
           toastLater(this, { title: ret.result.message, icon: 'success' });
         } catch (err) {
-          toastLater(this, { title: err.message || '删除失败', icon: 'none' });
+          if (!this.handleScheduleError(err)) toastLater(this, { title: err.message || '删除失败', icon: 'none' });
         } finally {
           feedback.hideLoading(this);
         }
@@ -600,6 +633,7 @@ Page(theme.page(feedback.page({
   },
 
   onRestoreRemoval(e) {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
     const dayIndex = Number(e.currentTarget.dataset.day);
     const songIndex = Number(e.currentTarget.dataset.songIndex);
     feedback.showLoading(this, { title: '撤销中' });
@@ -617,11 +651,12 @@ Page(theme.page(feedback.page({
       await this.refreshAfterWrite();
       toastLater(this, { title: ret.result.message, icon: 'success' });
     }).catch(err => {
-      toastLater(this, { title: err.message || '撤销失败', icon: 'none' });
+      if (!this.handleScheduleError(err)) toastLater(this, { title: err.message || '撤销失败', icon: 'none' });
     }).finally(() => feedback.hideLoading(this));
   },
 
   async confirmException() {
+    if (!this.checkScheduleSnapshot(this._exceptionSnapshot)) return;
     const { schedule, modalDay, modalSongIndex, selectedReason, customReason } = this.data;
     const reason = customReason || selectedReason || '管理员移除';
 
@@ -646,16 +681,17 @@ Page(theme.page(feedback.page({
         await this.refreshAfterWrite();
         this.closeModal();
       } else {
-        toastLater(this, { title: res.result.message, icon: 'none' });
+        if (!this.handleScheduleError(res.result.message)) toastLater(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      toastLater(this, { title: '操作失败', icon: 'none' });
+      if (!this.handleScheduleError(err)) toastLater(this, { title: '操作失败', icon: 'none' });
     } finally {
       feedback.hideLoading(this);
     }
   },
 
   onPublish() {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
     const { schedule, note, dayCounts } = this.data;
     if (!schedule || this.data.publishing) return;
     this._publishSnapshot = { id: schedule._id, revision: schedule.revision };
@@ -671,9 +707,7 @@ Page(theme.page(feedback.page({
     this.setData({ note, publishNoteValid: !!note.trim() });
     if (!activeSongCount && !note.trim()) { this.setData({ publishError: '没有曲目时，请填写本期说明。' }); return; }
     if (note.length > 100) { this.setData({ publishError: '发布说明最多100字。' }); return; }
-    if (schedule._id !== this._publishSnapshot.id || schedule.revision !== this._publishSnapshot.revision) {
-      this.setData({ publishError: '排期已经变化，请关闭后重新核对。' }); return;
-    }
+    if (!this.checkScheduleSnapshot(this._publishSnapshot)) return;
     this.setData({ publishing: true, publishError: '' });
     try {
       const ret = await cloudCall({ name: 'adminAuditPlaylist', data: {
@@ -684,17 +718,19 @@ Page(theme.page(feedback.page({
         toastLater(this, { title: '发布成功', icon: 'success' });
       } else {
         const message = ret.result.message || '发布失败，请重试';
+        if (this.handleScheduleError(message)) return;
         this.setData({ publishError: message });
-        if (/过期/.test(message)) { this.setData({ showPublishDrawer: false }); await this.loadPlaylist(false); }
       }
-    } catch (_) {
-      this.setData({ publishError: '网络异常，发布未确认，请稍后重试。' });
+    } catch (err) {
+      if (!this.handleScheduleError(err)) this.setData({ publishError: '网络异常，发布未确认，请稍后重试。' });
     } finally { this.setData({ publishing: false }); }
   },
 
   // ========== 特殊备注弹窗 ==========
 
   onOpenNote(e) {
+    if (this.data.scheduleConflict) { this.notifyScheduleConflict(); return; }
+    this._noteSnapshot = conflict.snapshot(this.data.schedule);
     const { day, songIndex, song } = e.currentTarget.dataset;
     this.setData({
       showNoteModal: true,
@@ -716,6 +752,7 @@ Page(theme.page(feedback.page({
   },
 
   async saveSpecialNote(noteValue, successMessage) {
+    if (!this.checkScheduleSnapshot(this._noteSnapshot)) return;
     if (this.data.noteSaving) return;
     const dayIndex = Number(this.data.noteDay);
     const songIndex = Number(this.data.noteSongIndex);
@@ -748,7 +785,7 @@ Page(theme.page(feedback.page({
           : item);
         // 服务端保存备注后会 revision+1，但只返回 special_note；这里同步加一，
         // 否则后续「标记删除 / 撤销删除」会因本地版本号落后而必然报“页面数据已过期”。
-        const nextRevision = (Number(this.data.schedule.revision) || 1) + 1;
+        const nextRevision = Number.isInteger(resultData.revision) ? resultData.revision : (Number(this.data.schedule.revision) || 1) + 1;
         const updatedSchedule = Object.assign({}, this.data.schedule, { [dayKey]: updatedDay, revision: nextRevision });
 
         this.setData({
@@ -760,10 +797,10 @@ Page(theme.page(feedback.page({
         });
         toastLater(this, { title: successMessage, icon: 'success' });
       } else {
-        toastLater(this, { title: res.result.message, icon: 'none' });
+        if (!this.handleScheduleError(res.result.message)) toastLater(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      toastLater(this, { title: '保存失败', icon: 'none' });
+      if (!this.handleScheduleError(err)) toastLater(this, { title: '保存失败', icon: 'none' });
     } finally {
       if (this.data.noteSaving) this.setData({ noteSaving: false });
     }
