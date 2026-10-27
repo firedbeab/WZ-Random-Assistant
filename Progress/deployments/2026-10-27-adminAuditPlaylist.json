@@ -1,0 +1,41 @@
+{
+  "function": "adminAuditPlaylist",
+  "sourceCommit": "8e06bce",
+  "backupCommit": "411e91b",
+  "verifiedAtUtc": "2026-10-27T20:14:45Z",
+  "status": "Active",
+  "runtime": "Nodejs16.13",
+  "timeoutSeconds": 60,
+  "method": "incremental:index.js",
+  "readback": {
+    "indexJsMatchesLocal": true,
+    "dataScopeUnchanged": true,
+    "packageJsonUnchanged": true,
+    "configJsonUnchanged": true,
+    "sha256": {
+      "index.js": "cfaadf13157d26351832fbb1faf0ce7e8029ee5d53edc817249dd2022bfbba96",
+      "dataScope.js": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+      "package.json": "d1c6321535da87268b67adcdd41e63936652e382d2d32b4b09864add034221f3",
+      "config.json": "3d609844180689d518491bebefbc2d874ae35b76baacf4af83ac09d7cdbbf553"
+    }
+  },
+  "rollback": {
+    "beforeIndexSha256": "25b9524383a98ef6f21c8fd3b599a9d6a3e2a68c59f3072a630c827f2eb42bee",
+    "localDownloadedCopy": ".cache/admin-audit-before-411e91b",
+    "sourceBaselineCommit": "0c2f2b1"
+  },
+  "compatibility": {
+    "legacyFrontendReference": "1c5173f (about page label v1.8)",
+    "updateNoteRequestFieldsUnchanged": true,
+    "legacySpecialNoteResponsePreserved": true,
+    "missingRevisionAccepted": true,
+    "dependenciesUnchanged": true,
+    "testsPassed": 104,
+    "productionBusinessWritesPerformed": false,
+    "liveV18ClientEndToEndTestPerformed": false
+  },
+  "notes": [
+    "First post-deployment download failed with socket hang up; retry succeeded.",
+    "No front-end upload or other function deployment."
+  ]
+}
