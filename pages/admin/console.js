@@ -1,3 +1,4 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 const { cloudCall, isTestMode } = require('../../utils/runtime');
 
@@ -121,7 +122,7 @@ function displayEvent(item) {
   });
 }
 
-Page(theme.page({
+Page(theme.page(feedback.page({
   data: {
     isTestMode: isTestMode(),
     mode: 'submissions',
@@ -137,6 +138,7 @@ Page(theme.page({
     submissions: [],
     submissionTotal: 0,
     selectedIds: [],
+    selectedFlags: {},
     showSubmissionEditor: false,
     editSubmission: null,
     schedules: [],
@@ -166,14 +168,26 @@ Page(theme.page({
   onPullDownRefresh() {
     if (this.data.scheduleDirty) {
       wx.stopPullDownRefresh();
-      wx.showToast({ title: '请先保存或取消编辑', icon: 'none' });
+      feedback.showToast(this, { title: '请先保存或取消编辑', icon: 'none' });
       return;
     }
     Promise.resolve(this.loadData()).finally(() => wx.stopPullDownRefresh());
   },
 
-  onUnload() { clearTimeout(this._submissionCloseTimer); },
-  backToManagement() { wx.navigateBack(); },
+  onUnload() { feedback.clear(this); clearTimeout(this._submissionCloseTimer); },
+  backToManagement() { this.confirmDiscardSchedule(() => wx.navigateBack()); },
+  async openWeekFilter() {
+    const result = await feedback.showChoice(this, { title: '选择投稿周次', choices: this.data.weekOptions, selectedIndex: this.data.weekIndex });
+    if (result.confirm) this.onWeekChange({ detail: { value: result.index } });
+  },
+  async openStatusFilter() {
+    const result = await feedback.showChoice(this, { title: '选择投稿状态', choices: this.data.statusOptions, selectedIndex: this.data.statusIndex });
+    if (result.confirm) this.onStatusChange({ detail: { value: result.index } });
+  },
+  async openEventFilter() {
+    const result = await feedback.showChoice(this, { title: '筛选事件类别', choices: this.data.eventCategories, selectedIndex: this.data.eventCategoryIndex });
+    if (result.confirm) this.onEventCategoryChange({ detail: { value: result.index } });
+  },
 
   async call(action, data) {
     const res = await cloudCall({
@@ -194,7 +208,7 @@ Page(theme.page({
       if (this.data.mode === 'events') await this.loadEvents();
       if (this.data.mode === 'counters') await this.loadCounters();
     } catch (err) {
-      wx.showToast({ title: err.message || '加载失败', icon: 'none' });
+      feedback.showToast(this, { title: err.message || '加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
     }
@@ -224,12 +238,24 @@ Page(theme.page({
     this.setData({
       submissions: (result.data || []).map(displaySubmission),
       submissionTotal: result.total || 0,
-      selectedIds: []
+      selectedIds: [],
+      selectedFlags: {}
     });
   },
 
   searchSubmissions() { this.loadSubmissions(); },
-  onSelectionChange(e) { this.setData({ selectedIds: e.detail.value || [] }); },
+  onSelectionChange(e) {
+    const selectedIds = e.detail.value || [];
+    this.setData({ selectedIds, selectedFlags: selectedIds.reduce((flags, id) => { flags[id] = true; return flags; }, {}) });
+  },
+  toggleSubmissionSelection(e) {
+    const id = e.currentTarget.dataset.id;
+    const item = this.data.submissions.find(row => row._id === id);
+    if (!item || item.status === 'selected' || item.status === 'rejected') return;
+    const selected = this.data.selectedIds.slice(), index = selected.indexOf(id);
+    if (index < 0) selected.push(id); else selected.splice(index, 1);
+    this.onSelectionChange({ detail: { value: selected } });
+  },
 
   openSubmissionEditor(e) {
     const id = e.currentTarget.dataset.id;
@@ -249,7 +275,7 @@ Page(theme.page({
   async saveSubmission() {
     const item = this.data.editSubmission;
     if (!item) return;
-    wx.showLoading({ title: '保存中' });
+    feedback.showLoading(this, { title: '保存中' });
     try {
       await this.call('updateSubmission', {
         id: item._id, songName: item.song_name,
@@ -257,41 +283,41 @@ Page(theme.page({
       });
       this.closeSubmissionEditor();
       await this.loadSubmissions();
-      wx.showToast({ title: '已保存', icon: 'success' });
+      feedback.showToast(this, { title: '已保存', icon: 'success' });
     } catch (err) {
-      wx.showToast({ title: err.message, icon: 'none' });
-    } finally { wx.hideLoading(); }
+      feedback.showToast(this, { title: err.message, icon: 'none' });
+    } finally { feedback.hideLoading(this); }
   },
 
   removeSelected() {
     const ids = this.data.selectedIds;
-    if (!ids.length) return wx.showToast({ title: '请先选择投稿', icon: 'none' });
-    wx.showModal({
+    if (!ids.length) return feedback.showToast(this, { title: '请先选择投稿', icon: 'none' });
+    feedback.showModal(this, {
       title: `移除 ${ids.length} 条投稿`, editable: true,
       placeholderText: '必须填写移除原因', confirmText: '移除', confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
-        if (!res.content || !res.content.trim()) return wx.showToast({ title: '请填写原因', icon: 'none' });
-        wx.showLoading({ title: '处理中' });
+        if (!res.content || !res.content.trim()) return feedback.showToast(this, { title: '请填写原因', icon: 'none' });
+        feedback.showLoading(this, { title: '处理中' });
         try {
           const result = await this.call('removeSubmissions', { ids, reason: res.content });
           await this.loadSubmissions();
-          wx.showToast({ title: result.message, icon: 'success' });
-        } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
-        finally { wx.hideLoading(); }
+          feedback.showToast(this, { title: result.message, icon: 'success' });
+        } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
+        finally { feedback.hideLoading(this); }
       }
     });
   },
 
   restoreSubmission(e) {
     const id = e.currentTarget.dataset.id;
-    wx.showModal({ title: '恢复投稿', content: '恢复后会同步增加该周计数，确定继续吗？', success: async res => {
+    feedback.showModal(this, { title: '恢复投稿', content: '恢复后会同步增加该周计数，确定继续吗？', success: async res => {
       if (!res.confirm) return;
       try {
         await this.call('restoreSubmission', { id });
         await this.loadSubmissions();
-        wx.showToast({ title: '已恢复', icon: 'success' });
-      } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
+        feedback.showToast(this, { title: '已恢复', icon: 'success' });
+      } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
     }});
   },
 
@@ -304,7 +330,7 @@ Page(theme.page({
       const result = await this.call('getSchedule', { id: e.currentTarget.dataset.id });
       this._savedSchedule = JSON.parse(JSON.stringify(result.data));
       this.setData({ scheduleDraft: result.data, scheduleEditing: false, scheduleDirty: false });
-    } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
+    } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
   },
   confirmDiscardSchedule(continueAction) {
     if (this.data.scheduleSaving) return;
@@ -314,7 +340,7 @@ Page(theme.page({
       continueAction();
     };
     if (!this.data.scheduleDirty) return discard();
-    wx.showModal({ title: '放弃未保存修改？', content: '本次修改尚未保存。', confirmText: '放弃修改', success: result => { if (result.confirm) discard(); } });
+    feedback.showModal(this, { title: '放弃未保存修改？', content: '本次修改尚未保存。', confirmText: '放弃修改', success: result => { if (result.confirm) discard(); } });
   },
   closeSchedule() { this.confirmDiscardSchedule(() => this.setData({ scheduleDraft: null, scheduleEditing: false })); },
   startScheduleEdit() {
@@ -356,7 +382,7 @@ Page(theme.page({
     const days = {};
     ['day1', 'day2', 'day3', 'day4', 'day5'].forEach(day => { days[day] = draft[day] || []; });
     this.setData({ scheduleSaving: true });
-    wx.showLoading({ title: '保存中' });
+    feedback.showLoading(this, { title: '保存中' });
     try {
       const result = await this.call('updateSchedule', {
         id: draft._id, revision: draft.revision, days, adminNote: draft.admin_note || ''
@@ -364,25 +390,25 @@ Page(theme.page({
       this.setData({ 'scheduleDraft.revision': result.revision, scheduleEditing: false, scheduleDirty: false });
       this._savedSchedule = JSON.parse(JSON.stringify(this.data.scheduleDraft));
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
-      wx.showToast({ title: '排期已保存', icon: 'success' });
-    } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
-    finally { this.setData({ scheduleSaving: false }); wx.hideLoading(); }
+      feedback.showToast(this, { title: '排期已保存', icon: 'success' });
+    } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
+    finally { this.setData({ scheduleSaving: false }); feedback.hideLoading(this); }
   },
   withdrawSchedule() {
     const draft = this.data.scheduleDraft;
     if (!draft || draft.status !== 'published') return;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '撤回已发布排期', editable: true, placeholderText: '必须填写撤回原因',
       confirmText: '撤回', confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
-        if (!res.content || !res.content.trim()) return wx.showToast({ title: '请填写原因', icon: 'none' });
+        if (!res.content || !res.content.trim()) return feedback.showToast(this, { title: '请填写原因', icon: 'none' });
         try {
           await this.call('withdrawSchedule', { id: draft._id, revision: draft.revision, reason: res.content });
           this.setData({ scheduleDraft: null });
           await this.loadSchedules();
-          wx.showToast({ title: '已撤回', icon: 'success' });
-        } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
+          feedback.showToast(this, { title: '已撤回', icon: 'success' });
+        } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
       }
     });
   },
@@ -413,7 +439,7 @@ Page(theme.page({
         counterCountInput: String(result.data.counter.count || 0),
         counterReason: ''
       });
-    } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
+    } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
   },
   closeCounter() { this.setData({ counterDetail: null }); },
   onCounterCountInput(e) { this.setData({ counterCountInput: e.detail.value }); },
@@ -428,19 +454,19 @@ Page(theme.page({
         reason: this.data.counterReason
       });
       await this.openCounter({ currentTarget: { dataset: { week: detail.counter._id } } });
-      wx.showToast({ title: '计数已更新', icon: 'success' });
-    } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
+      feedback.showToast(this, { title: '计数已更新', icon: 'success' });
+    } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
   },
   recalculateCounter() {
     const detail = this.data.counterDetail;
     if (!detail) return;
-    wx.showModal({ title: '重新计算', content: '将按该周现存且非 removed 的投稿数量覆盖计数器，是否继续？', success: async res => {
+    feedback.showModal(this, { title: '重新计算', content: '将按该周现存且非 removed 的投稿数量覆盖计数器，是否继续？', success: async res => {
       if (!res.confirm) return;
       try {
         await this.call('recalculateCounter', { weekKey: detail.counter._id });
         await this.openCounter({ currentTarget: { dataset: { week: detail.counter._id } } });
-        wx.showToast({ title: '已重新计算', icon: 'success' });
-      } catch (err) { wx.showToast({ title: err.message, icon: 'none' }); }
+        feedback.showToast(this, { title: '已重新计算', icon: 'success' });
+      } catch (err) { feedback.showToast(this, { title: err.message, icon: 'none' }); }
     }});
   }
-}));
+})));

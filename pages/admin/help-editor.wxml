@@ -1,8 +1,6 @@
 <page-meta page-style="{{appearanceStyle}}" />
-<view class="appearance-toolbar"><appearance-toggle /></view>
 <view class="page admin-page-enter" wx:if="{{!loading}}">
-  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 图片写入 test/help-images/</view>
-  <view class="admin-hero"><text class="admin-title">管理后台</text></view><view class="sub-heading"><text>编辑说明</text></view>
+<view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view><view class="sub-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回说明管理"><image src="{{themeIcons.back}}" /></button><text>编辑说明</text></view>
   <view class="form-card">
     <view class="field">
       <text class="field-label">标题</text>
@@ -71,3 +69,5 @@
 </view>
 
 <privacy-popup id="privacyPopup"></privacy-popup>
+
+<include src="../../templates/admin-feedback.wxml" />

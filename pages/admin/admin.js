@@ -1,3 +1,4 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 // pages/admin/admin.js
 const { cloudCall, collectionName, isTestMode, storageKey } = require('../../utils/runtime');
@@ -7,9 +8,9 @@ const ADMIN_TPL_ID = 'G9y63KY2Q0mPOS-ML_PtxVu9wqE5xKqVnnNgEFtPC_8';
 
 // showToast 与 showLoading 共用同一层：在 finally 里关掉 loading 会把刚弹出的提示一起抹掉。
 // 统一延后一帧再弹，保证提示一定看得见；用户无感知（0ms）。
-function toastLater(options) {
+function toastLater(page, options) {
   setTimeout(() => {
-    try { wx.showToast(options); } catch (_) { /* 页面已卸载时忽略 */ }
+    try { feedback.showToast(page, options); } catch (_) { /* 页面已卸载时忽略 */ }
   }, 0);
 }
 
@@ -23,7 +24,7 @@ function currentWeekKey() {
   return sun.toISOString().split('T')[0];
 }
 
-Page(theme.page({
+Page(theme.page(feedback.page({
   data: {
     isTestMode: isTestMode(),
     // 审核相关
@@ -44,12 +45,27 @@ Page(theme.page({
     currentTab: 'audit',
     panelVisible: true,
     bulkDay: -1,
+    batchMode: false,
+    batchRemoving: false,
+    batchSelectedCount: 0,
+    batchResultMessage: '',
+    showBulkConfirmDrawer: false,
+    bulkConfirmDays: [],
     auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} },
     activeSongCount: 0,
     auditLoading: false,
     auditError: '',
     showAuditTips: false,
     showPublishNote: false,
+    showPublishDrawer: false,
+    publishNoteValid: false,
+    publishDayCount: 0,
+    publishError: '',
+    showBatchDrawer: false,
+    showSongDrawer: false,
+    actionSong: null,
+    actionDay: 0,
+    actionSongIndex: 0,
     drawerClosing: false,
     // 验证码管理
     codeList: [],
@@ -105,6 +121,7 @@ Page(theme.page({
 
   // 下拉刷新：任何页面状态不对时，管理员可以自己拉一下，不必退出重进。
   async onPullDownRefresh() {
+    if (this.data.batchRemoving || this.data.publishing) { wx.stopPullDownRefresh(); return; }
     await this.loadPlaylist(false);
     if (this.data.currentTab === 'codes') await this.loadCodeList({ force: true });
     if (this.data.currentTab === 'admins') await Promise.all([this.loadPasscodeList(), this.loadAdminList()]);
@@ -119,7 +136,7 @@ Page(theme.page({
     }
   },
 
-  onUnload() {
+  onUnload() { feedback.clear(this);
     this._adminUnloaded = true;
     clearTimeout(this._panelTimer);
     clearTimeout(this._panelShowTimer);
@@ -131,7 +148,7 @@ Page(theme.page({
   },
 
   async checkPermissionFromCloud() {
-    wx.showLoading({ title: '验证身份...' });
+    feedback.showLoading(this, { title: '验证身份...' });
     try {
       const res = await cloudCall({ name: 'getUserInfo' });
       if (res.result.success && (res.result.data.role === 'admin' || res.result.data.role === 'superadmin')) {
@@ -163,10 +180,10 @@ Page(theme.page({
       }
     } catch (err) {
       console.warn('身份验证失败');
-      toastLater({ title: '网络异常', icon: 'none' });
+      toastLater(this, { title: '网络异常', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1500);
     } finally {
-      wx.hideLoading();
+      feedback.hideLoading(this);
     }
   },
 
@@ -188,7 +205,7 @@ Page(theme.page({
   },
 
   showNoPermission() {
-    toastLater({ title: '无权限访问', icon: 'none' });
+    toastLater(this, { title: '无权限访问', icon: 'none' });
     setTimeout(() => wx.navigateBack(), 1500);
   },
 
@@ -212,6 +229,38 @@ Page(theme.page({
     }
     this.setData({ currentTab: tab, panelVisible: true });
     this.loadTabData(tab);
+  },
+
+  adminTabs() {
+    const tabs = ['audit', 'codes'];
+    if (this.data.isTestEnv) tabs.push('test');
+    if (this.data.isSuperAdmin) tabs.push('manage');
+    return tabs;
+  },
+  onAdminTouchStart(e) {
+    this._adminTouch = null;
+    if (!this.adminTabs().includes(this.data.currentTab) || this.data.batchMode || this.data.publishing || this.data._adminFeedbackLoading) return;
+    const touch = e.touches && e.touches.length === 1 && e.touches[0];
+    if (!touch || !Number.isFinite(touch.clientX) || !Number.isFinite(touch.clientY) || touch.clientX < 24) return;
+    this._adminTouch = { x: touch.clientX, y: touch.clientY, time: e.timeStamp };
+  },
+  onAdminTouchMove(e) {
+    const start = this._adminTouch, touch = e.touches && e.touches.length === 1 && e.touches[0];
+    if (!start) return;
+    if (!touch || !Number.isFinite(touch.clientX) || !Number.isFinite(touch.clientY)) return this.onAdminTouchCancel();
+    const dx = Math.abs(touch.clientX - start.x), dy = Math.abs(touch.clientY - start.y);
+    if (dy > 12 && dy > dx) this.onAdminTouchCancel();
+  },
+  onAdminTouchCancel() { this._adminTouch = null; },
+  onAdminTouchEnd(e) {
+    const start = this._adminTouch; this._adminTouch = null;
+    const touch = e.changedTouches && e.changedTouches.length === 1 && e.changedTouches[0];
+    if (!start || !touch) return;
+    const dx = touch.clientX - start.x, dy = touch.clientY - start.y, elapsed = e.timeStamp - start.time;
+    if (!Number.isFinite(dx) || !Number.isFinite(dy) || elapsed < 50 || elapsed > 650 || Math.abs(dx) < 60 || Math.abs(dy) > 50 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    const tabs = this.adminTabs(), next = tabs.indexOf(this.data.currentTab) + (dx < 0 ? 1 : -1);
+    if (next < 0 || next >= tabs.length) return;
+    this.switchTab({ currentTarget: { dataset: { tab: tabs[next] } } });
   },
 
   loadTabData(tab) {
@@ -239,15 +288,45 @@ Page(theme.page({
       auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
   },
   openSongActions(e) {
-    const dataset = e.currentTarget.dataset;
-    wx.showActionSheet({
-      itemList: [dataset.song.special_note ? '编辑特殊备注' : '添加特殊备注', '异常处理与替补'],
-      success: result => {
-        if (this._adminUnloaded) return;
-        if (result.tapIndex === 0) this.onOpenNote({ currentTarget: { dataset } });
-        if (result.tapIndex === 1) this.onException({ currentTarget: { dataset } });
+    const { song, day, songIndex } = e.currentTarget.dataset;
+    this.setData({ showSongDrawer: true, actionSong: song, actionDay: Number(day), actionSongIndex: Number(songIndex) });
+  },
+  closeSongDrawer() { this.closeAdminDrawer('showSongDrawer'); },
+  onSongDrawerAction(e) {
+    const { actionSong: song, actionDay: day, actionSongIndex: songIndex } = this.data;
+    const action = e.currentTarget.dataset.action;
+    if (!song || !['note', 'exception', 'remove'].includes(action)) return;
+    this.closeAdminDrawer('showSongDrawer', () => {
+      const next = { currentTarget: { dataset: { song, day, songIndex } } };
+      if (action === 'note') this.onOpenNote(next);
+      if (action === 'exception') this.onException(next);
+      if (action === 'remove') {
+        this.setData({ [`auditSelections.day${day}`]: [String(songIndex)] });
+        this.onRemoveSelectedFromDay(next);
       }
     });
+  },
+  openBatchRemoval() {
+    if (!this.data.schedule || this.data.batchRemoving) return;
+    this.setData({ batchMode: !this.data.batchMode, batchSelectedCount: 0, batchResultMessage: '', bulkDay: -1,
+      auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
+      auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
+  },
+  closeBatchDrawer() { this.closeAdminDrawer('showBatchDrawer'); },
+  chooseBatchDay(e) {
+    const day = Number(e.currentTarget.dataset.day);
+    if (!Number.isInteger(day) || day < 0 || day > 4 || !this.data.dayCounts[day].active) return;
+    this.closeAdminDrawer('showBatchDrawer', () => this.toggleAuditDay({ currentTarget: { dataset: { day } } }));
+  },
+  toggleAuditSong(e) {
+    const { day, songIndex } = e.currentTarget.dataset;
+    if (!this.data.batchMode || this.data.batchRemoving) return;
+    const song = this.data.schedule && (this.data.schedule[`day${Number(day) + 1}`] || [])[Number(songIndex)];
+    if (!song || song.audit_state === 'pending_remove') return;
+    const selected = (this.data.auditSelections[`day${day}`] || []).slice();
+    const index = selected.indexOf(String(songIndex));
+    if (index < 0) selected.push(String(songIndex)); else selected.splice(index, 1);
+    this.onAuditSelectionChange({ currentTarget: { dataset: { day } }, detail: { value: selected } });
   },
   closeAdminDrawer(field, afterClose) {
     if (this.data.drawerClosing) return;
@@ -263,7 +342,7 @@ Page(theme.page({
   async onEnableNotification() {
     if (this.data.isTestMode) {
       this.setData({ subscribed: true });
-      toastLater({ title: '测试环境已模拟订阅', icon: 'none' });
+      toastLater(this, { title: '测试环境已模拟订阅', icon: 'none' });
       return;
     }
     try {
@@ -288,7 +367,7 @@ Page(theme.page({
           });
         }
         this.setData({ subscribed: true });
-        toastLater({ title: '已开启通知', icon: 'success' });
+        toastLater(this, { title: '已开启通知', icon: 'success' });
       }
     } catch (err) {
       console.warn('订阅失败:', err);
@@ -311,7 +390,7 @@ Page(theme.page({
 
   async loadPlaylist(showLoading = true) {
     this.setData({ auditLoading: true, auditError: '' });
-    if (showLoading) wx.showLoading({ title: '加载中' });
+    if (showLoading) feedback.showLoading(this, { title: '加载中' });
     try {
       const res = await cloudCall({
         name: 'adminAuditPlaylist',
@@ -335,6 +414,8 @@ Page(theme.page({
           schedule,
           pendingRemovalCount,
           dayCounts,
+          batchMode: false,
+          batchSelectedCount: 0,
           activeSongCount: dayCounts.reduce((total, day) => total + day.active, 0),
           bulkDay: -1,
           auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} },
@@ -350,14 +431,14 @@ Page(theme.page({
           return;
         }
         this.setData({ auditError: res.result.message || '请稍后重试' });
-        toastLater({ title: res.result.message, icon: 'none' });
+        toastLater(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
       this.setData({ auditError: '请检查网络后重新加载' });
       console.warn('加载排期失败');
     } finally {
       this.setData({ auditLoading: false });
-      if (showLoading) wx.hideLoading();
+      if (showLoading) feedback.hideLoading(this);
     }
   },
 
@@ -375,17 +456,23 @@ Page(theme.page({
   closeModal() { this.closeAdminDrawer('showModal'); },
   selectReason(e) { this.setData({ selectedReason: e.currentTarget.dataset.reason }); },
   onReasonInput(e) { this.setData({ customReason: e.detail.value }); },
-  onNoteInput(e) { this.setData({ note: e.detail.value }); },
+  onNoteInput(e) { this.setData({ note: e.detail.value, publishNoteValid: !!e.detail.value.trim(), publishError: '' }); },
+  onPublishNoteFocus() { this.setData({ publishNoteFocused: true }); },
+  onPublishNoteBlur() { this.setData({ publishNoteFocused: false }); },
+  async openExpireDate() {
+    const result = await feedback.showDatePicker(this, { title: '选择到期日期', value: this.data.newExpireDate });
+    if (result.confirm) this.onExpireDateChange({ detail: { value: result.value } });
+  },
 
   onSkipDay(e) {
     const dayIndex = e.currentTarget.dataset.day;
     const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
-    wx.showModal({
+    feedback.showModal(this, {
       title: '确认跳过',
       content: `「${dayLabel}」将不安排曲目，现有曲目转回候补。此操作没有一键撤销，确定继续吗？`,
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '处理中' });
+          feedback.showLoading(this, { title: '处理中' });
           try {
             const ret = await cloudCall({
               name: 'adminAuditPlaylist',
@@ -397,15 +484,15 @@ Page(theme.page({
               }
             });
             if (ret.result.success) {
-              toastLater({ title: ret.result.message, icon: 'success' });
+              toastLater(this, { title: ret.result.message, icon: 'success' });
               await this.refreshAfterWrite();
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            toastLater({ title: '操作失败', icon: 'none' });
+            toastLater(this, { title: '操作失败', icon: 'none' });
           } finally {
-            wx.hideLoading();
+            feedback.hideLoading(this);
           }
         }
       }
@@ -417,17 +504,64 @@ Page(theme.page({
     const selected = e.detail.value || [];
     this.setData({ [`auditSelections.day${dayIndex}`]: selected,
       [`auditChecked.day${dayIndex}`]: selected.reduce((flags, index) => { flags[index] = true; return flags; }, {}) });
+    this.setData({ batchSelectedCount: Object.values(this.data.auditSelections).reduce((sum, list) => sum + list.length, 0) });
+  },
+
+  openBulkConfirm() {
+    const schedule = this.data.schedule;
+    if (!schedule || !this.data.batchSelectedCount || this.data.batchRemoving) return;
+    const groups = [];
+    for (let day = 0; day < 5; day++) {
+      const songs = schedule[`day${day + 1}`] || [];
+      const songIndexes = (this.data.auditSelections[`day${day}`] || []).map(Number)
+        .filter(index => Number.isInteger(index) && songs[index] && songs[index].audit_state !== 'pending_remove');
+      if (songIndexes.length) groups.push({ dayIndex: day, songIndexes });
+    }
+    if (!groups.length) return;
+    this._bulkSnapshot = { id: schedule._id, revision: schedule.revision, groups };
+    this.setData({ showBulkConfirmDrawer: true, bulkConfirmDays: groups.map(group => ({ day: ['周一','周二','周三','周四','周五'][group.dayIndex], count: group.songIndexes.length })) });
+  },
+  closeBulkConfirm() { if (!this.data.batchRemoving) this.closeAdminDrawer('showBulkConfirmDrawer'); },
+  async confirmBulkRemoval(e) {
+    const snapshot = this._bulkSnapshot, schedule = this.data.schedule;
+    if (!snapshot || !schedule || !this.data.showBulkConfirmDrawer || this.data.batchRemoving) return;
+    if (snapshot.id !== schedule._id || snapshot.revision !== schedule.revision) {
+      this.setData({ batchResultMessage: '排期已经变化，请刷新后重新选择。', showBulkConfirmDrawer: false }); return;
+    }
+    const reason = e && e.detail && e.detail.value && e.detail.value.removalReason || '当天安排调整';
+    let revision = schedule.revision, confirmed = 0, message = '';
+    this.setData({ batchRemoving: true });
+    try {
+      for (const group of snapshot.groups) {
+        const result = await cloudCall({ name: 'adminAuditPlaylist', data: {
+          action: 'removeItems', playlistId: snapshot.id, revision, dayIndex: group.dayIndex,
+          songIndexes: group.songIndexes, reason: String(reason).trim() || '当天安排调整'
+        } });
+        if (!result.result.success) throw new Error(result.result.message || '处理未确认');
+        confirmed += group.songIndexes.length;
+        revision = (Number(revision) || 1) + 1;
+      }
+      message = `已标记 ${confirmed} 首，发布前可撤销。`;
+    } catch (err) {
+      message = `已确认标记 ${confirmed} 首；其余结果未确认，请刷新核对。${err.message || ''}`;
+    } finally {
+      this._bulkSnapshot = null;
+      await this.loadPlaylist(false);
+      this.setData({ batchRemoving: false, showBulkConfirmDrawer: false, batchMode: false, batchSelectedCount: 0,
+        batchResultMessage: message, auditSelections: { day0: [], day1: [], day2: [], day3: [], day4: [] },
+        auditChecked: { day0: {}, day1: {}, day2: {}, day3: {}, day4: {} } });
+    }
   },
 
   onRemoveSelectedFromDay(e) {
     const dayIndex = Number(e.currentTarget.dataset.day);
     const selected = this.data.auditSelections[`day${dayIndex}`] || [];
     if (!selected.length) {
-      toastLater({ title: '请先选择要删除的曲目', icon: 'none' });
+      toastLater(this, { title: '请先选择要删除的曲目', icon: 'none' });
       return;
     }
     const dayLabel = ['周一', '周二', '周三', '周四', '周五'][dayIndex];
-    wx.showModal({
+    feedback.showModal(this, {
       title: `标记${dayLabel}所选曲目`,
       content: `只处理${dayLabel}的 ${selected.length} 首曲目，不补位，发布前可撤销。`,
       editable: true,
@@ -436,7 +570,7 @@ Page(theme.page({
       confirmColor: theme.getNativeColors().danger,
       success: async res => {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中' });
+        feedback.showLoading(this, { title: '处理中' });
         try {
           const ret = await cloudCall({
             name: 'adminAuditPlaylist',
@@ -452,11 +586,11 @@ Page(theme.page({
           if (!ret.result.success) throw new Error(ret.result.message || '删除失败');
           this.setData({ [`auditSelections.day${dayIndex}`]: [] });
           await this.refreshAfterWrite();
-          toastLater({ title: ret.result.message, icon: 'success' });
+          toastLater(this, { title: ret.result.message, icon: 'success' });
         } catch (err) {
-          toastLater({ title: err.message || '删除失败', icon: 'none' });
+          toastLater(this, { title: err.message || '删除失败', icon: 'none' });
         } finally {
-          wx.hideLoading();
+          feedback.hideLoading(this);
         }
       }
     });
@@ -465,7 +599,7 @@ Page(theme.page({
   onRestoreRemoval(e) {
     const dayIndex = Number(e.currentTarget.dataset.day);
     const songIndex = Number(e.currentTarget.dataset.songIndex);
-    wx.showLoading({ title: '撤销中' });
+    feedback.showLoading(this, { title: '撤销中' });
     cloudCall({
       name: 'adminAuditPlaylist',
       data: {
@@ -478,10 +612,10 @@ Page(theme.page({
     }).then(async ret => {
       if (!ret.result.success) throw new Error(ret.result.message || '撤销失败');
       await this.refreshAfterWrite();
-      toastLater({ title: ret.result.message, icon: 'success' });
+      toastLater(this, { title: ret.result.message, icon: 'success' });
     }).catch(err => {
-      toastLater({ title: err.message || '撤销失败', icon: 'none' });
-    }).finally(() => wx.hideLoading());
+      toastLater(this, { title: err.message || '撤销失败', icon: 'none' });
+    }).finally(() => feedback.hideLoading(this));
   },
 
   async confirmException() {
@@ -490,7 +624,7 @@ Page(theme.page({
 
     if (modalSongIndex == null) return;
 
-    wx.showLoading({ title: '处理中' });
+    feedback.showLoading(this, { title: '处理中' });
     try {
       const res = await cloudCall({
         name: 'adminAuditPlaylist',
@@ -505,58 +639,54 @@ Page(theme.page({
       });
 
       if (res.result.success) {
-        toastLater({ title: res.result.message, icon: 'success' });
+        toastLater(this, { title: res.result.message, icon: 'success' });
         await this.refreshAfterWrite();
         this.closeModal();
       } else {
-        toastLater({ title: res.result.message, icon: 'none' });
+        toastLater(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      toastLater({ title: '操作失败', icon: 'none' });
+      toastLater(this, { title: '操作失败', icon: 'none' });
     } finally {
-      wx.hideLoading();
+      feedback.hideLoading(this);
     }
   },
 
-  async onPublish() {
-    const { schedule, note, pendingRemovalCount } = this.data;
-    if (!schedule) return;
-
-    wx.showModal({
-      title: '确认发布',
-      content: pendingRemovalCount > 0
-        ? `发布后列表将对用户可见，并最终移除 ${pendingRemovalCount} 首待删除曲目。是否确认？`
-        : '发布后列表将对用户可见，且不可修改。是否确认？',
-      success: async (res) => {
-        if (res.confirm) {
-          this.setData({ publishing: true });
-          try {
-            const ret = await cloudCall({
-              name: 'adminAuditPlaylist',
-              data: {
-                action: 'publish',
-                playlistId: schedule._id,
-                note,
-                revision: schedule.revision
-              }
-            });
-            if (ret.result.success) {
-              toastLater({ title: '发布成功', icon: 'success' });
-              this.setData({ schedule: null });
-            } else {
-              const message = ret.result.message || '';
-              toastLater({ title: message, icon: 'none' });
-              // 版本号过期时自动拉一次最新排期，省得管理员退出重进页面。
-              if (/过期/.test(message)) await this.loadPlaylist(false);
-            }
-          } catch (err) {
-            toastLater({ title: '发布失败', icon: 'none' });
-          } finally {
-            this.setData({ publishing: false });
-          }
-        }
+  onPublish() {
+    const { schedule, note, dayCounts } = this.data;
+    if (!schedule || this.data.publishing) return;
+    this._publishSnapshot = { id: schedule._id, revision: schedule.revision };
+    this.setData({ showPublishDrawer: true, publishNoteValid: !!note.trim(), publishError: '',
+      publishDayCount: dayCounts.filter(day => day.active > 0).length });
+  },
+  closePublishDrawer() { if (!this.data.publishing) this.closeAdminDrawer('showPublishDrawer'); },
+  async confirmPublish(e) {
+    const { schedule, publishing, activeSongCount } = this.data;
+    if (!schedule || publishing || !this.data.showPublishDrawer || !this._publishSnapshot) return;
+    const values = e && e.detail && e.detail.value;
+    const note = values && typeof values.publishNote === 'string' ? values.publishNote : this.data.note;
+    this.setData({ note, publishNoteValid: !!note.trim() });
+    if (!activeSongCount && !note.trim()) { this.setData({ publishError: '没有曲目时，请填写本期说明。' }); return; }
+    if (note.length > 100) { this.setData({ publishError: '发布说明最多100字。' }); return; }
+    if (schedule._id !== this._publishSnapshot.id || schedule.revision !== this._publishSnapshot.revision) {
+      this.setData({ publishError: '排期已经变化，请关闭后重新核对。' }); return;
+    }
+    this.setData({ publishing: true, publishError: '' });
+    try {
+      const ret = await cloudCall({ name: 'adminAuditPlaylist', data: {
+        action: 'publish', playlistId: schedule._id, note, revision: schedule.revision
+      } });
+      if (ret.result.success) {
+        this.setData({ schedule: null, activeSongCount: 0, showPublishDrawer: false });
+        toastLater(this, { title: '发布成功', icon: 'success' });
+      } else {
+        const message = ret.result.message || '发布失败，请重试';
+        this.setData({ publishError: message });
+        if (/过期/.test(message)) { this.setData({ showPublishDrawer: false }); await this.loadPlaylist(false); }
       }
-    });
+    } catch (_) {
+      this.setData({ publishError: '网络异常，发布未确认，请稍后重试。' });
+    } finally { this.setData({ publishing: false }); }
   },
 
   // ========== 特殊备注弹窗 ==========
@@ -625,12 +755,12 @@ Page(theme.page({
           noteText: '',
           noteSaving: false
         });
-        toastLater({ title: successMessage, icon: 'success' });
+        toastLater(this, { title: successMessage, icon: 'success' });
       } else {
-        toastLater({ title: res.result.message, icon: 'none' });
+        toastLater(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
-      toastLater({ title: '保存失败', icon: 'none' });
+      toastLater(this, { title: '保存失败', icon: 'none' });
     } finally {
       if (this.data.noteSaving) this.setData({ noteSaving: false });
     }
@@ -647,7 +777,7 @@ Page(theme.page({
   deleteNote() {
     if (this.data.noteSaving || !this.data.noteSong || !this.data.noteSong.special_note) return;
 
-    wx.showModal({
+    feedback.showModal(this, {
       title: '删除备注',
       content: '确定删除这条特殊备注吗？发布后的列表将不再显示该备注。',
       confirmText: '删除',
@@ -667,10 +797,10 @@ Page(theme.page({
       : `${name} - ${singer}`;
     wx.setClipboardData({
       data: song,
-      success: () => toastLater({ title: '已复制', icon: 'success' }),
+      success: () => toastLater(this, { title: '已复制', icon: 'success' }),
       fail(err) {
         console.warn('复制失败:', err);
-        toastLater({ title: '复制失败', icon: 'none' });
+        toastLater(this, { title: '复制失败', icon: 'none' });
       }
     });
   },
@@ -680,10 +810,10 @@ Page(theme.page({
     if (code && code !== '******') {
       wx.setClipboardData({
         data: code,
-        success() { toastLater({ title: '已复制', icon: 'success' }); },
+        success() { toastLater(this, { title: '已复制', icon: 'success' }); },
         fail(err) {
           console.warn('复制失败:', err);
-          toastLater({ title: '复制失败', icon: 'none' });
+          toastLater(this, { title: '复制失败', icon: 'none' });
         }
       });
     }
@@ -714,35 +844,35 @@ Page(theme.page({
         this.setData({ codeList: res.result.data });
         try { wx.setStorageSync(cacheKey, { list: res.result.data, at: now }); } catch (_) { /* 忽略写缓存失败 */ }
       } else if (!silent) {
-        toastLater({ title: res.result.message, icon: 'none' });
+        toastLater(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
       console.warn('加载验证码列表失败');
-      if (!silent && this.data.codeList.length === 0) toastLater({ title: '验证码加载失败', icon: 'none' });
+      if (!silent && this.data.codeList.length === 0) toastLater(this, { title: '验证码加载失败', icon: 'none' });
     }
   },
 
   async onGenerateCode() {
-    wx.showModal({
+    feedback.showModal(this, {
       title: '自动生成',
       content: '将生成3个6位验证码（有效期48h），是否继续？',
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '生成中...' });
+          feedback.showLoading(this, { title: '生成中...' });
           try {
             const ret = await cloudCall({
               name: 'autoGenerateWeeklyCode'
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: '生成成功', icon: 'success' });
+              toastLater(this, { title: '生成成功', icon: 'success' });
               this.loadCodeList({ force: true });
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '生成失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '生成失败', icon: 'none' });
           }
         }
       }
@@ -783,15 +913,15 @@ Page(theme.page({
   async confirmSaveCode() {
     const { newCode, newExpireDate, editingCodeId } = this.data;
     if (!newCode || newCode.length < 4) {
-      toastLater({ title: '验证码至少4位', icon: 'none' });
+      toastLater(this, { title: '验证码至少4位', icon: 'none' });
       return;
     }
     if (!newExpireDate) {
-      toastLater({ title: '请选择过期日期', icon: 'none' });
+      toastLater(this, { title: '请选择过期日期', icon: 'none' });
       return;
     }
 
-    wx.showLoading({ title: editingCodeId ? '保存中...' : '添加中...' });
+    feedback.showLoading(this, { title: editingCodeId ? '保存中...' : '添加中...' });
     try {
       const ret = await cloudCall({
         name: 'manageWeeklyCode',
@@ -802,43 +932,43 @@ Page(theme.page({
           expireDate: newExpireDate
         }
       });
-      wx.hideLoading();
+      feedback.hideLoading(this);
       if (ret.result.success) {
-        toastLater({ title: editingCodeId ? '保存成功' : '添加成功', icon: 'success' });
+        toastLater(this, { title: editingCodeId ? '保存成功' : '添加成功', icon: 'success' });
         this.closeCodeModal();
         this.loadCodeList({ force: true });
       } else {
-        toastLater({ title: ret.result.message, icon: 'none' });
+        toastLater(this, { title: ret.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.hideLoading();
-      toastLater({ title: '操作失败', icon: 'none' });
+      feedback.hideLoading(this);
+      toastLater(this, { title: '操作失败', icon: 'none' });
     }
   },
 
   onPublishCode(e) {
     const codeId = e.currentTarget.dataset.id;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '确认发布',
       content: '发布后验证码将对用户可见，且不可修改。是否确认？',
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '发布中...' });
+          feedback.showLoading(this, { title: '发布中...' });
           try {
             const ret = await cloudCall({
               name: 'manageWeeklyCode',
               data: { action: 'publish', codeId }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: '发布成功', icon: 'success' });
+              toastLater(this, { title: '发布成功', icon: 'success' });
               this.loadCodeList({ force: true });
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '发布失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '发布失败', icon: 'none' });
           }
         }
       }
@@ -847,27 +977,27 @@ Page(theme.page({
 
   onDeleteCode(e) {
     const codeId = e.currentTarget.dataset.id;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '确认删除',
       content: '确定删除该验证码吗？',
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '删除中...' });
+          feedback.showLoading(this, { title: '删除中...' });
           try {
             const ret = await cloudCall({
               name: 'manageWeeklyCode',
               data: { action: 'delete', codeId }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: '删除成功', icon: 'success' });
+              toastLater(this, { title: '删除成功', icon: 'success' });
               this.loadCodeList({ force: true });
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '删除失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '删除失败', icon: 'none' });
           }
         }
       }
@@ -897,7 +1027,7 @@ Page(theme.page({
 
   goConsoleDetail(e) {
     if (!this.data.isSuperAdmin) {
-      toastLater({ title: '仅超级管理员可查看', icon: 'none' });
+      toastLater(this, { title: '仅超级管理员可查看', icon: 'none' });
       return;
     }
     const mode = e.currentTarget.dataset.mode;
@@ -933,7 +1063,7 @@ Page(theme.page({
     this.setData({ channelBusy: true });
     try {
       const names = { open: '强制开放', close: '强制关闭', reset: '正常时间' };
-      const confirmed = await wx.showModal({
+      const confirmed = await feedback.showModal(this, {
         title: `切换为${names[mode]}？`,
         content: mode === 'open' ? '立即开放点歌，暂时忽略正常开放时段。' : mode === 'close' ? '立即暂停接收点歌，已有投稿不受影响。' : '恢复每周日 8:00–20:00 自动开放。',
         confirmText: '确认切换',
@@ -945,13 +1075,13 @@ Page(theme.page({
         data: { action: 'toggleChannel', mode }
       });
       if (ret.result.success) {
-        toastLater({ title: ret.result.message, icon: 'success' });
+        toastLater(this, { title: ret.result.message, icon: 'success' });
         await this.loadChannelStatus();
       } else {
-        toastLater({ title: ret.result.message || '操作失败', icon: 'none' });
+        toastLater(this, { title: ret.result.message || '操作失败', icon: 'none' });
       }
     } catch (err) {
-      toastLater({ title: '调用失败：' + (err.message || '网络错误'), icon: 'none' });
+      toastLater(this, { title: '调用失败：' + (err.message || '网络错误'), icon: 'none' });
     } finally {
       this.setData({ channelBusy: false });
     }
@@ -959,27 +1089,27 @@ Page(theme.page({
 
   async onTestGenerate(e) {
     const count = parseInt(e.currentTarget.dataset.count);
-    wx.showModal({
+    feedback.showModal(this, {
       title: '确认生成',
       content: `将生成 ${count} 条提交请求（清空本周已有数据），是否继续？`,
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '生成中...' });
+          feedback.showLoading(this, { title: '生成中...' });
           try {
             const ret = await cloudCall({
               name: 'testTool',
               data: { action: 'generateRequests', count }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: ret.result.message, icon: 'success' });
+              toastLater(this, { title: ret.result.message, icon: 'success' });
               this.loadTestStats();
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '生成失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '生成失败', icon: 'none' });
           }
         }
       }
@@ -987,27 +1117,27 @@ Page(theme.page({
   },
 
   async onTestGenCodes() {
-    wx.showModal({
+    feedback.showModal(this, {
       title: '生成验证码',
       content: '将生成3个测试验证码（TEST01/02/03），是否继续？',
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '生成中...' });
+          feedback.showLoading(this, { title: '生成中...' });
           try {
             const ret = await cloudCall({
               name: 'testTool',
               data: { action: 'generateCodes' }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: ret.result.message, icon: 'success' });
+              toastLater(this, { title: ret.result.message, icon: 'success' });
               this.loadTestStats();
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '生成失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '生成失败', icon: 'none' });
           }
         }
       }
@@ -1015,7 +1145,7 @@ Page(theme.page({
   },
 
   async onTestGenPublished() {
-    wx.showActionSheet({
+    feedback.showActionSheet(this, {
       itemList: ['本期排期', '上一期排期', '上上期排期', '全部3期排期'],
       success: async (res) => {
         const offsetMap = [0, 1, 2];
@@ -1026,49 +1156,49 @@ Page(theme.page({
           action = 'generatePublished';
           offset = offsetMap[res.tapIndex];
         }
-        wx.showLoading({ title: '生成中...' });
+        feedback.showLoading(this, { title: '生成中...' });
         try {
           const ret = await cloudCall({
             name: 'testTool',
             data: { action, offset }
           });
-          wx.hideLoading();
+          feedback.hideLoading(this);
           if (ret.result.success) {
-            toastLater({ title: ret.result.message, icon: 'success' });
+            toastLater(this, { title: ret.result.message, icon: 'success' });
             this.loadTestStats();
           } else {
-            toastLater({ title: ret.result.message, icon: 'none' });
+            toastLater(this, { title: ret.result.message, icon: 'none' });
           }
         } catch (err) {
-          wx.hideLoading();
-          toastLater({ title: '生成失败', icon: 'none' });
+          feedback.hideLoading(this);
+          toastLater(this, { title: '生成失败', icon: 'none' });
         }
       }
     });
   },
 
   async onTestDraw() {
-    wx.showModal({
+    feedback.showModal(this, {
       title: '一键抽取',
       content: '将执行本周抽取任务，是否继续？',
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '抽取中...' });
+          feedback.showLoading(this, { title: '抽取中...' });
           try {
             const ret = await cloudCall({
               name: 'testTool',
               data: { action: 'runDraw' }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: ret.result.message || '抽取完成', icon: 'success' });
+              toastLater(this, { title: ret.result.message || '抽取完成', icon: 'success' });
               this.loadTestStats();
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '抽取失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '抽取失败', icon: 'none' });
           }
         }
       }
@@ -1076,27 +1206,27 @@ Page(theme.page({
   },
 
   async onTestSimulateSubmitted() {
-    wx.showLoading({ title: '处理中...' });
+    feedback.showLoading(this, { title: '处理中...' });
     try {
       const ret = await cloudCall({
         name: 'testTool',
         data: { action: 'simulateSubmitted' }
       });
-      wx.hideLoading();
+      feedback.hideLoading(this);
       if (ret.result.success) {
-        toastLater({ title: ret.result.message, icon: 'success' });
+        toastLater(this, { title: ret.result.message, icon: 'success' });
         this.loadTestStats();
       } else {
-        toastLater({ title: ret.result.message, icon: 'none' });
+        toastLater(this, { title: ret.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.hideLoading();
-      toastLater({ title: '操作失败', icon: 'none' });
+      feedback.hideLoading(this);
+      toastLater(this, { title: '操作失败', icon: 'none' });
     }
   },
 
   async requestCleanupConfirmation(scope) {
-    wx.showLoading({ title: '统计影响范围...' });
+    feedback.showLoading(this, { title: '统计影响范围...' });
     let previewResult;
     try {
       const ret = await cloudCall({
@@ -1105,14 +1235,14 @@ Page(theme.page({
       });
       previewResult = ret.result;
     } catch (err) {
-      wx.hideLoading();
-      toastLater({ title: '无法获取清理预览', icon: 'none' });
+      feedback.hideLoading(this);
+      toastLater(this, { title: '无法获取清理预览', icon: 'none' });
       return;
     }
-    wx.hideLoading();
+    feedback.hideLoading(this);
 
     if (!previewResult || !previewResult.success) {
-      wx.showModal({
+      feedback.showModal(this, {
         title: previewResult && previewResult.blocked ? '生产保护已开启' : '无法继续',
         content: (previewResult && previewResult.message) || '无法获取清理预览',
         showCancel: false
@@ -1130,7 +1260,7 @@ Page(theme.page({
         : `订阅记录 ${preview.message_subscriptions || 0}`);
     const confirmationText = previewResult.confirmationText;
 
-    wx.showModal({
+    feedback.showModal(this, {
       title: isWeek ? '确认清空本周数据' : (isAll ? '确认清空全部测试数据' : '确认清空订阅记录'),
       content: `即将删除：${detail}，共 ${preview.total || 0} 条。\n请输入“${confirmationText}”确认，令牌两分钟内有效。`,
       editable: true,
@@ -1138,11 +1268,11 @@ Page(theme.page({
       success: async (res) => {
         if (!res.confirm) return;
         if (res.content !== confirmationText) {
-          toastLater({ title: '输入不匹配，已取消', icon: 'none' });
+          toastLater(this, { title: '输入不匹配，已取消', icon: 'none' });
           return;
         }
 
-        wx.showLoading({ title: '清空中...' });
+        feedback.showLoading(this, { title: '清空中...' });
         try {
           const ret = await cloudCall({
             name: 'testTool',
@@ -1152,21 +1282,21 @@ Page(theme.page({
               confirmationText
             }
           });
-          wx.hideLoading();
+          feedback.hideLoading(this);
           if (ret.result.success) {
-            toastLater({ title: '清理完成', icon: 'success' });
+            toastLater(this, { title: '清理完成', icon: 'success' });
             this.setData({ testStats: null });
             this.loadTestStats();
           } else {
-            wx.showModal({
+            feedback.showModal(this, {
               title: '未执行清理',
               content: ret.result.message || '服务端拒绝了本次操作',
               showCancel: false
             });
           }
         } catch (err) {
-          wx.hideLoading();
-          toastLater({ title: '清空失败', icon: 'none' });
+          feedback.hideLoading(this);
+          toastLater(this, { title: '清空失败', icon: 'none' });
         }
       }
     });
@@ -1239,17 +1369,17 @@ Page(theme.page({
   async confirmAddPasscode() {
     const { newPasscodeLabel } = this.data;
     if (!newPasscodeLabel || !newPasscodeLabel.trim()) {
-      toastLater({ title: '请输入描述标签', icon: 'none' });
+      toastLater(this, { title: '请输入描述标签', icon: 'none' });
       return;
     }
 
-    wx.showLoading({ title: '生成中...' });
+    feedback.showLoading(this, { title: '生成中...' });
     try {
       const ret = await cloudCall({
         name: 'manageAdmins',
         data: { action: 'addPasscode', label: newPasscodeLabel.trim() }
       });
-      wx.hideLoading();
+      feedback.hideLoading(this);
 
       if (ret.result.success) {
         this.setData({
@@ -1259,11 +1389,11 @@ Page(theme.page({
         });
         this.loadPasscodeList();
       } else {
-        toastLater({ title: ret.result.message, icon: 'none' });
+        toastLater(this, { title: ret.result.message, icon: 'none' });
       }
     } catch (err) {
-      wx.hideLoading();
-      toastLater({ title: '生成失败', icon: 'none' });
+      feedback.hideLoading(this);
+      toastLater(this, { title: '生成失败', icon: 'none' });
     }
   },
 
@@ -1276,10 +1406,10 @@ Page(theme.page({
     if (code) {
       wx.setClipboardData({
         data: code,
-        success() { toastLater({ title: '已复制', icon: 'success' }); },
+        success() { toastLater(this, { title: '已复制', icon: 'success' }); },
         fail(err) {
           console.warn('复制失败:', err);
-          toastLater({ title: '复制失败', icon: 'none' });
+          toastLater(this, { title: '复制失败', icon: 'none' });
         }
       });
     }
@@ -1287,27 +1417,27 @@ Page(theme.page({
 
   onDeletePasscode(e) {
     const { id, label } = e.currentTarget.dataset;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '确认删除',
       content: `确定删除通行码「${label}」吗？删除后该码立即失效。`,
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '删除中...' });
+          feedback.showLoading(this, { title: '删除中...' });
           try {
             const ret = await cloudCall({
               name: 'manageAdmins',
               data: { action: 'deletePasscode', passcodeId: id }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: '已删除', icon: 'success' });
+              toastLater(this, { title: '已删除', icon: 'success' });
               this.loadPasscodeList();
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '删除失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '删除失败', icon: 'none' });
           }
         }
       }
@@ -1317,28 +1447,28 @@ Page(theme.page({
   onRevokeAdmin(e) {
     const openid = e.currentTarget.dataset.openid;
     const preview = openid.length > 8 ? openid.substring(0, 4) + '...' + openid.substring(openid.length - 4) : openid;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '确认撤销',
       content: `确定撤销管理员 ${preview} 的身份吗？该用户将失去管理权限。`,
       confirmColor: theme.getNativeColors().danger,
       success: async (res) => {
         if (res.confirm) {
-          wx.showLoading({ title: '处理中...' });
+          feedback.showLoading(this, { title: '处理中...' });
           try {
             const ret = await cloudCall({
               name: 'manageAdmins',
               data: { action: 'revokeAdmin', targetOpenid: openid }
             });
-            wx.hideLoading();
+            feedback.hideLoading(this);
             if (ret.result.success) {
-              toastLater({ title: '已撤销', icon: 'success' });
+              toastLater(this, { title: '已撤销', icon: 'success' });
               this.loadAdminList();
             } else {
-              toastLater({ title: ret.result.message, icon: 'none' });
+              toastLater(this, { title: ret.result.message, icon: 'none' });
             }
           } catch (err) {
-            wx.hideLoading();
-            toastLater({ title: '撤销失败', icon: 'none' });
+            feedback.hideLoading(this);
+            toastLater(this, { title: '撤销失败', icon: 'none' });
           }
         }
       }
@@ -1358,10 +1488,10 @@ Page(theme.page({
       if (res.result && res.result.success) {
         this.setData({ helpArticleList: res.result.data || [] });
       } else {
-        toastLater({ title: (res.result && res.result.message) || '加载失败', icon: 'none' });
+        toastLater(this, { title: (res.result && res.result.message) || '加载失败', icon: 'none' });
       }
     } catch (err) {
-      toastLater({ title: '说明列表加载失败', icon: 'none' });
+      toastLater(this, { title: '说明列表加载失败', icon: 'none' });
     } finally {
       this.setData({ helpLoading: false });
     }
@@ -1372,28 +1502,28 @@ Page(theme.page({
   },
 
   onInitializeHelpArticles() {
-    wx.showModal({
+    feedback.showModal(this, {
       title: '生成默认说明',
       content: '将生成一套可继续编辑的基础使用说明，是否继续？',
       confirmText: '生成',
       success: async modalRes => {
         if (!modalRes.confirm) return;
-        wx.showLoading({ title: '生成中...' });
+        feedback.showLoading(this, { title: '生成中...' });
         try {
           const res = await cloudCall({
             name: 'manageHelpContent',
             data: { action: 'initializeDefaults' }
           });
           if (res.result && res.result.success) {
-            toastLater({ title: '已生成', icon: 'success' });
+            toastLater(this, { title: '已生成', icon: 'success' });
             this.loadHelpArticles(false);
           } else {
-            toastLater({ title: (res.result && res.result.message) || '生成失败', icon: 'none' });
+            toastLater(this, { title: (res.result && res.result.message) || '生成失败', icon: 'none' });
           }
         } catch (err) {
-          toastLater({ title: '生成失败', icon: 'none' });
+          toastLater(this, { title: '生成失败', icon: 'none' });
         } finally {
-          wx.hideLoading();
+          feedback.hideLoading(this);
         }
       }
     });
@@ -1414,10 +1544,10 @@ Page(theme.page({
       if (res.result && res.result.success) {
         this.loadHelpArticles(false);
       } else {
-        toastLater({ title: (res.result && res.result.message) || '排序失败', icon: 'none' });
+        toastLater(this, { title: (res.result && res.result.message) || '排序失败', icon: 'none' });
       }
     } catch (err) {
-      toastLater({ title: '排序失败', icon: 'none' });
+      toastLater(this, { title: '排序失败', icon: 'none' });
     }
   },
 
@@ -1425,7 +1555,7 @@ Page(theme.page({
     const { id, published } = e.currentTarget.dataset;
     const isPublished = published === true || published === 'true';
     const nextPublished = !isPublished;
-    wx.showModal({
+    feedback.showModal(this, {
       title: nextPublished ? '发布说明' : '隐藏说明',
       content: nextPublished ? '发布后用户将立即看到这条说明。' : '隐藏后用户将暂时看不到这条说明。',
       confirmText: nextPublished ? '发布' : '隐藏',
@@ -1437,13 +1567,13 @@ Page(theme.page({
             data: { action: 'setPublished', articleId: id, isPublished: nextPublished }
           });
           if (res.result && res.result.success) {
-            toastLater({ title: nextPublished ? '已发布' : '已隐藏', icon: 'success' });
+            toastLater(this, { title: nextPublished ? '已发布' : '已隐藏', icon: 'success' });
             this.loadHelpArticles(false);
           } else {
-            toastLater({ title: (res.result && res.result.message) || '操作失败', icon: 'none' });
+            toastLater(this, { title: (res.result && res.result.message) || '操作失败', icon: 'none' });
           }
         } catch (err) {
-          toastLater({ title: '操作失败', icon: 'none' });
+          toastLater(this, { title: '操作失败', icon: 'none' });
         }
       }
     });
@@ -1451,7 +1581,7 @@ Page(theme.page({
 
   onDeleteHelpArticle(e) {
     const { id, title } = e.currentTarget.dataset;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '删除说明',
       content: `确定删除「${title}」吗？相关图片也会一并删除。`,
       confirmText: '删除',
@@ -1464,15 +1594,15 @@ Page(theme.page({
             data: { action: 'delete', articleId: id }
           });
           if (res.result && res.result.success) {
-            toastLater({ title: '已删除', icon: 'success' });
+            toastLater(this, { title: '已删除', icon: 'success' });
             this.loadHelpArticles(false);
           } else {
-            toastLater({ title: (res.result && res.result.message) || '删除失败', icon: 'none' });
+            toastLater(this, { title: (res.result && res.result.message) || '删除失败', icon: 'none' });
           }
         } catch (err) {
-          toastLater({ title: '删除失败', icon: 'none' });
+          toastLater(this, { title: '删除失败', icon: 'none' });
         }
       }
     });
   }
-}));
+})));

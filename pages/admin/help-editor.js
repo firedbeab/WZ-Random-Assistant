@@ -1,3 +1,4 @@
+const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 const { cloudCall, isTestMode } = require('../../utils/runtime');
 
@@ -11,7 +12,7 @@ const IMAGE_COMPRESSION_STEPS = [
   { quality: 42, maxSide: 1280 }
 ];
 
-Page(theme.page({
+Page(theme.page(feedback.page({
   data: {
     isTestMode: isTestMode(),
     articleId: '',
@@ -27,6 +28,16 @@ Page(theme.page({
     dirty: false
   },
 
+  onUnload() { feedback.clear(this); },
+  async backFromEditor() {
+    if (this.data.saving || this.data.choosingImages) return;
+    if (this.data.dirty) {
+      const result = await feedback.showModal(this, { title: '放弃未保存修改？', content: '本次文字和图片修改尚未保存。', confirmText: '放弃修改' });
+      if (!result.confirm) return;
+      if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
+    }
+    wx.navigateBack();
+  },
   async onLoad(options) {
     const articleId = options.id ? decodeURIComponent(options.id) : '';
     this.setData({ articleId });
@@ -48,13 +59,13 @@ Page(theme.page({
     } catch (err) {
       // 统一按无权限处理，避免暴露内部错误。
     }
-    wx.showToast({ title: '仅超级管理员可编辑', icon: 'none' });
+    feedback.showToast(this, { title: '仅超级管理员可编辑', icon: 'none' });
     setTimeout(() => wx.navigateBack(), 1200);
     return false;
   },
 
   async loadArticle(articleId) {
-    wx.showLoading({ title: '加载中...' });
+    feedback.showLoading(this, { title: '加载中...' });
     try {
       const res = await cloudCall({
         name: 'manageHelpContent',
@@ -79,10 +90,10 @@ Page(theme.page({
         dirty: false
       });
     } catch (err) {
-      wx.showToast({ title: '说明加载失败', icon: 'none' });
+      feedback.showToast(this, { title: '说明加载失败', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1200);
     } finally {
-      wx.hideLoading();
+      feedback.hideLoading(this);
     }
   },
 
@@ -208,7 +219,7 @@ Page(theme.page({
     if (this.data.choosingImages || this.data.saving) return;
     const remaining = MAX_IMAGES - this.data.images.length;
     if (remaining <= 0) {
-      wx.showToast({ title: '每条说明最多添加10张图片', icon: 'none' });
+      feedback.showToast(this, { title: '每条说明最多添加10张图片', icon: 'none' });
       return;
     }
     this.setData({ choosingImages: true });
@@ -238,7 +249,7 @@ Page(theme.page({
       let rejected = false;
       let compressed = false;
       if (selectedFiles.some(file => Number(file.size) > MAX_IMAGE_SIZE)) {
-        wx.showLoading({ title: '正在压缩图片...', mask: true });
+        feedback.showLoading(this, { title: '正在压缩图片...', mask: true });
       }
       try {
         // 每批至多九张，兼容旧选择器；允许继续添加到总数十张。
@@ -257,15 +268,15 @@ Page(theme.page({
           }
         }
       } finally {
-        wx.hideLoading();
+        feedback.hideLoading(this);
       }
       if (accepted.length > 0) {
         this.markDirty({ images: this.data.images.concat(accepted.slice(0, Math.max(0, MAX_IMAGES - this.data.images.length))) });
       }
       if (rejected) {
-        wx.showToast({ title: '部分图片压缩后仍超过2MB', icon: 'none', duration: 2500 });
+        feedback.showToast(this, { title: '部分图片压缩后仍超过2MB', icon: 'none', duration: 2500 });
       } else if (compressed) {
-        wx.showToast({ title: '图片已自动压缩', icon: 'success' });
+        feedback.showToast(this, { title: '图片已自动压缩', icon: 'success' });
       }
     } catch (err) {
       const errMsg = err && err.errMsg ? err.errMsg : '';
@@ -277,7 +288,7 @@ Page(theme.page({
         normalizedMsg.includes('undeclared') ||
         (normalizedMsg.includes('scope') && normalizedMsg.includes('privacy'))
       ) {
-        wx.showModal({
+        feedback.showModal(this, {
           title: '需更新隐私声明',
           content: '这不是手机相册权限。请先在微信公众平台的用户隐私保护指引中声明“选中的照片或视频信息”，更新生效后再试。',
           showCancel: false
@@ -287,15 +298,15 @@ Page(theme.page({
         normalizedMsg.includes('disagree') ||
         normalizedMsg.includes('auth deny')
       ) {
-        wx.showToast({ title: '未同意隐私保护指引', icon: 'none' });
+        feedback.showToast(this, { title: '未同意隐私保护指引', icon: 'none' });
       } else if (normalizedMsg.includes('privacy') || errMsg.includes('隐私')) {
-        wx.showModal({
+        feedback.showModal(this, {
           title: '隐私授权未完成',
           content: '请在弹出的隐私保护指引中点击“同意”后再选择图片。',
           showCancel: false
         });
       } else {
-        wx.showToast({ title: '无法打开图片选择器', icon: 'none' });
+        feedback.showToast(this, { title: '无法打开图片选择器', icon: 'none' });
       }
     } finally {
       this.setData({ choosingImages: false });
@@ -358,15 +369,15 @@ Page(theme.page({
 
   validateForm() {
     if (this.data.images.length > MAX_IMAGES) {
-      wx.showToast({ title: '每条说明最多添加10张图片', icon: 'none' });
+      feedback.showToast(this, { title: '每条说明最多添加10张图片', icon: 'none' });
       return false;
     }
     if (!this.data.title.trim()) {
-      wx.showToast({ title: '请输入标题', icon: 'none' });
+      feedback.showToast(this, { title: '请输入标题', icon: 'none' });
       return false;
     }
     if (!this.data.content.trim()) {
-      wx.showToast({ title: '请输入详细说明', icon: 'none' });
+      feedback.showToast(this, { title: '请输入详细说明', icon: 'none' });
       return false;
     }
     return true;
@@ -378,7 +389,7 @@ Page(theme.page({
 
   onPublish() {
     if (!this.validateForm()) return;
-    wx.showModal({
+    feedback.showModal(this, {
       title: '发布使用说明',
       content: '发布后用户将立即看到这条说明，是否继续？',
       confirmText: '发布',
@@ -391,7 +402,7 @@ Page(theme.page({
   async saveArticle(isPublished) {
     if (this.data.saving || this.data.choosingImages || !this.validateForm()) return;
     this.setData({ saving: true });
-    wx.showLoading({ title: '保存中...' });
+    feedback.showLoading(this, { title: '保存中...' });
     const uploadedFileIDs = [];
     try {
       // 图片之间没有依赖关系，并行上传与校验可显著缩短多图保存时间。
@@ -433,17 +444,17 @@ Page(theme.page({
 
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       this.setData({ dirty: false, isPublished });
-      wx.showToast({ title: isPublished ? '已发布' : '草稿已保存', icon: 'success' });
+      feedback.showToast(this, { title: isPublished ? '已发布' : '草稿已保存', icon: 'success' });
       setTimeout(() => wx.navigateBack(), 800);
     } catch (err) {
       await this.cleanupUploadedFiles(uploadedFileIDs);
       const message = err && err.message && err.message !== 'save failed'
         ? err.message
         : '保存失败，请重试';
-      wx.showToast({ title: message, icon: 'none', duration: 2500 });
+      feedback.showToast(this, { title: message, icon: 'none', duration: 2500 });
     } finally {
-      wx.hideLoading();
+      feedback.hideLoading(this);
       this.setData({ saving: false });
     }
   }
-}));
+})));

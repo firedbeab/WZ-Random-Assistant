@@ -50,7 +50,7 @@ button::after { border: none; }
 .counter-num { font-size: 42rpx; font-weight: 750; color: var(--info); }
 .status-grid { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 18rpx; }
 .status-grid text { padding: 8rpx 14rpx; border-radius: 10rpx; background: var(--bg); color: var(--text-2); font-size: 22rpx; }
-.card > .field { margin-top: 14rpx; }.card > button { width: 100%; margin-top: 16rpx; }
+.card > .field { margin-top: 14rpx; }.card:not(.submission) > button { width: 100%; margin-top: 16rpx; }
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 30rpx; background: var(--mask); }
 .modal-card { width: 100%; box-sizing: border-box; padding: 34rpx; border-radius: 24rpx; background: var(--surface); }
 .modal-card .field { margin-top: 0; }
@@ -87,3 +87,9 @@ button::after { border: none; }
 .modal { align-items: flex-end; padding: 0; animation: admin-mask-in 240ms ease both; }.modal-card { max-height: 82vh; overflow-y: auto; padding: 34rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); border-radius: 36rpx 36rpx 0 0; animation: admin-drawer-in 280ms ease both; }.modal.drawer-closing { animation: admin-mask-out 200ms ease both; pointer-events: none; }.drawer-closing .modal-card { animation: admin-drawer-out 200ms ease both; }.modal-card .row button { min-height: 88rpx; line-height: 88rpx; }
 @media (max-width: 360px) { .page { padding: 20rpx 24rpx 180rpx; }.toolbar > picker,.toolbar > input,.toolbar > button { width: auto; }.card { padding: 24rpx; }.card.submission { flex-wrap: nowrap; }.side-actions { width: auto; flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { .event-expand,.event-chevron { transition-duration: 1ms; }.modal,.modal-card,.modal.drawer-closing,.drawer-closing .modal-card { animation-duration: 1ms; } }
+.record-check { margin-top: -12rpx; }.submission .side-actions { align-self: center; }.submission .row { align-items: baseline; flex-wrap: wrap; }.submission .item-title { flex: 1; min-width: 0; font-size: 32rpx; }
+.item-title,.event-title,.label { color: var(--text-1); }.counter-num { color: var(--accent); font-size: 40rpx; font-variant-numeric: tabular-nums; }.status-grid { gap: 10rpx; }.status-grid text { background: var(--surface-2); padding: 14rpx 16rpx; color: var(--text-2); font-size: 24rpx; }
+.input-caption { font-size: 25rpx; font-weight: 500; color: var(--text-2); }.field,.textarea { border-width: 1rpx; background: var(--surface-2); }.picker { border-width: 1rpx; border-color: var(--line); color: var(--text-1); }.picker.full { min-height: 88rpx; }
+.card:not(.submission) > button,.toolbar > button,.sticky-actions > button { display: flex; align-items: center; justify-content: center; min-height: 88rpx; padding: 18rpx 20rpx; line-height: 1.5; }.primary { color: var(--on-accent); background: var(--accent); font-weight: 600; }.secondary { color: var(--text-2); background: var(--surface-2); }.tiny.danger { background: transparent; }.tiny.green { color: var(--accent); background: var(--accent-weak); }
+.card.submission { display: grid; grid-template-columns: 44rpx minmax(0,1fr) auto; align-items: start; column-gap: 18rpx; }.card.submission > .record-check { width: 64rpx; min-width: 64rpx; max-width: 64rpx; margin: -12rpx 0 0 -10rpx; padding: 0; }.card.submission > .grow { width: auto; min-width: 0; }.card.submission .side-actions { min-width: 76rpx; }.card.submission .meta { overflow-wrap: anywhere; word-break: break-word; }.card.submission .tag { max-width: 100%; }
+.modal-card .row.gap { margin-top: 30rpx; }.modal-card .row.gap > button { font-size: 29rpx; min-height: 96rpx; line-height: 1.5; padding: 20rpx; }

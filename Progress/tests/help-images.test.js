@@ -18,6 +18,7 @@ function fixture(file, options = {}) {
   vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), {
     wx, Page: value => { page = value; }, console, setTimeout, clearTimeout,
     require(name) {
+      if (name.includes('admin-feedback')) return require('../../utils/admin-feedback');
       if (name.endsWith('/theme')) return require('../../utils/theme');
       if (name.endsWith('/runtime')) return { isTestMode: () => false, storageKey: key => key, cloudCall: options.call || (async () => ({ result: { success: true } })) };
       if (name.endsWith('/image-access')) return { async resolve(fn, id) { resolved.push(id); return `https://images.invalid/${encodeURIComponent(id)}`; }, forget() {} };
@@ -78,7 +79,7 @@ test('管理端现代和旧选择器都可分批添加至十张，第十一张�
     assert.deepEqual(f.picks, [9, 1]);
     f.page.data.images.push({ url: '/extra.jpg' });
     assert.equal(f.page.validateForm(), false);
-    assert.match(f.toasts.at(-1), /最多添加10张/);
+    assert.match(f.page.data._adminFeedbackMessage, /最多添加10张/);
   }
 });
 

@@ -1,18 +1,13 @@
 <page-meta page-style="{{appearanceStyle}}" />
-<view class="appearance-toolbar"><appearance-toggle /></view>
 <view class="page admin-page-enter">
-  <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
-  <view class="sub-heading"><button class="text-button" bindtap="backToManagement">‹ 返回数据管理</button><text>{{title}}</text></view><text class="hero-sub">{{subtitle}}</text>
+  <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
+  <view class="sub-heading"><button class="sub-back" bindtap="backToManagement" aria-label="返回控制台"><image src="{{themeIcons.back}}" /></button><text>{{title}}</text></view><text class="hero-sub">{{subtitle}}</text>
   <view class="loading" wx:if="{{loading}}">正在加载...</view>
 
   <block wx:if="{{mode === 'submissions'}}">
     <view class="toolbar">
-      <picker class="week-picker-wrap" range="{{weekOptions}}" range-key="label" value="{{weekIndex}}" bindchange="onWeekChange">
-        <view class="picker week-picker">{{weekOptions[weekIndex].label}}</view>
-      </picker>
-      <picker range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
-        <view class="picker">{{statusOptions[statusIndex].label}}</view>
-      </picker>
+      <button class="picker week-picker" bindtap="openWeekFilter">{{weekOptions[weekIndex].label}}</button>
+      <button class="picker " bindtap="openStatusFilter">{{statusOptions[statusIndex].label}}</button>
       <input class="field search-field" value="{{keyword}}" bindinput="onKeywordInput" placeholder="搜索名称、歌手或备注" placeholder-class="form-placeholder" confirm-type="search" bindconfirm="searchSubmissions" />
       <button class="small primary" bindtap="searchSubmissions">查询</button>
     </view>
@@ -20,9 +15,9 @@
       <text>共 {{submissionTotal}} 条，已选 {{selectedIds.length}} 条</text>
       <button class="small danger" bindtap="removeSelected">批量移除</button>
     </view>
-    <checkbox-group bindchange="onSelectionChange">
+    <view class="submission-list">
       <view class="card submission" wx:for="{{submissions}}" wx:key="_id">
-        <checkbox class="check" value="{{item._id}}" disabled="{{item.status === 'selected' || item.status === 'rejected'}}" />
+        <button class="check-hit record-check" bindtap="toggleSubmissionSelection" data-id="{{item._id}}" disabled="{{item.status === 'selected' || item.status === 'rejected'}}" aria-role="checkbox" aria-checked="{{!!selectedFlags[item._id]}}" aria-label="选择{{item.song_name}}"><view class="selection-box {{selectedFlags[item._id] ? 'checked' : ''}}"><view class="check-mark" wx:if="{{selectedFlags[item._id]}}" /></view></button>
         <view class="grow">
           <view class="row"><text class="item-title">{{item.song_name}}</text><text class="tag {{item.status}}">{{item.status_text}}</text></view>
           <text class="muted">{{item.singer}}</text>
@@ -34,7 +29,7 @@
           <button class="tiny green" wx:if="{{item.status === 'removed'}}" bindtap="restoreSubmission" data-id="{{item._id}}">恢复</button>
         </view>
       </view>
-    </checkbox-group>
+    </view>
     <view class="empty" wx:if="{{!loading && submissions.length === 0}}">没有符合条件的投稿</view>
   </block>
 
@@ -48,7 +43,7 @@
       <view class="empty" wx:if="{{!loading && schedules.length === 0}}">暂无排期</view>
     </block>
     <view wx:else>
-      <view class="detail-head"><button class="small" bindtap="closeSchedule">返回列表</button><text>{{scheduleDraft.week_key}} · {{scheduleDraft.status}} · 修订 {{scheduleDraft.revision}}</text><button class="small green" wx:if="{{!scheduleEditing}}" bindtap="startScheduleEdit">编辑</button></view>
+      <view class="detail-head"><button class="sub-back" bindtap="closeSchedule" aria-label="返回排期列表"><image src="{{themeIcons.back}}" /></button><text>{{scheduleDraft.week_key}} · {{scheduleDraft.status}} · 修订 {{scheduleDraft.revision}}</text><button class="small green" wx:if="{{!scheduleEditing}}" bindtap="startScheduleEdit">编辑</button></view>
       <view class="schedule-read admin-page-enter" wx:if="{{!scheduleEditing}}"><view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><text class="meta">{{scheduleDraft[day].length || 0}} 首</text></view><view class="read-song" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="read-index">{{songIndex + 1}}</text><view><view class="read-line"><text>{{song.song_name}}</text><text class="read-singer">{{song.singer}}</text></view><text class="read-note" wx:if="{{song.special_note}}">{{song.special_note}}</text></view></view><text class="meta" wx:if="{{!scheduleDraft[day].length}}">当天没有曲目安排</text></view><view class="card"><text class="label">当周备注</text><text class="muted">{{scheduleDraft.admin_note || '未填写'}}</text></view></view>
       <view class="admin-page-enter" wx:else>
         <view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><button class="tiny green" bindtap="addScheduleItem" data-day="{{day}}">添加曲目</button></view><view class="schedule-item" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="input-caption">第 {{songIndex + 1}} 首 · 歌名</text><input class="field" value="{{song.song_name}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" /><text class="input-caption">歌手 / 补充说明</text><input class="field" value="{{song.singer}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder" /><text class="input-caption">特殊备注（可留空）</text><input class="field" value="{{song.special_note}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="special_note" placeholder="没有备注可留空" placeholder-class="form-placeholder" /><button class="tiny danger" bindtap="removeScheduleItem" data-day="{{day}}" data-index="{{songIndex}}">删除此项</button></view></view>
@@ -59,9 +54,7 @@
   </block>
 
   <block wx:if="{{mode === 'events'}}">
-    <picker range="{{eventCategories}}" range-key="label" value="{{eventCategoryIndex}}" bindchange="onEventCategoryChange">
-      <view class="picker full">筛选：{{eventCategories[eventCategoryIndex].label}}</view>
-    </picker>
+    <button class="picker full" bindtap="openEventFilter">筛选：{{eventCategories[eventCategoryIndex].label}}</button>
     <view class="event-list"><view class="event-item" wx:for="{{events}}" wx:key="_id"><view class="event-summary" bindtap="toggleEvent" data-index="{{index}}" aria-role="button" aria-expanded="{{item.expanded}}"><view class="event-top"><text class="event-title">{{item.action_text}}</text><text class="event-category">{{item.category_text}}</text><text class="event-chevron {{item.expanded ? 'expanded' : ''}}">⌄</text></view><text class="event-meta">{{item.created_at_text}}<text wx:if="{{item.week_key}}"> · {{item.week_key}}</text></text><text class="event-reason" wx:if="{{item.reason || item.error}}">{{item.reason || item.error}}</text></view><view class="event-expand {{item.expanded ? 'expanded' : ''}}"><view class="event-inner"><text class="json" selectable>{{item.detail_text}}</text></view></view></view></view>
     <view class="empty" wx:if="{{!loading && events.length === 0}}">暂无事件记录</view>
   </block>
@@ -75,7 +68,7 @@
       <view class="empty" wx:if="{{!loading && counters.length === 0}}">暂无计数器</view>
     </block>
     <view wx:else>
-      <view class="detail-head"><button class="small" bindtap="closeCounter">返回列表</button><text>{{counterDetail.counter._id}}</text></view>
+      <view class="detail-head"><button class="sub-back" bindtap="closeCounter" aria-label="返回计数器列表"><image src="{{themeIcons.back}}" /></button><text>{{counterDetail.counter._id}}</text></view>
       <view class="card">
         <text class="item-title">当前计数：{{counterDetail.counter.count || 0}}</text>
         <text class="muted">云端仍保存 {{counterDetail.storedTotal}} 条投稿记录</text>
@@ -96,8 +89,8 @@
   </block>
 </view>
 
-<view class="modal {{submissionClosing ? 'drawer-closing' : ''}}" wx:if="{{showSubmissionEditor}}">
-  <view class="modal-card">
+<view class="modal admin-drawer-mask {{submissionClosing ? 'drawer-closing' : ''}}" wx:if="{{showSubmissionEditor}}" id="drawer-showSubmissionEditor" bindtap="onAdminDrawerMaskTap" data-close="closeSubmissionEditor">
+  <view class="modal-card admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSubmissionEditor"><view class="drawer-handle" data-drawer-drag="true" />
     <text class="item-title">编辑投稿</text>
     <text class="input-caption modal-caption">曲目名称</text>
     <input class="field" value="{{editSubmission.song_name}}" bindinput="onSubmissionField" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" />
@@ -108,3 +101,5 @@
     <view class="row gap"><button class="secondary" bindtap="closeSubmissionEditor">取消</button><button class="primary" bindtap="saveSubmission">保存</button></view>
   </view>
 </view>
+
+<include src="../../templates/admin-feedback.wxml" />

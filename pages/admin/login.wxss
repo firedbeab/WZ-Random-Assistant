@@ -82,6 +82,9 @@ page {
 .btn-verify[disabled] {
   background-color: var(--accent-disabled);
 }
+.btn-verify[disabled]:not([type]) { background: var(--accent-disabled); color: var(--on-accent); }
+.code-input { font-family: var(--font-code); padding: 0; min-width: 0; }
+.login-container { box-sizing: border-box; width: 100%; }.toggle-btn { min-height: 88rpx; display: flex; align-items: center; justify-content: center; flex: none; }
 
 
 .footer {

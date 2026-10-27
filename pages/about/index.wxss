@@ -15,3 +15,4 @@
 .info-footer { display: flex; flex-direction: column; align-items: center; flex: none; margin-top: auto; padding: 36rpx var(--space-5) var(--space-1); text-align: center; color: var(--text-3); }
 .privacy-link { display: inline-flex; align-items: center; justify-content: center; min-height: 88rpx; padding: var(--space-3) var(--space-4); color: var(--accent); font-size: 26rpx; line-height: 1.8; }
 .attribution { display: block; font-size: 22rpx; line-height: 1.8; }
+.entry-label { color: var(--text-1); }
