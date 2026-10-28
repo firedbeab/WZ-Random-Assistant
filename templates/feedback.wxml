@@ -1,2 +1,2 @@
 <view class="admin-feedback-layer {{_adminFeedbackMask ? 'masked' : ''}}" wx:if="{{_adminFeedbackLoading}}" aria-live="polite" catchtouchmove="onFeedbackTouchMove"><view class="admin-loading-card"><view class="admin-loading-dots"><view /><view /><view /></view><text>{{_adminFeedbackTitle}}</text></view></view>
-<view class="admin-message {{_adminFeedbackKind}}" wx:if="{{_adminFeedbackMessage}}" aria-live="polite"><view class="message-symbol" /><text>{{_adminFeedbackMessage}}</text></view>
+<view class="admin-message {{_adminFeedbackKind}}" wx:if="{{_adminFeedbackMessage}}" aria-live="polite"><image class="message-symbol" src="{{_adminFeedbackKind === 'success' ? themeIcons.messageSuccess : themeIcons.messageInfo}}" /><text>{{_adminFeedbackMessage}}</text></view>

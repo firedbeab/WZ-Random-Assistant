@@ -1,7 +1,6 @@
-<page-meta page-style="{{appearanceStyle}}" />
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}}" />
 <view class="info-page">
-  <app-navigation back />
-  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 当前显示测试说明内容</view>
+  <app-navigation back parent="/pages/about/index" />
   <view class="info-head">
     <view class="info-heading-row"><text class="info-title">使用说明</text><appearance-toggle /></view>
     <text class="info-desc">点开条目，查看规则和操作方法。</text>

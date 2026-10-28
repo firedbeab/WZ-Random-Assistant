@@ -32,8 +32,27 @@ test('快速切标签时旧请求不能覆盖当前数据，卸载后不写入',
   const pending=p.load();p.switchTab(event({tab:'polls'}));old({items:[{_id:'old',status:'received'}],hasMore:true,offset:20});await pending;assert.equal(p.data.tab,'polls');assert.equal(p.data.entries.length,0);
   let late;f.state.handler=()=>new Promise(resolve=>late=resolve);const last=p.load();p.onUnload();late({items:[],hasMore:false,offset:0});await last;assert.equal(p._alive,false);
 });
+
+test('反馈标签手势只接受单指横滑，纵滚、左缘返回、输入中与忙碌均不切换', () => {
+  const p=fixture('feedback/index.js').page;p.load=()=>{};
+  const start=(x=240,y=300,n=1)=>p.onTabTouchStart({touches:Array.from({length:n},()=>({clientX:x,clientY:y})),timeStamp:0});
+  const end=(x,y,time=250)=>p.onTabTouchEnd({changedTouches:[{clientX:x,clientY:y}],timeStamp:time});
+  start();end(120,305);assert.equal(p.data.tab,'polls');start(80);end(220,302);assert.equal(p.data.tab,'feedback');
+  start();p.onTabTouchMove({touches:[{clientX:242,clientY:340}]});end(100,340);assert.equal(p.data.tab,'feedback');
+  start(10);end(150,300);assert.equal(p.data.tab,'feedback');start(240,300,2);end(100,300);assert.equal(p.data.tab,'feedback');
+  p.setData({focusedField:'feedback-content'});start();end(100,300);assert.equal(p.data.tab,'feedback');
+  p.setData({focusedField:'',busy:true});start();end(100,300);assert.equal(p.data.tab,'feedback');
+});
+
+test('反馈历史独立分页合并且保留失败时已读列表，回页刷新不并发混页', async () => {
+  const f=fixture('feedback/history.js'),p=f.page;
+  f.state.handler=async()=>({items:[{_id:'one',createdAt:1}],offset:1,hasMore:true});await p.load();
+  f.state.handler=async()=>({items:[{_id:'one',createdAt:1},{_id:'two',createdAt:2}],offset:2,hasMore:false});await p.load(true);
+  assert.equal(p.data.entries.length,2);assert.equal(f.calls.at(-1).offset,1);
+  f.state.handler=async()=>{throw Error('offline');};await p.load();assert.equal(p.data.entries.length,2);assert.equal(p.data.error,'offline');
+});
 test('已读请求只使用当前展示的回复版本，不擅自确认后到回复', async () => {
-  const f=fixture('feedback/index.js'),p=f.page,entry={_id:'item',reply:'一版回复',replyVersion:1,status:'handling',unread:true,createdAt:1};p.setData({entries:[entry]});
+  const f=fixture('feedback/history.js'),p=f.page,entry={_id:'item',reply:'一版回复',replyVersion:1,status:'handling',unread:true,createdAt:1};p.setData({entries:[entry]});
   f.state.handler=async action=>action==='getFeedback'?entry:{...entry,reply:'二版回复',replyVersion:2,unread:true};await p.openFeedback(event({id:'item'}));assert.equal(f.calls.find(v=>v.action==='markRead').replyVersion,1);assert.equal(p.data.detail.replyVersion,1);assert.equal(p.data.entries[0].unread,true);
 });
 test('后台回复冲突保留草稿和原 revision，不自动重试覆盖', async()=>{

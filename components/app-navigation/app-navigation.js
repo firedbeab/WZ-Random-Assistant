@@ -5,6 +5,7 @@ Component(theme.component({
   properties: {
     title: { type: String, value: 'WZ随机助手' },
     back: { type: Boolean, value: false },
+    parent: { type: String, value: '/pages/index/index' },
     variant: { type: String, value: 'closed' }
   },
   data: { ...navigationLayout(), canGoBack: false },
@@ -27,9 +28,11 @@ Component(theme.component({
     },
     goBack() {
       const home = () => wx.reLaunch({ url: '/pages/index/index' });
+      const parent = () => this.properties.parent && this.properties.parent !== '/pages/index/index'
+        ? wx.redirectTo({ url: this.properties.parent, fail: home }) : home();
       if (typeof getCurrentPages === 'function' && getCurrentPages().length > 1) {
-        wx.navigateBack({ delta: 1, fail: home });
-      } else home();
+        wx.navigateBack({ delta: 1, fail: parent });
+      } else parent();
     }
   }
 }));

@@ -1,6 +1,7 @@
-<page-meta page-style="{{appearanceStyle}} {{showSubmissionEditor || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}} {{showSubmissionEditor || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
+<app-navigation id="pageNavigation" back parent="/pages/admin/admin" />
 <view class="page admin-page-enter">
-  <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
+  <view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle id="pageAppearance" /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
   <view class="sub-heading"><button class="sub-back" bindtap="backToManagement" aria-label="返回控制台"><image src="{{themeIcons.back}}" /></button><text>{{title}}</text></view><text class="hero-sub">{{subtitle}}</text>
   <view class="loading" wx:if="{{loading}}">正在加载...</view>
   <view class="schedule-conflict" wx:if="{{mode === 'schedules' && scheduleDraft && scheduleConflict}}"><text class="conflict-title">歌单状态已更新</text><text>可能有其他管理员此前编辑、发布或撤回了歌单。当前草稿仍保留，请刷新核对最新状态。</text><button bindtap="refreshConflictedSchedule" disabled="{{scheduleSaving}}">刷新歌单</button></view>
@@ -9,7 +10,7 @@
     <view class="toolbar">
       <button class="picker week-picker" bindtap="openWeekFilter">{{weekOptions[weekIndex].label}}</button>
       <button class="picker " bindtap="openStatusFilter">{{statusOptions[statusIndex].label}}</button>
-      <input class="field search-field" value="{{keyword}}" bindinput="onKeywordInput" placeholder="搜索名称、歌手或备注" placeholder-class="form-placeholder" confirm-type="search" bindconfirm="searchSubmissions" />
+      <input class="field search-field" value="{{keyword}}" bindinput="onKeywordInput" placeholder="搜索名称、歌手或备注" placeholder-class="form-placeholder" confirm-type="search" bindconfirm="searchSubmissions"  cursor-spacing="24" adjust-position="{{true}}" />
       <button class="small primary" bindtap="searchSubmissions">查询</button>
     </view>
     <view class="bulk-bar">
@@ -47,8 +48,8 @@
       <view class="detail-head"><button class="sub-back" bindtap="closeSchedule" aria-label="返回排期列表"><image src="{{themeIcons.back}}" /></button><text>{{scheduleDraft.week_key}} · {{scheduleDraft.status}} · 修订 {{scheduleDraft.revision}}</text><button class="small green" wx:if="{{!scheduleEditing}}" bindtap="startScheduleEdit">编辑</button></view>
       <view class="schedule-read admin-page-enter" wx:if="{{!scheduleEditing}}"><view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><text class="meta">{{scheduleDraft[day].length || 0}} 首</text></view><view class="read-song" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="read-index">{{songIndex + 1}}</text><view><view class="read-line"><text>{{song.song_name}}</text><text class="read-singer">{{song.singer}}</text></view><text class="read-note" wx:if="{{song.special_note}}">{{song.special_note}}</text></view></view><text class="meta" wx:if="{{!scheduleDraft[day].length}}">当天没有曲目安排</text></view><view class="card"><text class="label">当周备注</text><text class="muted">{{scheduleDraft.admin_note || '未填写'}}</text></view></view>
       <view class="admin-page-enter" wx:else>
-        <view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><button class="tiny green" bindtap="addScheduleItem" data-day="{{day}}">添加曲目</button></view><view class="schedule-item" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="input-caption">第 {{songIndex + 1}} 首 · 歌名</text><input class="field" value="{{song.song_name}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" /><text class="input-caption">歌手 / 补充说明</text><input class="field" value="{{song.singer}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder" /><text class="input-caption">特殊备注（可留空）</text><input class="field" value="{{song.special_note}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="special_note" placeholder="没有备注可留空" placeholder-class="form-placeholder" /><button class="tiny danger" bindtap="removeScheduleItem" data-day="{{day}}" data-index="{{songIndex}}">删除此项</button></view></view>
-        <view class="card"><text class="label">当周备注</text><textarea class="textarea" value="{{scheduleDraft.admin_note}}" bindinput="onAdminNoteInput" maxlength="100" placeholder="没有当周备注可留空" placeholder-class="form-placeholder" /></view>
+        <view class="card day" wx:for="{{dayKeys}}" wx:key="*this" wx:for-item="day" wx:for-index="dayIndex"><view class="row"><text class="item-title">{{dayNames[dayIndex]}}</text><button class="tiny green" bindtap="addScheduleItem" data-day="{{day}}">添加曲目</button></view><view class="schedule-item" wx:for="{{scheduleDraft[day]}}" wx:key="index" wx:for-item="song" wx:for-index="songIndex"><text class="input-caption">第 {{songIndex + 1}} 首 · 歌名</text><input class="field" value="{{song.song_name}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" /><text class="input-caption">歌手 / 补充说明</text><input class="field" value="{{song.singer}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" /><text class="input-caption">特殊备注（可留空）</text><input class="field" value="{{song.special_note}}" bindinput="onScheduleField" data-day="{{day}}" data-index="{{songIndex}}" data-field="special_note" placeholder="没有备注可留空" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" /><button class="tiny danger" bindtap="removeScheduleItem" data-day="{{day}}" data-index="{{songIndex}}">删除此项</button></view></view>
+        <view class="card"><text class="label">当周备注</text><textarea class="textarea" value="{{scheduleDraft.admin_note}}" bindinput="onAdminNoteInput" maxlength="100" placeholder="没有当周备注可留空" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" /></view>
       </view>
       <view class="sticky-actions"><block wx:if="{{scheduleEditing}}"><button class="secondary" bindtap="cancelScheduleEdit" disabled="{{scheduleSaving}}">取消编辑</button><button class="primary" bindtap="saveSchedule" disabled="{{scheduleSaving}}" loading="{{scheduleSaving}}">保存修改</button></block><button class="danger outlined" wx:elif="{{scheduleDraft.status === 'published'}}" bindtap="withdrawSchedule">撤回发布</button></view>
     </view>
@@ -80,9 +81,9 @@
       <view class="card">
         <text class="label">手动调整</text>
         <text class="input-caption card-caption">调整后的计数</text>
-        <input class="field" type="number" value="{{counterCountInput}}" bindinput="onCounterCountInput" placeholder="请输入新的计数" placeholder-class="form-placeholder" />
+        <input class="field" type="number" value="{{counterCountInput}}" bindinput="onCounterCountInput" placeholder="请输入新的计数" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" />
         <text class="input-caption card-caption">调整原因</text>
-        <input class="field" value="{{counterReason}}" bindinput="onCounterReasonInput" placeholder="必须填写调整原因" placeholder-class="form-placeholder" maxlength="100" />
+        <input class="field" value="{{counterReason}}" bindinput="onCounterReasonInput" placeholder="必须填写调整原因" placeholder-class="form-placeholder" maxlength="100"  cursor-spacing="24" adjust-position="{{true}}" />
         <button class="primary" bindtap="saveCounter">保存计数</button>
         <button class="secondary" bindtap="recalculateCounter">按现存投稿重新计算</button>
       </view>
@@ -94,9 +95,9 @@
   <view class="modal-card admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSubmissionEditor"><view class="drawer-handle" data-drawer-drag="true" catchtouchmove="adminDrawerNoop" />
     <text class="item-title">编辑投稿</text>
     <text class="input-caption modal-caption">曲目名称</text>
-    <input class="field" value="{{editSubmission.song_name}}" bindinput="onSubmissionField" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder" />
+    <input class="field" value="{{editSubmission.song_name}}" bindinput="onSubmissionField" data-field="song_name" placeholder="请输入曲目名称" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" />
     <text class="input-caption modal-caption">歌手 / 补充说明</text>
-    <input class="field" value="{{editSubmission.singer}}" bindinput="onSubmissionField" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder" />
+    <input class="field" value="{{editSubmission.singer}}" bindinput="onSubmissionField" data-field="singer" placeholder="请输入歌手或补充说明" placeholder-class="form-placeholder"  cursor-spacing="24" adjust-position="{{true}}" />
     <text class="input-caption modal-caption">特殊备注（可留空）</text>
     <textarea class="textarea" value="{{editSubmission.special_note}}" bindinput="onSubmissionField" data-field="special_note" placeholder="没有备注可留空" placeholder-class="form-placeholder" maxlength="50"></textarea>
     <view class="row gap"><button class="secondary" bindtap="closeSubmissionEditor">取消</button><button class="primary" bindtap="saveSubmission">保存</button></view>

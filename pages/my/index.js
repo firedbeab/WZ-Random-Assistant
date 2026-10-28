@@ -79,6 +79,7 @@ Page(theme.page(feedback.page({
   inputAlias(e) { this.setData({ aliasDraft: e.detail.value, aliasError: '' }); },
   closeAlias() {
     if (this.data.busy || this.data.aliasClosing) return;
+    if (typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
     this.setData({ aliasClosing: true, focusedField: '' });
     this._aliasTimer = setTimeout(() => { if (this._alive) this.setData({ aliasVisible: false, aliasClosing: false }); }, 180);
   },

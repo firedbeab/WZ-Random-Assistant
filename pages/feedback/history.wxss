@@ -1,0 +1,2 @@
+@import "../../styles/community.wxss";
+.feedback-categories { margin: 24rpx 0; }.feedback-limit { text-align: center; margin-top: 16rpx; }.feedback-poll-note { margin: 0 0 24rpx; }.feedback-detail { margin-top: 28rpx; }.c-list-arrow { width: 28rpx; height: 28rpx; }

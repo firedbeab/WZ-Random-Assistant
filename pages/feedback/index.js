@@ -11,6 +11,23 @@ Page(theme.page(feedback.page({
   onUnload() { this._alive = false; clearTimeout(this._sheetTimer); },
   async onPullDownRefresh() { await this.load(); wx.stopPullDownRefresh(); },
   switchTab(e) { const tab = e.currentTarget.dataset.tab; if (this.data.busy || !['feedback', 'polls'].includes(tab) || tab === this.data.tab) return; this.setData({ tab, error: '', hasMore: false, offset: 0 }); this.load(); },
+  goHistory() { wx.navigateTo({ url: '/pages/feedback/history' }); },
+  onTabTouchStart(e) {
+    const t = e.touches && e.touches.length === 1 && e.touches[0];
+    this._tabTouch = !this.data.busy && !this.data.focusedField && t && t.clientX >= 24 ? { x:t.clientX, y:t.clientY, time:e.timeStamp } : null;
+  },
+  onTabTouchMove(e) {
+    const t = e.touches && e.touches.length === 1 && e.touches[0], s = this._tabTouch;
+    if (s && (!t || Math.abs(t.clientY-s.y) > 18 && Math.abs(t.clientY-s.y) > Math.abs(t.clientX-s.x))) this._tabTouch = null;
+  },
+  onTabTouchCancel() { this._tabTouch = null; },
+  onTabTouchEnd(e) {
+    const s = this._tabTouch, t = e.changedTouches && e.changedTouches.length === 1 && e.changedTouches[0]; this._tabTouch = null;
+    if (!s || !t || e.timeStamp-s.time > 650) return;
+    const dx = t.clientX-s.x, dy = t.clientY-s.y;
+    if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy)*1.8) return;
+    if (dx < 0 && this.data.tab === 'feedback' || dx > 0 && this.data.tab === 'polls') this.switchTab({currentTarget:{dataset:{tab:dx < 0 ? 'polls' : 'feedback'}}});
+  },
   inputContent(e) { this.setData({ content: e.detail.value }); },
   selectCategory(e) { this.setData({ category: e.currentTarget.dataset.category }); },
   async load(more = false) {
@@ -40,26 +57,9 @@ Page(theme.page(feedback.page({
       await community.api('submitFeedback', { category, content, version: this.data.version, requestId: this._requestId });
       if (!this._alive) return;
       this.setData({ content: '' }); this._requestSignature = null;
-      feedback.showToast(this, { title: '反馈已收到，可在下方查看处理进度', icon: 'success' }); await this.load();
+      feedback.showToast(this, { title: '反馈已收到，可在我的反馈查看进度', icon: 'success' }); await this.load();
     } catch (e) { this.fail(e); }
     finally { if (this._alive) { this.setData({ busy: false }); feedback.hideLoading(this); } }
-  },
-  async openFeedback(e) {
-    if (this.data.busy) return;
-    const entry = this.data.entries.find(item => item._id === e.currentTarget.dataset.id); if (!entry) return;
-    this.openSheet('detail', { detail: entry });
-    const sheetToken = this._detailToken = (this._detailToken || 0) + 1;
-    try {
-      const result = await community.api('getFeedback', { id: entry._id });
-      if (!this._alive || sheetToken !== this._detailToken || this.data.sheet !== 'detail' || this.data.sheetClosing) return;
-      const detail = community.feedbackView(result); this.setData({ detail });
-      // 仅确认这次已展示的回复版本，不把后来更新的回复误标已读。
-      if (detail.unread && detail.reply) {
-        const updated = await community.api('markRead', { id: detail._id, replyVersion: detail.replyVersion });
-        if (!this._alive) return;
-        this.setData({ entries: this.data.entries.map(item => item._id === updated._id ? community.feedbackView(updated) : item) });
-      }
-    } catch (e) { this.fail(e); }
   },
   async vote(e) {
     if (this.data.busy) return;

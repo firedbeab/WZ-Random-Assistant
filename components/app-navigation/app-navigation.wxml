@@ -3,9 +3,8 @@
     <!-- 时钟、电量和右侧胶囊由系统/微信绘制，这里只为其保留安全空间。 -->
     <view style="height: {{statusHeight}}px;"></view>
     <view class="app-nav-bar" style="height: {{barHeight}}px; padding-left: {{sideWidth}}px; padding-right: {{sideWidth}}px;">
-      <button wx:if="{{back}}" class="app-nav-back" bindtap="goBack" hover-class="app-nav-pressed" style="height: {{barHeight}}px;" aria-label="{{canGoBack ? '返回上一页' : '返回首页'}}">
-        <image wx:if="{{canGoBack}}" class="app-nav-chevron" src="{{themeIcons.back}}" mode="aspectFit" aria-hidden="true" />
-        <text wx:else class="app-nav-home">首页</text>
+      <button wx:if="{{back}}" class="app-nav-back" bindtap="goBack" hover-class="app-nav-pressed" style="height: {{barHeight}}px;" aria-label="返回上级页面">
+        <image class="app-nav-chevron" src="{{themeIcons.back}}" mode="aspectFit" aria-hidden="true" />
       </button>
       <text class="app-nav-title">{{title}}</text>
     </view>

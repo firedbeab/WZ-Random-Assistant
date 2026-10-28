@@ -1,6 +1,6 @@
-<page-meta page-style="{{appearanceStyle}}" />
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}}" />
 <view class="info-page">
-  <app-navigation back />
+  <app-navigation back parent="/pages/my/index" />
   <view class="info-head">
     <view class="info-heading-row"><text class="info-title">关于</text><appearance-toggle /></view>
     <text class="info-desc">了解工具，查看说明与管理入口。</text>

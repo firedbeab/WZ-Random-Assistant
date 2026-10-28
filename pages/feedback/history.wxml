@@ -1,0 +1,11 @@
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}} {{sheet || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
+<import src="../../templates/community.wxml" />
+<view class="info-page community"><app-navigation id="pageNavigation" back parent="/pages/feedback/index" /><view class="info-head"><view class="info-heading-row"><text class="info-title">我的反馈</text><appearance-toggle id="pageAppearance" /></view></view><view class="c-content">
+<template is="community-feedback-list" data="{{entries, themeIcons}}" />
+<view class="c-state" wx:if="{{error}}"><text class="c-title">暂时无法读取</text><text class="c-sub">{{error}}</text><button class="c-link" bindtap="retry">重新加载</button></view>
+<view class="c-state" wx:elif="{{loading && !entries.length}}"><text class="c-title">正在读取反馈记录</text></view>
+<view class="c-state" wx:elif="{{!entries.length}}"><text class="c-title">还没有反馈记录</text><text class="c-sub">提交后，可在这里查看进度与回复。</text></view>
+<button class="c-link" wx:if="{{hasMore && !loading}}" bindtap="loadMore">查看更多</button>
+</view></view>
+<view wx:if="{{sheet}}" class="admin-drawer-mask c-sheet {{sheetClosing ? 'drawer-closing' : ''}}"><view class="drawer-backdrop" catchtap="closeSheet" catchtouchmove="adminDrawerNoop" /><view class="admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSheet"><view class="drawer-handle" data-drawer-drag="true" catchtouchmove="adminDrawerNoop" /><view class="c-sheet-head c-row c-between"><text class="modal-title">反馈详情</text><text class="c-badge {{detail.status}}">{{detail.statusLabel}}</text></view><view class="c-sheet-scroll"><view class="c-sheet-body"><text class="c-caption">{{detail.category}} · {{detail.date}} · v{{detail.version}}</text><text class="c-text feedback-detail">{{detail.content}}</text><view class="c-reply" wx:if="{{detail.reply}}"><text class="c-label">管理者回复</text><text class="c-text">{{detail.reply}}</text></view><text class="c-sub" wx:else>收到回复后会在这里显示。</text></view></view><view class="c-sheet-actions"><button class="c-secondary" bindtap="closeSheet">关闭</button></view></view></view>
+<privacy-popup id="privacyPopup" /><include src="../../templates/admin-feedback.wxml" />

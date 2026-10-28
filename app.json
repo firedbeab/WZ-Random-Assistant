@@ -11,7 +11,8 @@
     "pages/admin/easter-eggs",
     "pages/my/index",
     "pages/feedback/index",
-    "pages/admin/feedback"
+    "pages/admin/feedback",
+    "pages/feedback/history"
   ],
   "window": {
     "navigationBarTextStyle": "@navigationBarTextStyle",

@@ -8,21 +8,26 @@ const theme = require('../../utils/theme');
 const { outputs } = require('../build-theme.cjs');
 
 function fixture(options = {}) {
-  let event;
+  let event, keyboard, keyboardRemovals = 0;
+  let windowInfo = { windowHeight: 800, windowWidth: 390, statusBarHeight: 44 };
   const disk = options.disk || new Map(), natives = [];
   let system = options.system || 'light', observers = 0;
   const wx = {
     getStorageSync: key => disk.get(key), setStorageSync: (key, value) => disk.set(key, structuredClone(value)),
     getAppBaseInfo: () => ({ theme: system }),
     onThemeChange: handler => { observers++; event = handler; },
+    getWindowInfo: () => windowInfo,
+    getMenuButtonBoundingClientRect: () => ({ top: 50, height: 32, left: 290 }),
+    onKeyboardHeightChange: handler => { keyboard = handler; },
+    offKeyboardHeightChange: handler => { if (handler === keyboard) { keyboard = null; keyboardRemovals++; } },
     setNavigationBarColor: value => natives.push(value), setBackgroundColor() {}, setBackgroundTextStyle() {}
   };
   if (options.old) { delete wx.getAppBaseInfo; wx.getSystemInfoSync = () => ({ theme: system }); }
   if (options.throwing) { wx.getAppBaseInfo = () => { throw Error('unsupported'); }; wx.onThemeChange = () => { throw Error('unsupported'); }; }
-  const sandbox = { module: { exports: {} }, wx, setTimeout, clearTimeout, require: () => require('../../utils/color-palette') };
+  const sandbox = { module: { exports: {} }, wx, setTimeout, clearTimeout, require: name => name.includes('navigation-layout') ? require('../../utils/navigation-layout') : require('../../utils/color-palette') };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/theme.js'), 'utf8'), sandbox);
   const instance = sandbox.module.exports;
-  return { theme: instance, wx, disk, natives, observers: () => observers, emit(mode) { system = mode; if (event) event({ theme: mode }); } };
+  return { theme: instance, wx, disk, natives, observers: () => observers, emit(mode) { system = mode; if (event) event({ theme: mode }); }, window(value) { windowInfo = { ...windowInfo, ...value }; }, keyboard(height) { if (keyboard) keyboard({ height }); }, keyboardRemovals: () => keyboardRemovals };
 }
 const makePage = definition => ({ data: structuredClone(definition.data), setData(patch) { Object.assign(this.data, patch); } });
 function luminance(hex) {
@@ -47,14 +52,14 @@ test('颜色生成物无漂移，九页均接入外观变量和切换按钮，�
   for (const [file, expected] of Object.entries(outputs())) assert.equal(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'), expected);
   const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
   assert.equal(app.darkmode, true); assert.equal(app.themeLocation, 'theme.json');
-  const variableNames = new Set(Object.keys(theme.getTokens()).concat([...fs.readFileSync(path.join(root, 'styles/tokens.wxss'), 'utf8').matchAll(/--([\w-]+):/g)].map(match => match[1]), ['lift', 'tilt', 'travel', 'rise', 'spin', 'entry-x', 'entry-y', 'drift', 'dice-size', 'dice-pip-depth']));
+  const variableNames = new Set(Object.keys(theme.getTokens()).concat([...fs.readFileSync(path.join(root, 'styles/tokens.wxss'), 'utf8').matchAll(/--([\w-]+):/g)].map(match => match[1]), ['lift', 'tilt', 'travel', 'rise', 'spin', 'entry-x', 'entry-y', 'drift', 'dice-size', 'dice-pip-depth', 'window-height', 'keyboard-inset', 'feedback-top', 'navigation-height']));
   function inspect(dir) { for (const item of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) { const file = path.join(dir, item.name); if (item.isDirectory()) inspect(file); else if (item.name.endsWith('.wxss')) for (const match of fs.readFileSync(path.join(root, file), 'utf8').matchAll(/var\(--([\w-]+)/g)) assert(variableNames.has(match[1]), `${file}: undefined ${match[1]}`); } }
   for (const dir of ['pages', 'components', 'styles']) inspect(dir);
   for (const page of app.pages) {
     const config = JSON.parse(fs.readFileSync(path.join(root, page + '.json'), 'utf8')), xml = fs.readFileSync(path.join(root, page + '.wxml'), 'utf8');
     assert.equal(config.navigationBarTextStyle, '@navigationBarTextStyle');
     assert.ok(xml.startsWith('<page-meta page-style="{{appearanceStyle}}'));
-    assert.ok(xml.includes('<appearance-toggle />')); assert.ok(config.usingComponents['appearance-toggle']);
+    assert.ok(/<appearance-toggle(?:\s[^>]*)?\s*\/>/.test(xml)); assert.ok(config.usingComponents['appearance-toggle']);
   }
 });
 test('系统主题初始化、单次监听、旧API与不可用API降级', () => {
@@ -89,6 +94,18 @@ test('页面生命周期、返回值和业务data保留；隐藏页面不覆盖�
   definition.onUnload.call(page); f.emit('light'); assert.equal(page.data.appearanceMode, 'dark');
   assert.deepEqual(calls, ['options', 'hide', 'show', 'unload']);
 });
+test('键盘覆盖与窗口已缩高不重复抬升，通知避开导航，旋转与卸载保留生命周期', () => {
+  const f=fixture();let resized=0;
+  const def=f.theme.page({data:{},onResize(){resized++;}}),p=makePage(def);def.onLoad.call(p);
+  assert.match(p.data.viewportStyle,/--feedback-top:100px/);
+  f.keyboard(300);assert.match(p.data.viewportStyle,/--keyboard-inset:300px/);
+  f.window({windowHeight:500});def.onResize.call(p);f.keyboard(300);assert.match(p.data.viewportStyle,/--keyboard-inset:0px/);
+  f.window({windowHeight:620});f.keyboard(300);assert.match(p.data.viewportStyle,/--keyboard-inset:120px/);
+  f.window({windowHeight:800});f.keyboard(0);assert.match(p.data.viewportStyle,/--keyboard-inset:0px/);
+  f.window({windowHeight:390});def.onResize.call(p);assert.equal(resized,2);assert.match(p.data.viewportStyle,/--window-height:390px/);
+  def.onUnload.call(p);const old=p.data.viewportStyle;f.keyboard(200);assert.equal(p.data.viewportStyle,old);assert.equal(f.keyboardRemovals(),1);
+});
+
 test('组件附加与销毁保持原行为，SVG色值随外观更新而照片数据原样保留', () => {
   const f = fixture(), calls = [];
   const def = f.theme.component({ data: { photo: '/original.jpg' }, lifetimes: { attached() { calls.push('attached'); }, detached() { calls.push('detached'); } } });

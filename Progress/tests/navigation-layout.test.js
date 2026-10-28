@@ -28,14 +28,17 @@ test('导航直接打开时回首页，正常页面栈返回，失败可退回�
   const calls=[];
   vm.runInNewContext(fs.readFileSync(path.join(root,'components/app-navigation/app-navigation.js'),'utf8'),{
     Component: value=>{definition=value;}, require:name=>name.endsWith('/theme')?require('../../utils/theme'):({navigationLayout}), getCurrentPages:()=>Array(depth).fill({}),
-    wx:{ getWindowInfo:()=>({windowWidth:390,statusBarHeight:47}),getMenuButtonBoundingClientRect:()=>({top:51,height:32,left:296}),reLaunch:args=>calls.push(args.url),navigateBack:args=>{calls.push(args.delta);args.fail();} }
+    wx:{ getWindowInfo:()=>({windowWidth:390,statusBarHeight:47}),getMenuButtonBoundingClientRect:()=>({top:51,height:32,left:296}),reLaunch:args=>calls.push(args.url),redirectTo:args=>{calls.push(args.url);args.fail();},navigateBack:args=>{calls.push(args.delta);args.fail();} }
   });
-  const component={data:{},setData(patch){Object.assign(this.data,patch);},...definition.methods};
+  const component={data:{},properties:{parent:'/pages/index/index'},setData(patch){Object.assign(this.data,patch);},...definition.methods};
   definition.lifetimes.attached.call(component);
   assert.equal(component.data.canGoBack,false);
   component.goBack(); assert.equal(calls.pop(),'/pages/index/index');
   depth=2; component.updateLayout(); assert.equal(component.data.canGoBack,true);
   component.goBack(); assert.deepEqual(calls,[1,'/pages/index/index']);
+  calls.length=0;depth=1;component.properties.parent='/pages/my/index';
+  // 直接进入二级页面先回所属上级；上级打开失败才回首页。
+  component.goBack();assert.deepEqual(calls,['/pages/my/index','/pages/index/index']);
 });
 test('只在首页与歌单接入自定义导航，仍保留页面下拉刷新', () => {
   for(const page of ['index','playlist']) {

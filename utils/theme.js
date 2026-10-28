@@ -1,5 +1,6 @@
 // 外观的唯一颜色来源。中性色、品牌色、状态色分开；页面只消费语义变量。
 const colors = require('./color-palette');
+const { navigationLayout } = require('./navigation-layout');
 const NEUTRALS = {
   light: {
     bg: '#f4f2ef', surface: '#ffffff', 'surface-2': '#edebe7', 'surface-3': '#e2e5df',
@@ -81,6 +82,7 @@ function iconSources(tokens) {
   const svg = (body, color) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`);
   const bell = '<path d="M15 7a5 5 0 0 0-10 0c0 6-2 6-2 7h14c0-1-2-1-2-7M8 17h4"/>';
   return {
+    edit: svg('<path d="m12.5 3.5 4 4M3 17l4.5-1 10-10a2.8 2.8 0 0 0-4-4l-10 10L3 17Z"/>', tokens['text-2']),
     back: svg('<path d="m12 4-6 6 6 6"/>', tokens['text-1']),
     chevron: svg('<path d="m5.5 7.5 4.5 4.5 4.5-4.5"/>', tokens['text-3']),
     chevronRight: svg('<path d="m7.5 5.5 4.5 4.5-4.5 4.5"/>', tokens['text-3']),
@@ -88,6 +90,8 @@ function iconSources(tokens) {
     bell: svg(bell, tokens.accent), bellMuted: svg(bell, tokens['text-2']),
     musicList: svg('<path d="M3 4h8M3 8h6M3 12h4M13 13V5l4-1v8"/><ellipse cx="11" cy="14" rx="2" ry="1.5"/><ellipse cx="15" cy="13" rx="2" ry="1.5"/>', tokens.accent),
     history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent),
+    messageSuccess: svg('<circle cx="10" cy="10" r="8" fill="'+tokens.accent+'" stroke="'+tokens.accent+'"/><path d="m6 10 2.5 2.5 5-5" stroke="'+tokens['on-accent']+'"/>', tokens.accent),
+    messageInfo: svg('<circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h.01"/>', tokens['text-2']),
     person: svg('<circle cx="10" cy="6" r="3"/><path d="M4 17v-2a6 6 0 0 1 12 0v2"/>', tokens.accent)
   };
 }
@@ -164,7 +168,7 @@ function syncNative(state) {
   if (!platform) return;
   try {
     if (platform.setNavigationBarColor) platform.setNavigationBarColor({
-      frontColor: state.resolved === 'dark' ? '#ffffff' : '#000000', backgroundColor: state.tokens.surface,
+      frontColor: state.resolved === 'dark' ? '#ffffff' : '#000000', backgroundColor: state.tokens['gradient-open-start'],
       fail() {}
     });
     if (platform.setBackgroundColor) platform.setBackgroundColor({
@@ -174,10 +178,30 @@ function syncNative(state) {
     if (platform.setBackgroundTextStyle) platform.setBackgroundTextStyle({ textStyle: state.resolved === 'dark' ? 'light' : 'dark', fail() {} });
   } catch (_) { /* 原生 API 不支持时，theme.json 与 CSS 仍负责系统跟随和页面配色。 */ }
 }
+function viewportMetrics() {
+  let info = {}, capsule = {};
+  try { info = api().getWindowInfo ? api().getWindowInfo() : api().getSystemInfoSync(); } catch (_) {}
+  try { capsule = api().getMenuButtonBoundingClientRect(); } catch (_) {}
+  const nav = navigationLayout(info, capsule).totalHeight;
+  return { height: Number(info.windowHeight) || 667, width: Number(info.windowWidth) || 375, nav };
+}
+function viewportStyle(metrics, keyboard = 0) {
+  return '--window-height:' + metrics.height + 'px;--keyboard-inset:' + keyboard + 'px;--feedback-top:' + (metrics.nav + 12) + 'px;--navigation-height:' + metrics.nav + 'px;';
+}
 function page(definition) {
   const result = { ...definition, data: { ...viewData(), ...definition.data } };
   result.onLoad = function (...args) {
     start();
+    this._viewport = viewportMetrics();
+    this.setData({ viewportStyle: viewportStyle(this._viewport) });
+    this._keyboardListener = event => {
+      const current = viewportMetrics(), height = Math.max(0, Number(event.height) || 0);
+      this._keyboardHeight = height;
+      if (!height) this._viewport = current;
+      const overlap = Math.max(0, height - Math.max(0, this._viewport.height - current.height));
+      this.setData({ viewportStyle: viewportStyle(current, overlap) });
+    };
+    if (api() && api().onKeyboardHeightChange) api().onKeyboardHeightChange(this._keyboardListener);
     this._appearanceVisible = true;
     this._releaseAppearance = subscribe(state => {
       this.setData(viewData(state));
@@ -188,6 +212,8 @@ function page(definition) {
   };
   result.onShow = function (...args) {
     this._appearanceVisible = true; refreshSystem();
+    this._viewport = viewportMetrics();
+    this.setData({ viewportStyle: viewportStyle(this._viewport) });
     this.setData(viewData()); syncNative(getState());
     if (definition.onShow) return definition.onShow.apply(this, args);
   };
@@ -195,8 +221,18 @@ function page(definition) {
     this._appearanceVisible = false;
     if (definition.onHide) return definition.onHide.apply(this, args);
   };
+  result.onResize = function (...args) {
+    const current = viewportMetrics();
+    // Android may resize before emitting the keyboard event. Do not replace the
+    // full-height baseline with that reduced height and then lift a second time.
+    if (!this._viewport || current.width !== this._viewport.width || current.height > this._viewport.height) this._viewport = current;
+    const overlap = Math.max(0, (this._keyboardHeight || 0) - Math.max(0, this._viewport.height - current.height));
+    this.setData({ viewportStyle: viewportStyle(current, overlap) });
+    if (definition.onResize) return definition.onResize.apply(this, args);
+  };
   result.onUnload = function (...args) {
     this._appearanceVisible = false;
+    if (api() && api().offKeyboardHeightChange && this._keyboardListener) api().offKeyboardHeightChange(this._keyboardListener);
     if (this._releaseAppearance) this._releaseAppearance();
     this._releaseAppearance = null;
     if (definition.onUnload) return definition.onUnload.apply(this, args);

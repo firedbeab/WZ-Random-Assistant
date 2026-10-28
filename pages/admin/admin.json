@@ -1,11 +1,13 @@
 {
   "usingComponents": {
     "privacy-popup": "../../components/privacy-popup/privacy-popup",
-    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
+    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle",
+    "app-navigation": "../../components/app-navigation/app-navigation"
   },
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "@backgroundTextStyle",
   "backgroundColor": "@backgroundColor",
   "navigationBarTextStyle": "@navigationBarTextStyle",
-  "navigationBarBackgroundColor": "@navigationBarBackgroundColor"
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+  "navigationStyle": "custom"
 }

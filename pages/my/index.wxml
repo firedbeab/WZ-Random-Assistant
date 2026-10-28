@@ -1,13 +1,12 @@
-<page-meta page-style="{{appearanceStyle}} {{sheet || aliasVisible || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}} {{sheet || aliasVisible || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
 <view class="info-page community">
-  <app-navigation back />
-  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 反馈与投票不会写入正式数据</view>
-  <view class="info-head"><view class="info-heading-row"><text class="info-title">我的</text><appearance-toggle /></view><text class="info-desc">这一周的点歌，还有你的偏好。</text></view>
+  <app-navigation id="pageNavigation" back parent="/pages/index/index" />
+  <view class="info-head"><view class="info-heading-row"><text class="info-title">我的</text><appearance-toggle id="pageAppearance" /></view></view>
   <view class="c-content">
-    <view class="my-profile c-row"><view class="my-avatar">WZ</view><view class="c-grow"><text class="my-alias">{{alias}}</text><text class="c-caption">{{firstUseText}}</text></view><button class="c-link" bindtap="editAlias" disabled="{{!profileReady}}">修改</button></view>
+    <view class="my-profile c-row"><view class="my-avatar">WZ</view><view class="c-grow"><button class="my-name-row" bindtap="editAlias" disabled="{{!profileReady}}" aria-label="修改称呼"><text class="my-alias">{{alias}}</text><image class="my-edit-icon" src="{{themeIcons.edit}}" /></button><text class="c-caption">{{firstUseText}}</text></view></view>
     <view class="c-card my-week-card" aria-busy="{{loading}}">
-      <view class="c-row c-between"><text class="c-caption">本周点歌</text><text class="c-caption my-period" wx:if="{{week.kind !== 'loading' && week.kind !== 'error'}}">{{week.weekLabel}}</text></view>
-      <text class="my-week-status">{{week.status}}</text><text class="c-title my-week-title">{{week.title}}</text><text class="c-sub my-week-description">{{week.description}}</text>
+      <view class="c-row c-between"><text class="c-caption">当前状态</text><text class="c-caption my-period" wx:if="{{week.kind !== 'loading' && week.kind !== 'error'}}">{{week.weekLabel}}</text></view>
+      <text class="c-title my-week-title">{{week.summary}}</text>
       <view class="my-week-action"><button class="c-link my-week-link" wx:if="{{week.action}}" bindtap="weekAction">{{week.actionLabel}}<image src="{{themeIcons.chevronRight}}" /></button></view>
       <text wx:if="{{error || refreshError}}" class="c-caption my-refresh-error">{{error || refreshError}}</text>
     </view>
@@ -19,7 +18,7 @@
   <view class="drawer-backdrop" catchtap="closeAlias" />
   <view class="my-dialog" role="dialog" aria-label="修改称呼" catchtap="adminDrawerNoop">
     <text class="c-title">怎么称呼你？</text><text class="c-sub">2–12 个字，无需填写真实姓名。</text>
-    <view class="c-input-shell {{focusedField === 'alias' ? 'focused' : ''}}"><input class="c-field my-alias-field" maxlength="12" value="{{aliasDraft}}" bindinput="inputAlias" bindfocus="onCommunityFieldFocus" bindblur="onCommunityFieldBlur" data-field="alias" placeholder="填写你的称呼" placeholder-class="c-placeholder" disabled="{{busy}}" /></view>
+    <view class="c-input-shell {{focusedField === 'alias' ? 'focused' : ''}}"><input class="c-field my-alias-field" maxlength="12" value="{{aliasDraft}}" bindinput="inputAlias" bindfocus="onCommunityFieldFocus" bindblur="onCommunityFieldBlur" data-field="alias" placeholder="填写你的称呼" placeholder-class="c-placeholder" disabled="{{busy}}"  cursor-spacing="24"  adjust-position="{{false}}"  /></view>
     <text class="c-error" wx:if="{{aliasError}}">{{aliasError}}</text><view class="c-actions"><button class="c-secondary" bindtap="closeAlias" disabled="{{busy}}">取消</button><button class="c-primary" bindtap="saveAlias" disabled="{{busy}}">{{busy ? '保存中…' : '保存'}}</button></view>
   </view>
 </view>
@@ -28,15 +27,15 @@
   <view class="admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSheet">
     <view class="drawer-handle" data-drawer-drag="true" catchtouchmove="adminDrawerNoop" />
     <view class="c-sheet-head"><text class="modal-title">{{sheet === 'appearance' ? '外观设置' : '本周提交记录'}}</text></view>
-    <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="c-sheet-scroll"><view class="c-sheet-body">
+    <view class="c-sheet-scroll"><view class="c-sheet-body">
       <block wx:if="{{sheet === 'appearance'}}">
         <text class="c-label">显示模式</text><view class="c-chips my-modes"><button wx:for="{{modes}}" wx:key="id" class="c-chip {{selectedMode === item.id ? 'active' : ''}}" bindtap="selectMode" data-id="{{item.id}}">{{item.label}}</button></view>
         <text class="c-label">主题颜色</text><view class="my-palettes"><button wx:for="{{palettes}}" wx:key="id" class="my-palette {{selectedPalette === item.id ? 'selected' : ''}}" bindtap="selectPalette" data-id="{{item.id}}"><view class="my-swatch" style="background:{{item.color}};" /><text>{{item.label}}</text></button></view>
-        <button class="c-entry my-custom-entry" bindtap="openColor" aria-expanded="{{colorEditing}}"><view class="c-grow"><text class="c-title">自定义颜色</text><text class="c-sub">{{selectedPalette === 'custom' ? customColor : '从色盘挑选你喜欢的颜色'}}</text></view><image class="my-custom-arrow {{colorEditing ? 'expanded' : ''}}" src="{{themeIcons.chevron}}" /></button>
+        <button class="c-entry my-custom-entry {{selectedPalette === 'custom' ? 'selected' : ''}}" bindtap="openColor" aria-expanded="{{colorEditing}}"><view class="c-grow"><text class="c-title">自定义颜色</text><text class="c-sub">{{selectedPalette === 'custom' ? customColor : '从色盘挑选你喜欢的颜色'}}</text></view><text wx:if="{{selectedPalette === 'custom'}}" class="my-custom-selected">已选</text><image class="my-custom-arrow {{colorEditing ? 'expanded' : ''}}" src="{{themeIcons.chevron}}" /></button>
         <color-picker wx:if="{{colorEditing}}" value="{{customColor}}" bindchange="changeColor" />
       </block>
       <block wx:else><text class="c-caption">{{week.weekLabel}}</text><text class="c-title">{{submission.song_name}}</text><text class="c-sub">{{submission.singer}}</text><view wx:if="{{submission.special_note}}" class="c-reply"><text class="c-caption">备注</text><text class="c-text">{{submission.special_note}}</text></view><text class="c-sub">已提交不代表已入选，请以已发布歌单为准。</text></block>
-    </view></scroll-view>
+    </view></view>
     <view class="c-sheet-actions"><button class="c-secondary" bindtap="closeSheet">完成</button></view>
   </view>
 </view>

@@ -1,9 +1,8 @@
-<page-meta page-style="{{appearanceStyle}}" />
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}}" />
+<app-navigation back parent="/pages/about/index" />
 <view class="appearance-toolbar"><appearance-toggle /></view>
 <!-- pages/admin/login.wxml -->
 <view class="login-container">
-
-  <view class="test-mode-banner" wx:if="{{isTestMode}}">测试模式 · 使用测试管理员数据</view>
 
   <!-- 头部图标和标题 -->
   <view class="header">
@@ -25,7 +24,7 @@
       autocorrect="off"
       autocapitalize="none"
       spell-check="false"
-    />
+     cursor-spacing="24" adjust-position="{{true}}" />
     <text class="toggle-btn" bindtap="toggleShow">
       {{showCode ? '隐藏' : '显示'}}
     </text>

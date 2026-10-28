@@ -33,6 +33,7 @@ const sheetMethods = {
   },
   finishSheet() {
     if (!this._alive) return;
+    if (typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
     this.setData({ sheetClosing: true });
     this._sheetTimer = setTimeout(() => { if (this._alive) this.setData({ sheet: '', sheetClosing: false, dirty: false }); }, feedback.DRAWER_CLOSE_MS);
   },

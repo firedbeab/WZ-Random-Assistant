@@ -1,2 +1,5 @@
 @import "../../styles/community.wxss";
 .feedback-categories { margin: 24rpx 0; }.feedback-limit { text-align: center; margin-top: 16rpx; }.feedback-poll-note { margin: 0 0 24rpx; }.feedback-detail { margin-top: 28rpx; }.c-list-arrow { width: 28rpx; height: 28rpx; }
+
+.feedback-tabs { position:relative; gap:0; }.feedback-tabs .c-tab { flex:1; min-width:0; }.feedback-tabs .c-tab.active::before { display:none; }.feedback-tab-indicator { position:absolute; left:0; bottom:0; width:50%; transition:transform 320ms ease; pointer-events:none; }.feedback-tab-indicator.on-polls { transform:translateX(100%); }.feedback-tab-indicator > view { width:100rpx; height:4rpx; border-radius:4rpx; background:var(--accent); margin:auto; }.feedback-history-entry { padding:24rpx 28rpx; box-sizing:border-box; border-radius:var(--radius-lg); }
+@media(prefers-reduced-motion:reduce) { .feedback-tab-indicator { transition-duration:1ms; } }

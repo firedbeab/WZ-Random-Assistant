@@ -197,3 +197,5 @@
 .bottom-copy { flex: none; width: 160rpx; }.bottom-copy > text { display: block; }.batch-error { display: block; color: var(--danger); font-size: 24rpx; line-height: 1.7; margin-bottom: 18rpx; }
 .date-field-trigger { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; width: 100%; min-height: 96rpx; margin: 0; padding: 20rpx 24rpx; box-sizing: border-box; border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-1); font-size: 28rpx; line-height: 1.6; text-align: left; }
 .date-field-trigger .date-label { color: var(--text-2); font-size: 26rpx; }.date-field-value { display: flex; align-items: center; gap: 12rpx; min-width: 0; font-variant-numeric: tabular-nums; }.date-field-value.is-placeholder { color: var(--text-3); }.date-field-value image { width: 28rpx; height: 28rpx; flex: none; }
+
+page { background:var(--gradient-page); }.container { background:transparent; min-height:calc(var(--window-height, 100vh) - var(--navigation-height, 64px)); }
