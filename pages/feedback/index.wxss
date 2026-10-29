@@ -8,3 +8,4 @@
 .feedback-categories .c-chip { border: 1px solid var(--line); box-sizing: border-box; }
 .feedback-categories .c-chip.active { border-color: var(--accent); }
 .feedback-categories .c-chip::after { border: 0; }
+.feedback-history-entry { background: var(--surface); }
