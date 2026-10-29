@@ -17,3 +17,10 @@ test('未填完整的色值不会误改主题，失焦时保留用户输入并�
  picker.blur();assert.equal(picker.data.field,'#12');assert.equal(picker.data.invalid,true);assert.equal(events.filter(e=>e.name==='change').length,0);
  picker.input({detail:{value:'123456'}});assert.equal(picker.data.invalid,false);assert.equal(picker.data.hex,'#123456');
 });
+test('滑块两端及色盘角落能达到完整取值范围',()=>{
+ const {picker}=fixture();picker._rect={left:10,top:20,width:300,height:120};picker._kind='hue';
+ picker.movePoint({clientX:10,clientY:50});assert.equal(picker.data.hue,0);
+ picker.movePoint({clientX:310,clientY:50});assert(picker.data.hue>359);
+ picker._kind='plane';picker.movePoint({clientX:10,clientY:20});assert.equal(picker.data.sat,0);assert.equal(picker.data.val,0);
+ picker.movePoint({clientX:310,clientY:140});assert.equal(picker.data.sat,100);assert.equal(picker.data.val,100);
+});

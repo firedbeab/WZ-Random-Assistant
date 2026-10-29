@@ -194,21 +194,30 @@ function page(definition) {
   const result = { ...definition, data: { ...viewData(), ...definition.data } };
   function updateKeyboard(page, metrics, height) {
     const overlap = Math.max(0, height - Math.max(0, page._viewport.height - metrics.height));
-    const space = height && page._keyboardTarget && page._keyboardTarget.layer === 'page' ? height + 120 : 0;
+    const space = height && page._keyboardTarget && page._keyboardTarget.layer === 'page' ? height + 24 : 0;
     page.setData({ viewportStyle: viewportStyle(metrics, overlap, space) });
     keyboardAvoid.schedule(page, api(), overlap, metrics);
   }
   result.onKeyboardFieldFocus = function (e) {
     const data = e.currentTarget && e.currentTarget.dataset || {};
     if (!data.keyboardTarget) return;
+    clearTimeout(this._keyboardBlurTimer); clearTimeout(this._keyboardZeroTimer);
+    this._keyboardBlurTimer = null; this._keyboardZeroTimer = null;
     this._keyboardTarget = { selector: data.keyboardTarget, layer: data.keyboardLayer || 'page' };
     if (e.detail && Number(e.detail.height) > 0) this._keyboardHeight = Number(e.detail.height);
     updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
   };
-  result.onKeyboardFieldBlur = function () {
-    this._keyboardTarget = null;
+  result.onKeyboardFieldBlur = function (e) {
+    const data = e && e.currentTarget && e.currentTarget.dataset || {};
+    if (data.keyboardTarget && this._keyboardTarget && data.keyboardTarget !== this._keyboardTarget.selector) return;
     keyboardAvoid.clear(this);
-    if (this._viewport) updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
+    // A second field may receive focus immediately; keep the spacer until the
+    // transition settles so the page does not collapse between focus events.
+    clearTimeout(this._keyboardBlurTimer);
+    this._keyboardBlurTimer = setTimeout(() => {
+      this._keyboardBlurTimer = null; this._keyboardTarget = null;
+      if (this._appearanceVisible && this._viewport) updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
+    }, 180);
   };
   for (const name of ['onFieldFocus', 'onCommunityFieldFocus', 'onPublishNoteFocus']) {
     if (typeof definition[name] !== 'function') continue;
@@ -224,9 +233,14 @@ function page(definition) {
     this.setData({ viewportStyle: viewportStyle(this._viewport) });
     this._keyboardListener = event => {
       const current = viewportMetrics(), height = Math.max(0, Number(event.height) || 0);
-      this._keyboardHeight = height;
-      if (!height) this._viewport = current;
-      updateKeyboard(this, current, height);
+      clearTimeout(this._keyboardZeroTimer);
+      const apply = () => {
+        this._keyboardZeroTimer = null; this._keyboardHeight = height;
+        if (!height) this._viewport = current;
+        if (this._appearanceVisible) updateKeyboard(this, current, height);
+      };
+      if (!height && this._keyboardBlurTimer) this._keyboardZeroTimer = setTimeout(apply, 180);
+      else apply();
     };
     try { if (api() && api().onKeyboardHeightChange) api().onKeyboardHeightChange(this._keyboardListener); } catch (_) {}
     this._appearanceVisible = true;
@@ -246,6 +260,7 @@ function page(definition) {
   };
   result.onHide = function (...args) {
     this._appearanceVisible = false;
+    clearTimeout(this._keyboardBlurTimer); clearTimeout(this._keyboardZeroTimer); this._keyboardBlurTimer = null; this._keyboardZeroTimer = null; this._keyboardHeight = 0;
     this._keyboardTarget = null; keyboardAvoid.clear(this);
     if (definition.onHide) return definition.onHide.apply(this, args);
   };
@@ -259,7 +274,7 @@ function page(definition) {
   };
   result.onUnload = function (...args) {
     this._appearanceVisible = false;
-    keyboardAvoid.clear(this); this._keyboardTarget = null;
+    clearTimeout(this._keyboardBlurTimer); clearTimeout(this._keyboardZeroTimer); keyboardAvoid.clear(this); this._keyboardTarget = null;
     try { if (api() && api().offKeyboardHeightChange && this._keyboardListener) api().offKeyboardHeightChange(this._keyboardListener); } catch (_) {}
     if (this._releaseAppearance) this._releaseAppearance();
     this._releaseAppearance = null;

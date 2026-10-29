@@ -106,6 +106,19 @@ test('键盘覆盖与窗口已缩高不重复抬升，通知避开导航，旋�
   def.onUnload.call(p);const old=p.data.viewportStyle;f.keyboard(200);assert.equal(p.data.viewportStyle,old);assert.equal(f.keyboardRemovals(),1);
 });
 
+test('切换输入框时保留键盘占位，旧失焦事件和短暂零高度不覆盖新焦点', async () => {
+  const f=fixture(),def=f.theme.page({data:{}}),p=makePage(def);def.onLoad.call(p);
+  const event = selector => ({currentTarget:{dataset:{keyboardTarget:selector}},detail:{height:300}});
+  def.onKeyboardFieldFocus.call(p,event('#first'));f.keyboard(300);
+  assert.match(p.data.viewportStyle,/--keyboard-page-space:324px/);
+  def.onKeyboardFieldBlur.call(p,event('#first'));f.keyboard(0);def.onKeyboardFieldFocus.call(p,event('#second'));
+  def.onKeyboardFieldBlur.call(p,event('#first'));
+  await new Promise(resolve=>setTimeout(resolve,220));
+  assert.equal(p._keyboardTarget.selector,'#second');assert.match(p.data.viewportStyle,/--keyboard-page-space:324px/);
+  def.onKeyboardFieldBlur.call(p,event('#second'));f.keyboard(0);await new Promise(resolve=>setTimeout(resolve,220));
+  assert.equal(p._keyboardTarget,null);assert.match(p.data.viewportStyle,/--keyboard-page-space:0px/);def.onUnload.call(p);
+});
+
 test('组件附加与销毁保持原行为，SVG色值随外观更新而照片数据原样保留', () => {
   const f = fixture(), calls = [];
   const def = f.theme.component({ data: { photo: '/original.jpg' }, lifetimes: { attached() { calls.push('attached'); }, detached() { calls.push('detached'); } } });

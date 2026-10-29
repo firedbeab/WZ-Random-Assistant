@@ -9,7 +9,7 @@ Page(theme.page(feedback.page({
   ...community.sheetMethods,
   onLoad() { this._alive = true; this._requestId = community.requestId(); this.load(); },
   onUnload() { this._alive = false; clearTimeout(this._sheetTimer); },
-  async onPullDownRefresh() { await this.load(); wx.stopPullDownRefresh(); },
+  async onPullDownRefresh() { if (!this.data.busy) await this.load(); wx.stopPullDownRefresh(); },
   switchTab(e) { const tab = e.currentTarget.dataset.tab; if (this.data.busy || !['feedback', 'polls'].includes(tab) || tab === this.data.tab) return; this.setData({ tab, error: '', hasMore: false, offset: 0 }); this.load(); },
   goHistory() { wx.navigateTo({ url: '/pages/feedback/history' }); },
   onTabTouchStart(e) {
@@ -43,7 +43,7 @@ Page(theme.page(feedback.page({
     } catch (e) { if (this._alive && seq === this._seq) this.setData({ error: e.message }); }
     finally { if (this._alive && seq === this._seq) this.setData({ loading: false }); }
   },
-  loadMore() { this.load(true); },
+  loadMore() { if (!this.data.busy) this.load(true); },
   retry() { this.load(); },
   async submit() {
     if (this.data.busy) return;
@@ -63,9 +63,28 @@ Page(theme.page(feedback.page({
   },
   async vote(e) {
     if (this.data.busy) return;
-    this.setData({ busy: true });
-    try { await community.api('vote', { id: e.currentTarget.dataset.id, choice: Number(e.currentTarget.dataset.choice) }); if (!this._alive) return; feedback.showToast(this, { title: '选择已记录', icon: 'success' }); await this.load(); }
-    catch (e) { this.fail(e); if (e.code === 'POLL_CLOSED' && this._alive) await this.load(); }
+    const id = e.currentTarget.dataset.id, choice = Number(e.currentTarget.dataset.choice);
+    const previous = this.data.polls.find(poll => poll._id === id);
+    if (!previous || previous.ended || !Number.isInteger(choice) || choice < 0 || choice >= previous.options.length || choice === previous.choice) return;
+    // Before the first vote the server deliberately hides counts. Show the
+    // choice immediately without fabricating results or revealing hidden data.
+    const total = previous.total + (previous.choice < 0 ? 1 : 0);
+    const options = previous.resultsVisible ? previous.options.map((option, index) => {
+      const count = Math.max(0, option.count + (index === choice ? 1 : 0) - (index === previous.choice ? 1 : 0));
+      return { ...option, count, percent: total ? Math.round(count / total * 100) : 0 };
+    }) : previous.options;
+    const optimistic = { ...previous, choice, total, options, votePending: true };
+    this._seq = (this._seq || 0) + 1; // Ignore any list request started before this vote.
+    this.setData({ busy: true, loading: false, polls: this.data.polls.map(poll => poll._id === id ? optimistic : poll) });
+    try {
+      await community.api('vote', { id, choice }); if (!this._alive) return;
+      this.setData({ polls: this.data.polls.map(poll => poll._id === id ? { ...poll, votePending: false } : poll) });
+      feedback.showToast(this, { title: '选择已记录', icon: 'success' }); await this.load();
+    }
+    catch (e) {
+      if (this._alive) this.setData({ polls: this.data.polls.map(poll => poll._id === id ? previous : poll) });
+      this.fail(e); if (e.code === 'POLL_CLOSED' && this._alive) await this.load();
+    }
     finally { if (this._alive) this.setData({ busy: false }); }
   }
 })));

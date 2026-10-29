@@ -21,6 +21,20 @@ function fixture(file) {
   page.fail = error => { if (page._alive) toasts.push({ title: error.message }); };
   return { page, state, calls, toasts, flush() { for (const fn of timers.values()) fn(); timers.clear(); } };
 }
+
+test('改票立即更新选择与比例，失败时恢复；首次投票不编造隐藏票数', async () => {
+  const f=fixture('feedback/index.js'),p=f.page;
+  const poll={_id:'p',choice:0,total:4,resultsVisible:true,ended:false,options:[{label:'甲',count:3,percent:75},{label:'乙',count:1,percent:25}]};
+  p.setData({tab:'polls',polls:[poll]});let reject;
+  f.state.handler=()=>new Promise((resolve,fail)=>{reject=fail;});
+  const pending=p.vote(event({id:'p',choice:1}));
+  assert.equal(p.data.polls[0].choice,1);assert.equal(p.data.polls[0].options[0].percent,50);assert.equal(p.data.polls[0].options[1].percent,50);assert.equal(p.data.polls[0].votePending,true);
+  reject(Error('网络断开'));await pending;assert.equal(p.data.polls[0].choice,0);assert.equal(p.data.polls[0].options[0].percent,75);assert.equal(p.data.busy,false);
+  p.setData({polls:[{...poll,choice:-1,resultsVisible:false,options:poll.options.map(o=>({...o,count:null,percent:0}))}]});let finish;
+  f.state.handler=action=>action==='vote'?new Promise(resolve=>finish=resolve):Promise.resolve({items:[],hasMore:false,offset:0});
+  const first=p.vote(event({id:'p',choice:1}));assert.equal(p.data.polls[0].choice,1);assert.equal(p.data.polls[0].resultsVisible,false);assert.equal(p.data.polls[0].options[0].count,null);
+  finish({});await first;assert.equal(p.data.busy,false);
+});
 test('提交失败保留正文和幂等编号；重复点击不并发提交，成功后才清空', async () => {
   const f=fixture('feedback/index.js'),p=f.page; p.setData({content:'希望改进反馈页面'});
   f.state.handler=async()=>{throw Error('网络断开');}; await p.submit();const first=f.calls[0].requestId;assert.equal(p.data.content,'希望改进反馈页面');assert.equal(p.data.busy,false);

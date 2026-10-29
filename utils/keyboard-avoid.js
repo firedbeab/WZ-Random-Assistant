@@ -7,10 +7,10 @@ function scrollDelta(rect, viewportHeight, overlap, navHeight) {
   const height = Math.max(0, rect.bottom - rect.top);
   if (bottom <= top) return 0;
   if (rect.top < top) return Math.floor(rect.top - top);
-  // Place the focused input around the upper half of the visible area. This
-  // also leaves room to see what is being typed before it reaches the keyboard.
-  const ideal = Math.max(top, Math.min(bottom - height, top + (bottom - top) * .42 - height / 2));
-  return Math.max(0, Math.ceil(rect.top - ideal));
+  // Do not move an input that is already visible. For a field taller than the
+  // available area, keep its start visible instead of scrolling past it.
+  if (height > bottom - top) return Math.max(0, Math.ceil(rect.top - top));
+  return Math.max(0, Math.ceil(rect.bottom - bottom));
 }
 function clear(page) {
   for (const timer of page._keyboardScrollTimers || []) clearTimeout(timer);
@@ -38,10 +38,10 @@ function schedule(page, platform, overlap, metrics) {
       query.exec(result => {
         if (page._keyboardScrollGeneration !== generation || page._keyboardTarget !== target || !page._appearanceVisible || !page._keyboardHeight || !current(page) || !result || !result[0] || !result[1]) return;
         const delta = scrollDelta(result[0], metrics.height, overlap, metrics.nav);
-        if (Math.abs(delta) > 1) platform.pageScrollTo({ scrollTop: Math.max(0, (result[1].scrollTop || 0) + delta), duration: 180, fail() {} });
+        if (Math.abs(delta) > 1) platform.pageScrollTo({ scrollTop: Math.max(0, (result[1].scrollTop || 0) + delta), duration: 250, fail() {} });
       });
     } catch (_) { /* Old clients retain native keyboard positioning. */ }
   };
-  page._keyboardScrollTimers = [setTimeout(measure, 100), setTimeout(measure, 380)];
+  page._keyboardScrollTimers = [setTimeout(measure, 60)];
 }
 module.exports = { scrollDelta, clear, schedule };

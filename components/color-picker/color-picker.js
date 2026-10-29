@@ -29,7 +29,15 @@ Component(theme.component({
     },
     move(e) { if (e.touches && e.touches.length === 1) this.movePoint(e.touches[0]); },
     end() { if (this._kind) this.emitChange(true); this._kind = null; this._rect = null; },
-    movePoint(touch) { const r = this._rect; if (!r || !this._kind || !r.width || !r.height) return; const x = Math.max(0, Math.min(1, (touch.clientX - r.left) / r.width)), y = Math.max(0, Math.min(1, (touch.clientY - r.top) / r.height)); this.commit(this._kind === 'hue' ? { ...this._hsv, h: Math.min(359.99, x * 360) } : { ...this._hsv, s: x, v: 1 - y }); },
+    movePoint(touch) {
+      const r = this._rect; if (!r || !this._kind || !r.width || !r.height) return;
+      let width = 375;
+      try { const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync(); width = info.windowWidth || width; } catch (_) {}
+      const inset = 20 * width / 750, clamp = n => Math.max(0, Math.min(1, n));
+      const x = clamp((touch.clientX - r.left - inset) / Math.max(1, r.width - 2 * inset));
+      const y = clamp((touch.clientY - r.top - inset) / Math.max(1, r.height - 2 * inset));
+      this.commit(this._kind === 'hue' ? { ...this._hsv, h: Math.min(359.99, x * 360) } : { ...this._hsv, s: x, v: 1 - y });
+    },
     input(e) { this.setData({ field: e.detail.value, invalid: false }); const value = inputColor(e.detail.value); if (value) { this.applyHex(value); this.emitChange(true); } },
     focus(e) { this.setData({ focused: true }); this.triggerEvent('keyboardfocus', { height: e.detail && e.detail.height || 0 }); },
     blur() { this.setData({ focused: false }); this.triggerEvent('keyboardblur'); const value = inputColor(this.data.field); if (value) { this.applyHex(value); this.emitChange(true); } else this.setData({ invalid: true }); }
