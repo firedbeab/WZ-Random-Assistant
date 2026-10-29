@@ -95,3 +95,5 @@ button::after { border: none; }
 .modal-card .row.gap { margin-top: 30rpx; }.modal-card .row.gap > button { font-size: 29rpx; min-height: 96rpx; line-height: 1.5; padding: 20rpx; }
 
 page { background:var(--gradient-page); }.page { background:transparent; min-height:calc(var(--window-height, 100vh) - var(--navigation-height, 64px)); }
+
+.page { padding-bottom:calc(150rpx + var(--keyboard-page-space, 0px)); }

@@ -92,3 +92,5 @@ page {
   color: var(--text-3);
   text-align: center;
 }
+
+.login-container { padding-bottom:calc(100rpx + var(--keyboard-page-space, 0px)); }

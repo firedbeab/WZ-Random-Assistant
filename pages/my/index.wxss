@@ -13,5 +13,6 @@
 .my-week-card { min-height:220rpx; padding-top:26rpx; padding-bottom:20rpx; }.my-week-title { font-size:32rpx; margin-top:14rpx; }.my-week-action { min-height:72rpx; }.my-week-link { min-height:72rpx; margin-top:0; font-size:25rpx; }.my-custom-entry { padding-left:16rpx; padding-right:16rpx; border:1rpx solid transparent; border-radius:var(--radius-md); }.my-custom-entry.selected { background:var(--accent-weak); border-color:var(--accent); }.my-custom-selected { color:var(--accent); font-size:23rpx; }
 
 .my-dialog-mask { bottom:var(--keyboard-inset, 0px); }.my-dialog { max-height:calc(var(--window-height, 667px) - var(--keyboard-inset, 0px) - 32px); overflow-y:auto; }
+.my-sheet-scroll.color-open { height:var(--sheet-scroll-height, 300px); }
 
 .my-name-row { display:inline-flex; max-width:100%; align-items:baseline; justify-content:flex-start; min-height:76rpx; margin:0; padding:0; background:transparent; color:var(--text-1); text-align:left; line-height:1.6; }.my-name-row[disabled]:not([type]) { background:transparent; color:var(--text-1); }.my-edit-icon { flex:none; width:22rpx; height:22rpx; align-self:flex-end; margin:0 4rpx 18rpx 2rpx; opacity:.8; }

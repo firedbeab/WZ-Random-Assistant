@@ -14,3 +14,5 @@
 .info-state-title { display: block; font-size: var(--font-xl); font-weight: 600; line-height: 1.5; }
 .info-state-desc { display: block; margin-top: var(--space-3); color: var(--text-2); font-size: var(--font-md); line-height: 1.8; }
 .test-mode-banner { border: none; border-radius: 0; font-size: var(--font-xs); font-weight: 400; }
+
+.info-page { padding-bottom:calc(var(--space-5) + env(safe-area-inset-bottom) + var(--keyboard-page-space, 0px)); }

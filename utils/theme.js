@@ -1,6 +1,7 @@
 // 外观的唯一颜色来源。中性色、品牌色、状态色分开；页面只消费语义变量。
 const colors = require('./color-palette');
 const { navigationLayout } = require('./navigation-layout');
+const keyboardAvoid = require('./keyboard-avoid');
 const NEUTRALS = {
   light: {
     bg: '#f4f2ef', surface: '#ffffff', 'surface-2': '#edebe7', 'surface-3': '#e2e5df',
@@ -185,11 +186,38 @@ function viewportMetrics() {
   const nav = navigationLayout(info, capsule).totalHeight;
   return { height: Number(info.windowHeight) || 667, width: Number(info.windowWidth) || 375, nav };
 }
-function viewportStyle(metrics, keyboard = 0) {
-  return '--window-height:' + metrics.height + 'px;--keyboard-inset:' + keyboard + 'px;--feedback-top:' + (metrics.nav + 12) + 'px;--navigation-height:' + metrics.nav + 'px;';
+function viewportStyle(metrics, keyboard = 0, pageSpace = 0) {
+  const sheetHeight = Math.max(72, metrics.height - keyboard - metrics.nav - 220);
+  return '--window-height:' + metrics.height + 'px;--keyboard-inset:' + keyboard + 'px;--keyboard-page-space:' + pageSpace + 'px;--sheet-scroll-height:' + sheetHeight + 'px;--feedback-top:' + (metrics.nav + 12) + 'px;--navigation-height:' + metrics.nav + 'px;';
 }
 function page(definition) {
   const result = { ...definition, data: { ...viewData(), ...definition.data } };
+  function updateKeyboard(page, metrics, height) {
+    const overlap = Math.max(0, height - Math.max(0, page._viewport.height - metrics.height));
+    const space = height && page._keyboardTarget && page._keyboardTarget.layer === 'page' ? height + 120 : 0;
+    page.setData({ viewportStyle: viewportStyle(metrics, overlap, space) });
+    keyboardAvoid.schedule(page, api(), overlap, metrics);
+  }
+  result.onKeyboardFieldFocus = function (e) {
+    const data = e.currentTarget && e.currentTarget.dataset || {};
+    if (!data.keyboardTarget) return;
+    this._keyboardTarget = { selector: data.keyboardTarget, layer: data.keyboardLayer || 'page' };
+    if (e.detail && Number(e.detail.height) > 0) this._keyboardHeight = Number(e.detail.height);
+    updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
+  };
+  result.onKeyboardFieldBlur = function () {
+    this._keyboardTarget = null;
+    keyboardAvoid.clear(this);
+    if (this._viewport) updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
+  };
+  for (const name of ['onFieldFocus', 'onCommunityFieldFocus', 'onPublishNoteFocus']) {
+    if (typeof definition[name] !== 'function') continue;
+    result[name] = function (e) { const value = definition[name].call(this, e); this.onKeyboardFieldFocus(e); return value; };
+  }
+  for (const name of ['onFieldBlur', 'onCommunityFieldBlur', 'onPublishNoteBlur']) {
+    if (typeof definition[name] !== 'function') continue;
+    result[name] = function (e) { const value = definition[name].call(this, e); this.onKeyboardFieldBlur(e); return value; };
+  }
   result.onLoad = function (...args) {
     start();
     this._viewport = viewportMetrics();
@@ -198,10 +226,9 @@ function page(definition) {
       const current = viewportMetrics(), height = Math.max(0, Number(event.height) || 0);
       this._keyboardHeight = height;
       if (!height) this._viewport = current;
-      const overlap = Math.max(0, height - Math.max(0, this._viewport.height - current.height));
-      this.setData({ viewportStyle: viewportStyle(current, overlap) });
+      updateKeyboard(this, current, height);
     };
-    if (api() && api().onKeyboardHeightChange) api().onKeyboardHeightChange(this._keyboardListener);
+    try { if (api() && api().onKeyboardHeightChange) api().onKeyboardHeightChange(this._keyboardListener); } catch (_) {}
     this._appearanceVisible = true;
     this._releaseAppearance = subscribe(state => {
       this.setData(viewData(state));
@@ -219,6 +246,7 @@ function page(definition) {
   };
   result.onHide = function (...args) {
     this._appearanceVisible = false;
+    this._keyboardTarget = null; keyboardAvoid.clear(this);
     if (definition.onHide) return definition.onHide.apply(this, args);
   };
   result.onResize = function (...args) {
@@ -226,13 +254,13 @@ function page(definition) {
     // Android may resize before emitting the keyboard event. Do not replace the
     // full-height baseline with that reduced height and then lift a second time.
     if (!this._viewport || current.width !== this._viewport.width || current.height > this._viewport.height) this._viewport = current;
-    const overlap = Math.max(0, (this._keyboardHeight || 0) - Math.max(0, this._viewport.height - current.height));
-    this.setData({ viewportStyle: viewportStyle(current, overlap) });
+    updateKeyboard(this, current, this._keyboardHeight || 0);
     if (definition.onResize) return definition.onResize.apply(this, args);
   };
   result.onUnload = function (...args) {
     this._appearanceVisible = false;
-    if (api() && api().offKeyboardHeightChange && this._keyboardListener) api().offKeyboardHeightChange(this._keyboardListener);
+    keyboardAvoid.clear(this); this._keyboardTarget = null;
+    try { if (api() && api().offKeyboardHeightChange && this._keyboardListener) api().offKeyboardHeightChange(this._keyboardListener); } catch (_) {}
     if (this._releaseAppearance) this._releaseAppearance();
     this._releaseAppearance = null;
     if (definition.onUnload) return definition.onUnload.apply(this, args);

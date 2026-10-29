@@ -39,7 +39,7 @@ Page(theme.page(feedback.page({
     this.load();
   },
   onHide() { theme.flushPreference(); this.setData({ focusedField: '' }); },
-  onUnload() { this._alive = false; theme.flushPreference(); clearTimeout(this._sheetTimer); clearTimeout(this._aliasTimer); },
+  onUnload() { this._alive = false; theme.flushPreference(); clearTimeout(this._sheetTimer); clearTimeout(this._aliasTimer); clearTimeout(this._colorScrollTimer); },
   async onPullDownRefresh() { await this.load(); wx.stopPullDownRefresh(); },
   async load() {
     const seq = this._loadSeq = (this._loadSeq || 0) + 1;
@@ -108,6 +108,13 @@ Page(theme.page(feedback.page({
     this.setData({ colorEditing: !this.data.colorEditing });
     // 只展开不修改选中的配色；实际调色时才切到自定义。
   },
+  onColorKeyboardFocus(e) {
+    this.onKeyboardFieldFocus({ currentTarget: { dataset: { keyboardTarget: '#color-input-end', keyboardLayer: 'overlay' } }, detail: e.detail || {} });
+    clearTimeout(this._colorScrollTimer);
+    this.setData({ colorScrollAnchor: '' });
+    this._colorScrollTimer = setTimeout(() => { if (this._alive && this.data.sheet === 'appearance' && this.data.colorEditing) this.setData({ colorScrollAnchor: 'color-input-end' }); }, 220);
+  },
+  onColorKeyboardBlur() { clearTimeout(this._colorScrollTimer); this.setData({ colorScrollAnchor: '' }); this.onKeyboardFieldBlur(); },
   changeColor(e) {
     const value = e.detail.value;
     if (!colors.normalize(value)) return;

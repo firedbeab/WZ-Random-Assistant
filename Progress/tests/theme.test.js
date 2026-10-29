@@ -24,7 +24,7 @@ function fixture(options = {}) {
   };
   if (options.old) { delete wx.getAppBaseInfo; wx.getSystemInfoSync = () => ({ theme: system }); }
   if (options.throwing) { wx.getAppBaseInfo = () => { throw Error('unsupported'); }; wx.onThemeChange = () => { throw Error('unsupported'); }; }
-  const sandbox = { module: { exports: {} }, wx, setTimeout, clearTimeout, require: name => name.includes('navigation-layout') ? require('../../utils/navigation-layout') : require('../../utils/color-palette') };
+  const sandbox = { module: { exports: {} }, wx, setTimeout, clearTimeout, require: name => name.includes('navigation-layout') ? require('../../utils/navigation-layout') : name.includes('keyboard-avoid') ? require('../../utils/keyboard-avoid') : require('../../utils/color-palette') };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'utils/theme.js'), 'utf8'), sandbox);
   const instance = sandbox.module.exports;
   return { theme: instance, wx, disk, natives, observers: () => observers, emit(mode) { system = mode; if (event) event({ theme: mode }); }, window(value) { windowInfo = { ...windowInfo, ...value }; }, keyboard(height) { if (keyboard) keyboard({ height }); }, keyboardRemovals: () => keyboardRemovals };
@@ -52,7 +52,7 @@ test('颜色生成物无漂移，九页均接入外观变量和切换按钮，�
   for (const [file, expected] of Object.entries(outputs())) assert.equal(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'), expected);
   const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
   assert.equal(app.darkmode, true); assert.equal(app.themeLocation, 'theme.json');
-  const variableNames = new Set(Object.keys(theme.getTokens()).concat([...fs.readFileSync(path.join(root, 'styles/tokens.wxss'), 'utf8').matchAll(/--([\w-]+):/g)].map(match => match[1]), ['lift', 'tilt', 'travel', 'rise', 'spin', 'entry-x', 'entry-y', 'drift', 'dice-size', 'dice-pip-depth', 'window-height', 'keyboard-inset', 'feedback-top', 'navigation-height']));
+  const variableNames = new Set(Object.keys(theme.getTokens()).concat([...fs.readFileSync(path.join(root, 'styles/tokens.wxss'), 'utf8').matchAll(/--([\w-]+):/g)].map(match => match[1]), ['lift', 'tilt', 'travel', 'rise', 'spin', 'entry-x', 'entry-y', 'drift', 'dice-size', 'dice-pip-depth', 'window-height', 'keyboard-inset', 'feedback-top', 'navigation-height', 'keyboard-page-space', 'sheet-scroll-height']));
   function inspect(dir) { for (const item of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) { const file = path.join(dir, item.name); if (item.isDirectory()) inspect(file); else if (item.name.endsWith('.wxss')) for (const match of fs.readFileSync(path.join(root, file), 'utf8').matchAll(/var\(--([\w-]+)/g)) assert(variableNames.has(match[1]), `${file}: undefined ${match[1]}`); } }
   for (const dir of ['pages', 'components', 'styles']) inspect(dir);
   for (const page of app.pages) {

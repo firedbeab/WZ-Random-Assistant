@@ -82,3 +82,5 @@
   25% { transform: translateY(var(--lift)) rotate(var(--tilt)) scale(1.06); }
   75% { transform: translateY(var(--lift)) rotate(calc(var(--tilt) * -1)) scale(1.06); }
 }
+
+.home-page { padding-bottom:var(--keyboard-page-space, 0px); }

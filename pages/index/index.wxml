@@ -40,25 +40,25 @@
         <view class="field-group">
           <text class="field-label">本周验证码</text>
           <view class="input-shell {{focusedField === 'weeklyCode' ? 'is-focused' : ''}}">
-            <input class="form-input num" placeholder-class="home-placeholder" placeholder="输入本周公布的验证码" value="{{weeklyCode}}" data-field="weeklyCode" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="20" aria-label="本周验证码"  cursor-spacing="24" adjust-position="{{true}}" />
+            <input class="form-input num" placeholder-class="home-placeholder" placeholder="输入本周公布的验证码" value="{{weeklyCode}}" data-field="weeklyCode" id="keyboard-weeklyCode" data-keyboard-target="#keyboard-weeklyCode" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="20" aria-label="本周验证码"  cursor-spacing="24" adjust-position="{{true}}" />
           </view>
         </view>
         <view class="field-group">
           <text class="field-label">歌名</text>
           <view class="input-shell {{focusedField === 'title' ? 'is-focused' : ''}}">
-            <input class="form-input" placeholder-class="home-placeholder" placeholder="例如：稻香" value="{{title}}" data-field="title" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="50" aria-label="歌名"  cursor-spacing="24" adjust-position="{{true}}" />
+            <input class="form-input" placeholder-class="home-placeholder" placeholder="例如：稻香" value="{{title}}" data-field="title" id="keyboard-title" data-keyboard-target="#keyboard-title" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="50" aria-label="歌名"  cursor-spacing="24" adjust-position="{{true}}" />
           </view>
         </view>
         <view class="field-group">
           <text class="field-label">歌手 / 来源</text>
           <view class="input-shell {{focusedField === 'remark' ? 'is-focused' : ''}}">
-            <input class="form-input" placeholder-class="home-placeholder" placeholder="例如：周杰伦" value="{{remark}}" data-field="remark" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="50" aria-label="歌手或来源"  cursor-spacing="24" adjust-position="{{true}}" />
+            <input class="form-input" placeholder-class="home-placeholder" placeholder="例如：周杰伦" value="{{remark}}" data-field="remark" id="keyboard-remark" data-keyboard-target="#keyboard-remark" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="50" aria-label="歌手或来源"  cursor-spacing="24" adjust-position="{{true}}" />
           </view>
         </view>
         <view class="field-group">
           <text class="field-label">特殊备注<text class="optional-label">选填</text></text>
           <view class="input-shell {{focusedField === 'specialNote' ? 'is-focused' : ''}}">
-            <input class="form-input" placeholder-class="home-placeholder" placeholder="例如：希望播放现场版" value="{{specialNote}}" data-field="specialNote" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="50" aria-label="特殊备注，选填"  cursor-spacing="24" adjust-position="{{true}}" />
+            <input class="form-input" placeholder-class="home-placeholder" placeholder="例如：希望播放现场版" value="{{specialNote}}" data-field="specialNote" id="keyboard-specialNote" data-keyboard-target="#keyboard-specialNote" bindinput="onInput" bindfocus="onFieldFocus" bindblur="onFieldBlur" maxlength="50" aria-label="特殊备注，选填"  cursor-spacing="24" adjust-position="{{true}}" />
           </view>
         </view>
         <button class="primary-button {{loading ? 'is-loading' : ''}}" bindtap="submitRequest" disabled="{{loading}}" hover-class="primary-pressed">{{loading ? '正在提交…' : '提交本周点歌'}}</button>

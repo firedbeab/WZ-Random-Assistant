@@ -1,8 +1,15 @@
 const theme = require('../../utils/theme');
 const colors = require('../../utils/color-palette');
+// RGB hex accepts six digits, with an optional leading #. The theme module
+// continues to store the canonical #rrggbb form.
+function inputColor(value) {
+  if (typeof value !== 'string') return '';
+  const clean = value.trim();
+  return colors.normalize(clean[0] === '#' ? clean : '#' + clean);
+}
 Component(theme.component({
   properties: { value: { type: String, value: '#28764f', observer(value) { if (colors.normalize(value) && value !== this.data.hex) this.applyHex(value); } } },
-  data: { hex: '#28764f', hue: 150, hueColor: '#00ff80', sat: 66, val: 46, field: '#28764f', focused: false },
+  data: { hex: '#28764f', hue: 150, hueColor: '#00ff80', sat: 66, val: 46, field: '#28764f', focused: false, invalid: false },
   lifetimes: { attached() { this.applyHex(this.properties.value); }, detached() { clearTimeout(this._changeTimer); } },
   methods: {
     applyHex(value) { const hex = colors.normalize(value); if (!hex) return; const hsv = colors.hexToHsv(hex); this._hsv = hsv; this.setData({ hex, field: hex, hue: hsv.h, hueColor: colors.hsvToHex(hsv.h, 1, 1), sat: hsv.s * 100, val: (1 - hsv.v) * 100 }); },
@@ -23,8 +30,8 @@ Component(theme.component({
     move(e) { if (e.touches && e.touches.length === 1) this.movePoint(e.touches[0]); },
     end() { if (this._kind) this.emitChange(true); this._kind = null; this._rect = null; },
     movePoint(touch) { const r = this._rect; if (!r || !this._kind || !r.width || !r.height) return; const x = Math.max(0, Math.min(1, (touch.clientX - r.left) / r.width)), y = Math.max(0, Math.min(1, (touch.clientY - r.top) / r.height)); this.commit(this._kind === 'hue' ? { ...this._hsv, h: Math.min(359.99, x * 360) } : { ...this._hsv, s: x, v: 1 - y }); },
-    input(e) { this.setData({ field: e.detail.value }); const value = colors.normalize(e.detail.value); if (value) { this.applyHex(value); this.emitChange(true); } },
-    focus() { this.setData({ focused: true }); },
-    blur() { this.setData({ focused: false }); const value = colors.normalize(this.data.field); if (value) { this.applyHex(value); this.emitChange(true); } else this.setData({ field: this.data.hex }); }
+    input(e) { this.setData({ field: e.detail.value, invalid: false }); const value = inputColor(e.detail.value); if (value) { this.applyHex(value); this.emitChange(true); } },
+    focus(e) { this.setData({ focused: true }); this.triggerEvent('keyboardfocus', { height: e.detail && e.detail.height || 0 }); },
+    blur() { this.setData({ focused: false }); this.triggerEvent('keyboardblur'); const value = inputColor(this.data.field); if (value) { this.applyHex(value); this.emitChange(true); } else this.setData({ invalid: true }); }
   }
 }));

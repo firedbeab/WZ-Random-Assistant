@@ -14,7 +14,7 @@
   <!-- 输入区域 -->
   <view class="input-group">
     <input
-      class="code-input"
+      class="code-input" id="keyboard-login" data-keyboard-target="#keyboard-login" bindfocus="onKeyboardFieldFocus" bindblur="onKeyboardFieldBlur"
       placeholder-class="form-placeholder"
       type="text"
       placeholder="请输入通行码"
