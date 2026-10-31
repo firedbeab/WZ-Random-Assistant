@@ -21,7 +21,7 @@ function playlistPresentation(schedule, weekKey) {
     const date = dateAt(index + 1);
     const source = schedule && schedule[`day${index + 1}`];
     const songs = (Array.isArray(source) ? source : []).filter(song => song && typeof song.song_name === 'string' && song.song_name).map((song, i) => ({
-      key: `${index + 1}-${i}`, number: i + 1,
+      key: `${index + 1}-${i}`, number: i + 1, likeRow: `${index + 1}-${source.indexOf(song)}`,
       title: song.song_name, singer: typeof song.singer === 'string' ? song.singer : '',
       note: typeof song.special_note === 'string' ? song.special_note : ''
     }));

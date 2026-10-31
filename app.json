@@ -12,7 +12,8 @@
     "pages/my/index",
     "pages/feedback/index",
     "pages/admin/feedback",
-    "pages/feedback/history"
+    "pages/feedback/history",
+    "pages/likes/index"
   ],
   "window": {
     "navigationBarTextStyle": "@navigationBarTextStyle",

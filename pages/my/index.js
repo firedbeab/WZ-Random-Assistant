@@ -24,6 +24,7 @@ Page(theme.page(feedback.page({
       { id: 'wzred', label: 'WZ红', color: colors.PRESETS.wzred }]
   },
   ...community.sheetMethods,
+  goLikes() { wx.navigateTo({url:'/pages/likes/index'}); },
   onLoad() {
     this._alive = true;
     const cached = snapshots.get(cacheKey());

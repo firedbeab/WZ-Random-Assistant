@@ -92,6 +92,8 @@ function iconSources(tokens) {
     appearance: svg('<circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 0 0 14V3Z" fill="'+tokens.accent+'" stroke="none"/>', tokens.accent),
     feedback: svg('<path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-4 2v-2.5A1.5 1.5 0 0 1 2.5 13V6A1.5 1.5 0 0 1 4 4.5Z"/><path d="M6 8h8M6 11h5"/>', tokens.accent),
     about: svg('<circle cx="10" cy="10" r="7.5"/><path d="M10 9v4.5M10 6.5h.01"/>', tokens.accent),
+    heart: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z"/>', tokens['text-3']),
+    heartFilled: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z" fill="'+tokens.accent+'"/>', tokens.accent),
     musicList: svg('<path d="M3 4h8M3 8h6M3 12h4M13 13V5l4-1v8"/><ellipse cx="11" cy="14" rx="2" ry="1.5"/><ellipse cx="15" cy="13" rx="2" ry="1.5"/>', tokens.accent),
     history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent),
     messageSuccess: svg('<circle cx="10" cy="10" r="8" fill="'+tokens.accent+'" stroke="'+tokens.accent+'"/><path d="m6 10 2.5 2.5 5-5" stroke="'+tokens['on-accent']+'"/>', tokens.accent),

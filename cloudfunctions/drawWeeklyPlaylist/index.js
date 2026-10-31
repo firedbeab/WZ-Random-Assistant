@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const {cleanupSchedules}=require('./scheduleRetention');
 const crypto = require('crypto');
 const { createDataScope, canUseTestData } = require('./dataScope');
 
@@ -255,16 +256,17 @@ exports.main = async (event, context) => {
   console.log(`[抽取任务] 启动 | 周标识: ${weekKey}`);
 
   try {
-    // 0. 清理过期排期数据：保留本周 + 前2周，更早的全部删除
+    // 0. 已发布歌单保留六个月；未发布排期/投稿仍按本周+前两周。
     const keepKeys = [weekKey, ...getHistoryKeys()];
     // 0.1 清理过期提交；0.2 清理两周前已消费订阅。三个集合互不依赖，并行处理。
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const cleanupResults = await Promise.allSettled([
-      removeAllMatching(schedulesCollection, { week_key: _.nin(keepKeys) }),
+      cleanupSchedules({db,command:_,collection:schedulesCollection,keepKeys,fetchAll,removeAllMatching}),
       removeAllMatching(submissionsCollection, { week_key: _.nin(keepKeys) }),
-      removeAllMatching(subscriptionsCollection, { consumed: true, created_at: _.lt(twoWeeksAgo) })
+      removeAllMatching(subscriptionsCollection, { consumed: true, created_at: _.lt(twoWeeksAgo) }),
+      removeAllMatching(scope.collection('song_likes'), { expires_at: _.lte(Date.now()) })
     ]);
-    const cleanupLabels = ['过期排期', '过期提交请求', '已消费订阅记录'];
+    const cleanupLabels = ['过期排期', '过期提交请求', '已消费订阅记录', '过期点赞记录'];
     cleanupResults.forEach((result, index) => {
       if (result.status === 'rejected') {
         console.warn(`[清理] ${cleanupLabels[index]}清理失败，本周抽取继续:`, result.reason?.message || '未知错误');

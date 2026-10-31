@@ -1,0 +1,120 @@
+{
+  "verifiedAtUtc": "2026-10-31T23:22:32.013Z",
+  "backupCommit": "5e31ce2",
+  "frontendUploaded": false,
+  "functions": {
+    "drawWeeklyPlaylist": {
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeoutSeconds": 60,
+      "readback": {
+        "config.json": {
+          "matchesLocal": true,
+          "localSha256": "3d609844180689d518491bebefbc2d874ae35b76baacf4af83ac09d7cdbbf553",
+          "downloadedSha256": "3d609844180689d518491bebefbc2d874ae35b76baacf4af83ac09d7cdbbf553"
+        },
+        "dataScope.js": {
+          "matchesLocal": true,
+          "localSha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+          "downloadedSha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+        },
+        "index.js": {
+          "matchesLocal": true,
+          "localSha256": "9f4d029f90ea053943c58e208c71019bfe8ae64c31e6db8516364e9d2c81be53",
+          "downloadedSha256": "9f4d029f90ea053943c58e208c71019bfe8ae64c31e6db8516364e9d2c81be53"
+        },
+        "package.json": {
+          "matchesLocal": true,
+          "localSha256": "32d313ec5edd2ce5bdb84277bb2cb601e11c8295a7404aa5a2d091c27774ab92",
+          "downloadedSha256": "32d313ec5edd2ce5bdb84277bb2cb601e11c8295a7404aa5a2d091c27774ab92"
+        },
+        "scheduleRetention.js": {
+          "matchesLocal": true,
+          "localSha256": "5f535cc7ef89ffbcd9d0e81be74ee475da0f39b1d7e14942e89179c60c659a14",
+          "downloadedSha256": "5f535cc7ef89ffbcd9d0e81be74ee475da0f39b1d7e14942e89179c60c659a14"
+        }
+      }
+    },
+    "manageSongLikes": {
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeoutSeconds": 3,
+      "readback": {
+        "dataScope.js": {
+          "matchesLocal": true,
+          "localSha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+          "downloadedSha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+        },
+        "index.js": {
+          "matchesLocal": true,
+          "localSha256": "4810e1cbda09d744175be444c407683c1263481f1cc5d34aaa8e762c478825f9",
+          "downloadedSha256": "4810e1cbda09d744175be444c407683c1263481f1cc5d34aaa8e762c478825f9"
+        },
+        "model.js": {
+          "matchesLocal": true,
+          "localSha256": "2cf2f8df8c65eedb006ace7ebbb387ce29111a1ae5d879875acdbf3202a6fa9b",
+          "downloadedSha256": "2cf2f8df8c65eedb006ace7ebbb387ce29111a1ae5d879875acdbf3202a6fa9b"
+        },
+        "package.json": {
+          "matchesLocal": true,
+          "localSha256": "db00d92d6f7f861c03444a924f9b16d95b8fb7b643849dc3fea605b2a7c29b11",
+          "downloadedSha256": "db00d92d6f7f861c03444a924f9b16d95b8fb7b643849dc3fea605b2a7c29b11"
+        },
+        "service.js": {
+          "matchesLocal": true,
+          "localSha256": "ae6f491ddcdbb1898d9f3d68eba54c33cce20c17cd0ab6184e320fda1c865a08",
+          "downloadedSha256": "ae6f491ddcdbb1898d9f3d68eba54c33cce20c17cd0ab6184e320fda1c865a08"
+        }
+      }
+    }
+  },
+  "collections": {
+    "song_likes": {
+      "clientReadDenied": true,
+      "indexes": [
+        "owner_schedule_v1",
+        "owner_month_v1",
+        "expires_v1"
+      ],
+      "indexesReadBack": true
+    },
+    "test_song_likes": {
+      "clientReadDenied": true,
+      "indexes": [
+        "owner_schedule_v1",
+        "owner_month_v1",
+        "expires_v1"
+      ],
+      "indexesReadBack": true
+    }
+  },
+  "rollback": {
+    "sourceCommit": "5e31ce2",
+    "beforeIndexSha256": "10ed366a0f88b941736da24f53d83d55df4e6e86d5d258a3de1eabf480916ea4",
+    "localDownloadedCopy": ".cache/likes-deploy-before/drawWeeklyPlaylist",
+    "onlineBeforeMatchesBackup": true,
+    "unchanged": [
+      "dataScope.js",
+      "config.json",
+      "package dependencies"
+    ],
+    "packageMetadataChange": {
+      "licenseFrom": "ISC",
+      "licenseTo": "MIT",
+      "reason": "existing repository MIT metadata included by full deployment"
+    }
+  },
+  "verification": {
+    "testsPassed": 150,
+    "productionBusinessWritesPerformed": false,
+    "liveV18ClientEndToEndTestPerformed": false,
+    "testDomain": [
+      "real getSchedule",
+      "setLike 0 -> 1",
+      "listMine and detail UI",
+      "cancel from detail 1 -> 0",
+      "personal history cleared"
+    ],
+    "mobileDevicesTested": false
+  }
+}

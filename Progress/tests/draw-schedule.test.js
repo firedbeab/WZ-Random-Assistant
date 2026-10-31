@@ -17,12 +17,16 @@ function loadDrawFn(seed) {
     in: value => ({ __op: 'in', value }),
     nin: value => ({ __op: 'nin', value }),
     lt: value => ({ __op: 'lt', value }),
+    lte: value => ({ __op: 'lte', value }),
+    neq: value => ({ __op: 'neq', value }),
     eq: value => ({ __op: 'eq', value })
   };
   const matches = (row, query) => Object.entries(query || {}).every(([key, value]) => {
     if (value && value.__op === 'in') return value.value.includes(row[key]);
     if (value && value.__op === 'nin') return !value.value.includes(row[key]);
     if (value && value.__op === 'lt') return String(row[key]) < String(value.value);
+    if (value && value.__op === 'lte') return row[key] <= value.value;
+    if (value && value.__op === 'neq') return row[key] !== value.value;
     if (value && value.__op === 'eq') return row[key] === value.value;
     return row[key] === value;
   });
@@ -93,6 +97,7 @@ function loadDrawFn(seed) {
   const moduleObj = { exports: {} };
   const context = {
     require(name) {
+      if (name === './scheduleRetention') return require('../../cloudfunctions/drawWeeklyPlaylist/scheduleRetention');
       if (name.includes('dataScope')) {
         return { createDataScope: () => scope, canUseTestData: async () => true, isProductionSuperadmin: async () => false };
       }

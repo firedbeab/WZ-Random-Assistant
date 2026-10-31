@@ -1,5 +1,6 @@
 {
   "usingComponents": {
+    "song-like": "../../components/song-like/song-like",
     "privacy-popup": "../../components/privacy-popup/privacy-popup",
     "app-navigation": "../../components/app-navigation/app-navigation",
     "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"

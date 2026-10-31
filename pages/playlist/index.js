@@ -18,6 +18,8 @@ Page(theme.page(feedback.notifications({
     subscribed: false,
     // 周次标签：0=本周, 1=上周, 2=上上周
     activeTab: 0,
+    likesEpoch: 0,
+    historical: false,
     renderedWeeks: [0],
     tabIndicatorReady: false,
     tabIndicatorStyle: '',
@@ -29,11 +31,12 @@ Page(theme.page(feedback.notifications({
   },
 
   onLoad(options = {}) {
+    this._historyWeek = typeof options.week === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(options.week) ? options.week : '';
     const activeTab = ['1', '2'].includes(options.tab) ? Number(options.tab) : 0;
-    this._prefetchEnabled = true;
+    this._prefetchEnabled = !this._historyWeek;
     this._prefetchStarted = false;
     this._playlistUnloaded = false;
-    this.setData({ activeTab, renderedWeeks: [activeTab] });
+    this.setData({ activeTab, renderedWeeks: [activeTab], historical: !!this._historyWeek });
     this.loadWeekPlaylist(activeTab, false);
     this.checkSubStatus();
   },
@@ -73,14 +76,17 @@ Page(theme.page(feedback.notifications({
   },
 
   onPullDownRefresh() {
+    this.setData({likesEpoch:Date.now()});
     this.loadWeekPlaylist(this.data.activeTab, true)
       .then(() => wx.stopPullDownRefresh());
   },
+  onShow() { if(this.data.schedule)this.setData({likesEpoch:Date.now()}); },
 
   // 计算指定周偏移的 week_key
   // "最新"对应最近一个已过去的周日（抽取发生的那天）
   // 周一~周六 → 上一个周日；周日当天 → 本周日
   getWeekKeyByOffset(offset) {
+    if(this._historyWeek)return this._historyWeek;
     const now = new Date();
     const bjTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
     const day = bjTime.getUTCDay(); // 0=周日 ... 6=周六
@@ -98,6 +104,7 @@ Page(theme.page(feedback.notifications({
 
   // 点击和滑动复用同一读取路径，保留缓存校验及迟到响应保护。
   selectWeek(value) {
+    if(this._historyWeek)return;
     if (!Number.isInteger(value) || value < 0 || value >= this.data.tabs.length || value === this.data.activeTab) return;
     // 只渲染选中期次；换 key 重启单段淡入，避免原生多步动画停在透明状态。
     this.setData({ activeTab: value, renderedWeeks: [value], ...this.tabIndicatorPatch(value) });
@@ -178,6 +185,7 @@ Page(theme.page(feedback.notifications({
   retryLoad() {
     return this.loadWeekPlaylist(this.data.activeTab, true);
   },
+  onLikeNotice(e) { feedback.showToast(this,{title:e.detail.message,duration:4000}); },
 
   async fetchPublishedSchedule(weekKey) {
     const res = this.data.isTestMode
