@@ -71,8 +71,18 @@ function getTokens(mode = 'light', palette = 'green', customColor = '#28764f') {
   const resolved = mode === 'dark' ? 'dark' : 'light';
   const seed = palette === 'custom' ? colors.normalize(customColor) : colors.PRESETS[palette];
   const neutrals = palette !== 'green' && seed ? { ...NEUTRALS[resolved], ...colors.neutralTint(resolved, seed) } : NEUTRALS[resolved];
-  const brand = palette !== 'green' && seed ? colors.generate(seed, resolved, neutrals) : PALETTES.green[resolved];
-  return { ...neutrals, ...brand,
+  const paletteColors = palette !== 'green' && seed ? colors.generate(seed, resolved, neutrals) : PALETTES.green[resolved];
+  // Light cards stay white. Carry the chosen hue through the page background.
+  const brand = resolved === 'light' ? {...paletteColors,'gradient-open-start':colors.mix(neutrals.bg,paletteColors.accent,.20),'gradient-open-mid':colors.mix(neutrals.bg,paletteColors.accent,.075)} : paletteColors;
+  const readableNeutrals = {...neutrals};
+  if (resolved === 'light') for (const key of ['text-2','text-3','placeholder']) {
+    for (let step=0;step<=100;step++) { const value=colors.mix(neutrals[key],'#000000',step/100);if(colors.contrast(value,brand['gradient-open-start'])>=4.5){readableNeutrals[key]=value;break;} }
+  }
+  const avatarSurface=colors.mix(neutrals.surface,brand.accent,.22);
+  let avatarText=brand.accent;
+  for(let step=0;step<=100;step++){const value=colors.mix(brand.accent,resolved==='dark'?'#ffffff':'#000000',step/100);if(colors.contrast(value,avatarSurface)>=4.5){avatarText=value;break;}}
+  return { ...readableNeutrals, ...brand,
+    'avatar-surface':avatarSurface,'on-avatar':avatarText,
     'gradient-closed-start': brand['gradient-open-start'], 'gradient-closed-mid': brand['gradient-open-mid'],
     'input-focused': colors.mix(resolved === 'dark' ? neutrals['surface-2'] : neutrals.surface, brand.accent, resolved === 'dark' ? .07 : .055), ...STATES[resolved] };
 }
@@ -82,7 +92,7 @@ function cssVariables(tokens) {
 function iconSources(tokens) {
   const svg = (body, color) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`);
   const bell = '<path d="M15 7a5 5 0 0 0-10 0c0 6-2 6-2 7h14c0-1-2-1-2-7M8 17h4"/>';
-  return {
+  const icons = {
     edit: svg('<path d="m12.5 3.5 4 4M3 17l4.5-1 10-10a2.8 2.8 0 0 0-4-4l-10 10L3 17Z"/>', tokens['text-2']),
     back: svg('<path d="m12 4-6 6 6 6"/>', tokens['text-1']),
     chevron: svg('<path d="m5.5 7.5 4.5 4.5 4.5-4.5"/>', tokens['text-3']),
@@ -92,6 +102,7 @@ function iconSources(tokens) {
     appearance: svg('<circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 0 0 14V3Z" fill="'+tokens.accent+'" stroke="none"/>', tokens.accent),
     feedback: svg('<path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-4 2v-2.5A1.5 1.5 0 0 1 2.5 13V6A1.5 1.5 0 0 1 4 4.5Z"/><path d="M6 8h8M6 11h5"/>', tokens.accent),
     about: svg('<circle cx="10" cy="10" r="7.5"/><path d="M10 9v4.5M10 6.5h.01"/>', tokens.accent),
+    journal: svg('<circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1.2"/><path d="M10 1v2M10 17v2"/>', tokens.accent),
     heart: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z"/>', tokens['text-3']),
     heartFilled: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z" fill="'+tokens.accent+'"/>', tokens.accent),
     musicList: svg('<path d="M3 4h8M3 8h6M3 12h4M13 13V5l4-1v8"/><ellipse cx="11" cy="14" rx="2" ry="1.5"/><ellipse cx="15" cy="13" rx="2" ry="1.5"/>', tokens.accent),
@@ -100,6 +111,12 @@ function iconSources(tokens) {
     messageInfo: svg('<circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h.01"/>', tokens['text-2']),
     person: svg('<circle cx="10" cy="6" r="3"/><path d="M4 17v-2a6 6 0 0 1 12 0v2"/>', tokens.accent)
   };
+  // Explicit intrinsic size avoids low-resolution decoding on large wx:image.
+  for (const key of ['journal','heartFilled','about','feedback']) {
+    const body=decodeURIComponent(icons[key].split(',')[1]).replace('<svg ','<svg width="512" height="512" ');
+    icons[key+'Decor']='data:image/svg+xml,'+encodeURIComponent(body);
+  }
+  return icons;
 }
 function getState() {
   const resolved = preference.mode === 'system' ? systemMode : preference.mode;

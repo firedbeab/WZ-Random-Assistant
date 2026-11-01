@@ -62,3 +62,17 @@ test('六个月仅延长已发布歌单，候补和最近两期判断不变',asy
  assert(f.rows.has('schedules/older'));assert(!f.rows.has('schedules/expired'));assert(!f.rows.has('schedules/pending'));
  assert.equal(retention.expiry('2026-08-30'),Date.UTC(2027,1,27,16));assert.equal(model.expiresAt('2026-08-30'),retention.expiry('2026-08-30'));
 });
+
+test('本人投稿历史按月份与身份读取，只以正式发布及原投稿ID确认入选',async()=>{
+ const f=fixture();f.seed('submissions','a',{user_id:'alice',song_name:'稻香',singer:'周杰伦',special_note:'原版',week_key:'2026-10-25',submit_time:new Date('2026-10-25T02:00:00Z'),status:'selected'});
+ f.seed('submissions','private',{user_id:'bob',song_name:'别人的歌',week_key:'2026-10-25',submit_time:new Date('2026-10-25T02:00:00Z')});
+ const r=await f.call('listSubmissions',{month:'2026-10',owner:'bob'});assert.equal(r.success,true);assert.equal(r.data.items.length,1);assert.equal(r.data.items[0].note,'原版');assert.equal(r.data.items[0].placement.weekKey,'2026-10-25');assert(!JSON.stringify(r).includes('alice'));assert(!JSON.stringify(r).includes('别人的歌'));
+ f.rows.get('schedules/schedule').status='pending';const draft=await f.call('listSubmissions',{month:'2026-10'});assert.equal(draft.data.items[0].placement,null);assert.equal(draft.data.items[0].statusLabel,'等待结果');
+ assert.equal((await f.call('listSubmissions',{month:'2026-10',_testMode:true})).code,'TEST_ACCESS_DENIED');
+});
+test('投稿历史保存六个月不延长候补，overflow仍能查看且过期不可见',async()=>{
+ const f=fixture();f.seed('submissions','over',{user_id:'alice',song_name:'超额记录',week_key:'2026-08-02',submit_time:new Date('2026-08-02T02:00:00Z'),status:'overflow'});f.seed('submissions','expired',{user_id:'alice',song_name:'到期记录',week_key:'2026-04-26',submit_time:new Date('2026-04-26T02:00:00Z'),status:'carryover'});
+ assert.equal((await f.call('listSubmissions',{month:'2026-08'})).data.items[0].statusLabel,'未进入候选');assert.equal((await f.call('listSubmissions',{month:'2026-04'})).data.items.length,0);
+ const fetchAll=async(n,w)=>(await f.db.collection(n).where(w).get()).data;
+ await retention.cleanupSubmissions({db:f.db,command:f.db.command,collection:'submissions',fetchAll,now:Date.UTC(2026,9,31)});assert(f.rows.has('submissions/over'));assert(!f.rows.has('submissions/expired'));
+});

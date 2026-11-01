@@ -18,3 +18,6 @@
 .my-sheet-scroll.color-open { height:var(--sheet-scroll-height, 300px); }
 
 .my-name-row { display:inline-flex; max-width:100%; align-items:baseline; justify-content:flex-start; min-height:76rpx; margin:0; padding:0; background:transparent; color:var(--text-1); text-align:left; line-height:1.6; }.my-name-row[disabled]:not([type]) { background:transparent; color:var(--text-1); }.my-edit-icon { flex:none; width:22rpx; height:22rpx; align-self:flex-end; margin:0 4rpx 18rpx 2rpx; opacity:.8; }
+
+/* Fit both profile text lines within the rounded avatar visual bounds. */
+.my-avatar{width:112rpx;height:112rpx;border-radius:30rpx;background:var(--avatar-surface);color:var(--on-avatar)}.my-profile>.c-grow{display:flex;flex-direction:column;justify-content:center;gap:0}.my-name-row{min-height:64rpx;line-height:1.25}.my-alias{line-height:1.25}.my-profile .c-caption{line-height:1.35;margin-top:0}.my-edit-icon{width:20rpx;height:20rpx;margin-bottom:10rpx}

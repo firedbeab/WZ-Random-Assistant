@@ -1,0 +1,109 @@
+{
+  "verifiedAtUtc": "2026-11-01T23:23:16.253Z",
+  "backupCommit": "f12b954",
+  "frontendUploaded": false,
+  "functions": {
+    "manageSongLikes": {
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeoutSeconds": 3,
+      "method": "full",
+      "readback": {
+        "dataScope.js": {
+          "matchesLocal": true,
+          "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+        },
+        "history.js": {
+          "matchesLocal": true,
+          "sha256": "0a36ca6f4de9e48fbfdb2f80670d0b0c28a9b2b98db0bd57536d7f28b71cea51"
+        },
+        "index.js": {
+          "matchesLocal": true,
+          "sha256": "4810e1cbda09d744175be444c407683c1263481f1cc5d34aaa8e762c478825f9"
+        },
+        "model.js": {
+          "matchesLocal": true,
+          "sha256": "2cf2f8df8c65eedb006ace7ebbb387ce29111a1ae5d879875acdbf3202a6fa9b"
+        },
+        "package.json": {
+          "matchesLocal": true,
+          "sha256": "db00d92d6f7f861c03444a924f9b16d95b8fb7b643849dc3fea605b2a7c29b11"
+        },
+        "service.js": {
+          "matchesLocal": true,
+          "sha256": "ad7324a177309c874e3c4f62899a6535a3ede7326594cc18d46870d1963b3d8b"
+        }
+      }
+    },
+    "drawWeeklyPlaylist": {
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeoutSeconds": 60,
+      "method": "full",
+      "readback": {
+        "config.json": {
+          "matchesLocal": true,
+          "sha256": "3d609844180689d518491bebefbc2d874ae35b76baacf4af83ac09d7cdbbf553"
+        },
+        "dataScope.js": {
+          "matchesLocal": true,
+          "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+        },
+        "index.js": {
+          "matchesLocal": true,
+          "sha256": "948cf463af89eaa2b4ceaf76c007018c0d11888ddb0c81d927328e850cc96464"
+        },
+        "package.json": {
+          "matchesLocal": true,
+          "sha256": "32d313ec5edd2ce5bdb84277bb2cb601e11c8295a7404aa5a2d091c27774ab92"
+        },
+        "scheduleRetention.js": {
+          "matchesLocal": true,
+          "sha256": "0957108e1854fc5cc12ac845c20e72896c8f97d319d76f8e98de19a473ed0339"
+        }
+      }
+    },
+    "adminAuditPlaylist": {
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeoutSeconds": 60,
+      "method": "incremental:index.js",
+      "readback": {
+        "config.json": {
+          "matchesLocal": true,
+          "sha256": "3d609844180689d518491bebefbc2d874ae35b76baacf4af83ac09d7cdbbf553"
+        },
+        "dataScope.js": {
+          "matchesLocal": true,
+          "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+        },
+        "index.js": {
+          "matchesLocal": true,
+          "sha256": "5d65d4b64e70f1806857e2a94f12c9fb80c8e661d121d958d8f6485ebb8f313f"
+        },
+        "package.json": {
+          "preservedOnlineBaseline": true,
+          "sha256": "d1c6321535da87268b67adcdd41e63936652e382d2d32b4b09864add034221f3"
+        }
+      }
+    }
+  },
+  "indexes": {
+    "submissions": "user_history_month_v1",
+    "test_submissions": "user_history_month_v1"
+  },
+  "verification": {
+    "testsPassed": 155,
+    "officialWxmlFiles": 23,
+    "officialWxssFiles": 28,
+    "productionBusinessWritesPerformed": false,
+    "liveV18DeviceTestPerformed": false,
+    "sourceBytes": 632460,
+    "sourceFiles": 119
+  },
+  "rollback": {
+    "localDownloadedCopy": ".cache/journal-before",
+    "sourceCommit": "f12b954",
+    "notes": "Deployed source baseline equals backup, except existing admin package license metadata (ISC online/MIT repository), preserved by incremental deployment."
+  }
+}

@@ -38,3 +38,11 @@ test('非绿色深色主题的背景和卡片体现所选色相，灰色种子�
     const [r,g,b]=channel(theme.getTokens('dark','custom',seed).surface);assert(Math.max(r,g,b)-Math.min(r,g,b)<=3);
   }
 });
+
+test('浅色卡片保持白色，增强背景渐变后辅助文字仍清楚，深色配色不改变',()=>{
+ for(const palette of Object.keys(colors.PRESETS).concat('custom')){
+  const t=theme.getTokens('light',palette,'#ff00ff');assert.equal(t.surface,'#ffffff');assert.equal(t['feedback-surface'],'#ffffff');
+  for(const text of ['text-1','text-2','text-3','placeholder'])assert(colors.contrast(t[text],t['gradient-open-start'])>=4.5,palette+' '+text);
+  for(const mode of ['light','dark']){const avatar=theme.getTokens(mode,palette,'#ff00ff');assert(colors.contrast(avatar['on-avatar'],avatar['avatar-surface'])>=4.5,palette+' avatar');assert.notEqual(avatar['avatar-surface'],avatar.bg);}
+ }
+});

@@ -55,7 +55,7 @@ function showModal(page, options = {}) {
       _adminDialogPlaceholder: options.placeholderText || '请输入', _adminDialogInput: options.inputValue || '',
       _adminDialogCancel: options.showCancel !== false, _adminDialogConfirmText: options.confirmText || '确定',
       _adminDialogCancelText: options.cancelText || '取消', _adminDialogChoices: options.choices || [],
-      _adminDialogDestructive: /删除|清空|撤回|撤销|放弃|强制关闭|移除/.test(options.title || ''),
+      _adminDialogDestructive: options.danger === true || /删除|清空|撤回|撤销|放弃|强制关闭|移除/.test(options.title || ''),
       _adminDialogDate: false, _adminDateMoving: false,
       _adminDialogChoiceIndex: options.selectedIndex === undefined ? -1 : options.selectedIndex });
   });

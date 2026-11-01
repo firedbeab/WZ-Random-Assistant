@@ -1,5 +1,5 @@
 const cloud = require('wx-server-sdk');
-const {cleanupSchedules}=require('./scheduleRetention');
+const {cleanupSchedules,cleanupSubmissions}=require('./scheduleRetention');
 const crypto = require('crypto');
 const { createDataScope, canUseTestData } = require('./dataScope');
 
@@ -256,13 +256,13 @@ exports.main = async (event, context) => {
   console.log(`[抽取任务] 启动 | 周标识: ${weekKey}`);
 
   try {
-    // 0. 已发布歌单保留六个月；未发布排期/投稿仍按本周+前两周。
+    // 0. 已发布歌单和本人投稿保留六个月；候补范围仍为前两周。
     const keepKeys = [weekKey, ...getHistoryKeys()];
     // 0.1 清理过期提交；0.2 清理两周前已消费订阅。三个集合互不依赖，并行处理。
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const cleanupResults = await Promise.allSettled([
       cleanupSchedules({db,command:_,collection:schedulesCollection,keepKeys,fetchAll,removeAllMatching}),
-      removeAllMatching(submissionsCollection, { week_key: _.nin(keepKeys) }),
+      cleanupSubmissions({db,command:_,collection:submissionsCollection,fetchAll}),
       removeAllMatching(subscriptionsCollection, { consumed: true, created_at: _.lt(twoWeeksAgo) }),
       removeAllMatching(scope.collection('song_likes'), { expires_at: _.lte(Date.now()) })
     ]);

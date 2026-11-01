@@ -1,7 +1,7 @@
 <page-meta page-style="{{appearanceStyle}} {{viewportStyle}}" />
-<view class="info-page">
+<view class="info-page ornament-page">
   <app-navigation back parent="/pages/my/index" />
-  <view class="info-head">
+  <image class="page-ornament" src="{{themeIcons.aboutDecor}}" mode="aspectFit" aria-hidden="true" /><image class="page-ornament motif-edge" src="{{themeIcons.aboutDecor}}" mode="aspectFit" aria-hidden="true" /><view class="info-head ornament-head">
     <view class="info-heading-row"><text class="info-title">关于</text><appearance-toggle /></view>
     <text class="info-desc">了解工具，查看说明与管理入口。</text>
   </view>
@@ -14,6 +14,7 @@
     </view>
 
     <view class="info-surface entry-list">
+      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goFeedback"><view class="entry-text"><text class="entry-label">反馈中心</text><text class="entry-caption">使用反馈与功能投票</text></view><image class="info-chevron entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" /></button>
       <button class="info-button info-entry" hover-class="info-pressed" bindtap="goHelp">
         <view class="entry-text">
           <text class="entry-label">使用说明</text>

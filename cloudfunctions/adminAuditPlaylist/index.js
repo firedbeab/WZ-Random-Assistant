@@ -626,22 +626,8 @@ exports.main = async (event, context) => {
       console.warn('[发布] 转换历史候选失败，不影响推送:', cleanupErr.message || '');
     }
 
-    // overflow 不参与抽取，发布完成后即可清理；失败不影响发布结果。
-    try {
-      let removed = 0;
-      while (true) {
-        const overflowRes = await db.collection(submissionsCollection)
-          .where({ week_key: weekKey, status: 'overflow' }).limit(100).get();
-        if (overflowRes.data.length === 0) break;
-        const ids = overflowRes.data.map(item => item._id);
-        const result = await db.collection(submissionsCollection)
-          .where({ _id: _.in(ids) }).remove();
-        removed += result.stats && result.stats.removed ? result.stats.removed : ids.length;
-      }
-      if (removed > 0) console.log(`[发布清理] 已删除 ${removed} 条 overflow`);
-    } catch (overflowErr) {
-      console.warn('[发布] 清理 overflow 失败，不影响发布:', overflowErr.message || '');
-    }
+    // overflow 不参与抽取，但仍是本人提交历史；与其它投稿一同保留六个月。
+    // 不在发布时删除，抽取/替补仍只查询 pending 和前两周 carryover。
 
     try {
       await notifyStudents(weekKey, scope);

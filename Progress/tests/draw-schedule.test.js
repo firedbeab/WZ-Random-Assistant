@@ -112,7 +112,9 @@ function loadDrawFn(seed) {
       if (name === 'crypto') return { randomInt: () => 1 };
       return {};
     },
-    module: moduleObj, exports: moduleObj.exports, console, Date, JSON, Object, Array, Number, String, Set, Math, Promise
+    module: moduleObj, exports: moduleObj.exports, console,
+    Date: class extends Date { constructor(...args) { super(...(args.length ? args : ['2026-11-01T04:00:00Z'])); } static now() { return Date.parse('2026-11-01T04:00:00Z'); } },
+    JSON, Object, Array, Number, String, Set, Math, Promise
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../cloudfunctions/drawWeeklyPlaylist/index.js'), 'utf8'), context);
   return { main: moduleObj.exports.main, state };

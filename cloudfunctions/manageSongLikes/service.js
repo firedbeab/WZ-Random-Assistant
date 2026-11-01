@@ -1,4 +1,5 @@
 const {hash,dateKey,recentWeeks,expiresAt,items}=require('./model');
+const {listSubmissions}=require('./history');
 const fail=(message,code='INVALID_INPUT')=>{const e=Error(message);e.code=code;throw e;};
 const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(id);
 function createService({db,createDataScope,canUseTestData,now=Date.now}){
@@ -12,6 +13,7 @@ function createService({db,createDataScope,canUseTestData,now=Date.now}){
   const view=(s,item,record)=>({id:item.id,row:item.row,title:item.title,singer:item.singer,count:count(s,item.id),liked:!!(record&&record.active),version:record&&record.version||0,interactive:interactive(s)&&!item.ambiguous});
   try{
    if(!await canUseTestData(db,owner,scope))fail('测试数据仅限测试账号访问','TEST_ACCESS_DENIED');
+   if(event.action==='listSubmissions')return {success:true,data:await listSubmissions({db,scope,owner,event,now:now()})};
    if(event.action==='getSchedule'){
     if(!validId(event.scheduleId))fail('歌单标识无效');
     const s=await read('schedules',event.scheduleId);if(!usable(s))fail('这期歌单已撤回或不在保留范围内','NOT_AVAILABLE');
