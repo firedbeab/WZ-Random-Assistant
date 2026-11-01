@@ -2,7 +2,7 @@
 <view class="info-page ornament-page">
   <app-navigation back parent="/pages/my/index" />
   <image class="page-ornament" src="{{themeIcons.aboutDecor}}" mode="aspectFit" aria-hidden="true" /><image class="page-ornament motif-edge" src="{{themeIcons.aboutDecor}}" mode="aspectFit" aria-hidden="true" /><view class="info-head ornament-head">
-    <view class="info-heading-row"><text class="info-title">关于</text><appearance-toggle /></view>
+    <view class="info-heading-row"><text class="info-title">关于</text></view>
     <text class="info-desc">了解工具，查看说明与管理入口。</text>
   </view>
 

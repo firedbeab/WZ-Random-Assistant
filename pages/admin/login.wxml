@@ -1,6 +1,5 @@
 <page-meta page-style="{{appearanceStyle}} {{viewportStyle}}" />
 <app-navigation back parent="/pages/about/index" />
-<view class="appearance-toolbar"><appearance-toggle /></view>
 <!-- pages/admin/login.wxml -->
 <view class="login-container">
 

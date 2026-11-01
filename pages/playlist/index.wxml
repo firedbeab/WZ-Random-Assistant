@@ -3,7 +3,7 @@
   <app-navigation back="{{true}}" />
   <view class="playlist-head">
     <text class="page-title">{{historical ? '历史歌单' : '每周歌单'}}</text>
-    <appearance-toggle />
+
     <view wx:if="{{subscribed}}" class="notify-status" aria-label="本周发布提醒已开启">
       <image class="notify-icon" src="{{themeIcons.bellMuted}}" mode="aspectFit" aria-hidden="true" />
       <text>本周已开启</text>

@@ -1,5 +1,11 @@
 {
-  "navigationBarTitleText": "反馈与投票管理", "enablePullDownRefresh": true,
-  "navigationBarTextStyle": "@navigationBarTextStyle", "navigationBarBackgroundColor": "@navigationBarBackgroundColor", "backgroundColor": "@backgroundColor", "backgroundTextStyle": "@backgroundTextStyle",
-  "usingComponents": { "appearance-toggle": "../../components/appearance-toggle/appearance-toggle", "privacy-popup": "../../components/privacy-popup/privacy-popup" }
+  "navigationBarTitleText": "反馈与投票管理",
+  "enablePullDownRefresh": true,
+  "navigationBarTextStyle": "@navigationBarTextStyle",
+  "navigationBarBackgroundColor": "@navigationBarBackgroundColor",
+  "backgroundColor": "@backgroundColor",
+  "backgroundTextStyle": "@backgroundTextStyle",
+  "usingComponents": {
+    "privacy-popup": "../../components/privacy-popup/privacy-popup"
+  }
 }

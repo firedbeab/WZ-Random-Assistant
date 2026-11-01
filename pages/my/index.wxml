@@ -1,7 +1,9 @@
 <page-meta page-style="{{appearanceStyle}} {{viewportStyle}} {{sheet || aliasVisible || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
-<view class="info-page community">
+<view class="info-page community ornament-page">
   <app-navigation id="pageNavigation" back parent="/pages/index/index" />
-  <view class="info-head compact-head"><view class="info-heading-row"><text class="info-title">我的</text><appearance-toggle id="pageAppearance" /></view></view>
+  <image class="page-ornament" src="{{themeIcons.personDecor}}" mode="aspectFit" aria-hidden="true" />
+  <image class="page-ornament motif-edge" src="{{themeIcons.personDecor}}" mode="aspectFit" aria-hidden="true" />
+  <view class="info-head ornament-head compact-head"><view class="info-heading-row"><text class="info-title">我的</text></view></view>
   <view class="c-content">
     <view class="my-profile c-row"><view class="my-avatar">WZ</view><view class="c-grow"><button class="my-name-row" bindtap="editAlias" disabled="{{!profileReady}}" aria-label="修改称呼"><text class="my-alias">{{alias}}</text><image class="my-edit-icon" src="{{themeIcons.edit}}" /></button><text class="c-caption">{{firstUseText}}</text></view></view>
     <view class="c-card my-week-card" aria-busy="{{loading}}">
@@ -24,7 +26,9 @@
 </view>
 <view wx:if="{{sheet}}" class="admin-drawer-mask c-sheet my-sheet {{sheetClosing ? 'drawer-closing' : ''}}">
   <view class="drawer-backdrop" catchtap="closeSheet" catchtouchmove="adminDrawerNoop" />
-  <view class="admin-drawer" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSheet">
+  <view class="admin-drawer {{sheet === 'appearance' ? 'appearance-drawer' : ''}}" catchtap="adminDrawerNoop" bindtouchstart="onAdminDrawerTouchStart" bindtouchend="onAdminDrawerTouchEnd" data-close="closeSheet">
+    <image wx:if="{{sheet === 'appearance'}}" class="appearance-motif" src="{{themeIcons.appearanceDecor}}" mode="aspectFit" aria-hidden="true" />
+    <image wx:if="{{sheet === 'appearance'}}" class="appearance-motif motif-edge" src="{{themeIcons.appearanceDecor}}" mode="aspectFit" aria-hidden="true" />
     <view class="drawer-handle" data-drawer-drag="true" catchtouchmove="adminDrawerNoop" />
     <view class="c-sheet-head"><text class="modal-title">{{sheet === 'appearance' ? '外观设置' : '本周提交记录'}}</text></view>
     <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="c-sheet-scroll my-sheet-scroll {{sheet === 'appearance' && colorEditing ? 'color-open' : ''}}" scroll-into-view="{{colorScrollAnchor}}"><view class="c-sheet-body">

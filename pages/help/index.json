@@ -1,8 +1,7 @@
 {
   "navigationBarTitleText": "使用说明",
   "usingComponents": {
-    "app-navigation": "../../components/app-navigation/app-navigation",
-    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
+    "app-navigation": "../../components/app-navigation/app-navigation"
   },
   "navigationStyle": "custom",
   "navigationBarTextStyle": "@navigationBarTextStyle",

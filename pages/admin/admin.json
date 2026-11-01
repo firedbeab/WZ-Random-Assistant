@@ -1,7 +1,6 @@
 {
   "usingComponents": {
     "privacy-popup": "../../components/privacy-popup/privacy-popup",
-    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle",
     "app-navigation": "../../components/app-navigation/app-navigation"
   },
   "enablePullDownRefresh": true,

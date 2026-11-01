@@ -7,7 +7,7 @@
         <text class="dice" style="{{diceShakeStyle}}" bindtap="onSecretDiceTap" aria-label="骰子彩蛋">🎲</text>
         <text class="brand-name">WZ随机助手</text>
       </view>
-      <appearance-toggle id="pageAppearance" />
+
       <button class="text-button admin-link" wx:if="{{userInfo.role === 'admin' || userInfo.role === 'superadmin'}}" bindtap="goAdmin" hover-class="text-pressed">管理后台 ›</button>
     </view>
     <block wx:if="{{statusReady && !statusError}}">

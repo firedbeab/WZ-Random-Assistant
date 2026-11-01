@@ -2,8 +2,7 @@
   "usingComponents": {
     "privacy-popup": "../../components/privacy-popup/privacy-popup",
     "easter-dice": "../../components/easter-dice/easter-dice",
-    "app-navigation": "../../components/app-navigation/app-navigation",
-    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle"
+    "app-navigation": "../../components/app-navigation/app-navigation"
   },
   "navigationStyle": "custom",
   "navigationBarTextStyle": "@navigationBarTextStyle",

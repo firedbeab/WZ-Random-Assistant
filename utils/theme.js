@@ -105,14 +105,14 @@ function iconSources(tokens) {
     journal: svg('<circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1.2"/><path d="M10 1v2M10 17v2"/>', tokens.accent),
     heart: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z"/>', tokens['text-3']),
     heartFilled: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z" fill="'+tokens.accent+'"/>', tokens.accent),
-    musicList: svg('<path d="M3 4h8M3 8h6M3 12h4M13 13V5l4-1v8"/><ellipse cx="11" cy="14" rx="2" ry="1.5"/><ellipse cx="15" cy="13" rx="2" ry="1.5"/>', tokens.accent),
+    musicList: svg('<path d="M7.2 16.4V6.1a.9.9 0 0 1 .6-.85l8.5-2.95a.9.9 0 0 1 1.2.85V13.3M7.2 9.4l10.3-3.6"/><circle cx="4.4" cy="16.4" r="2.8"/><circle cx="14.7" cy="13.3" r="2.8"/>', tokens.accent),
     history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent),
     messageSuccess: svg('<circle cx="10" cy="10" r="8" fill="'+tokens.accent+'" stroke="'+tokens.accent+'"/><path d="m6 10 2.5 2.5 5-5" stroke="'+tokens['on-accent']+'"/>', tokens.accent),
     messageInfo: svg('<circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h.01"/>', tokens['text-2']),
     person: svg('<circle cx="10" cy="6" r="3"/><path d="M4 17v-2a6 6 0 0 1 12 0v2"/>', tokens.accent)
   };
   // Explicit intrinsic size avoids low-resolution decoding on large wx:image.
-  for (const key of ['journal','heartFilled','about','feedback']) {
+  for (const key of ['journal','heartFilled','about','feedback','appearance','person']) {
     const body=decodeURIComponent(icons[key].split(',')[1]).replace('<svg ','<svg width="512" height="512" ');
     icons[key+'Decor']='data:image/svg+xml,'+encodeURIComponent(body);
   }

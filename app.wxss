@@ -3,8 +3,6 @@
 @import "styles/feedback.wxss";
 
 page { background: var(--bg); color: var(--text-1); }
-.appearance-toolbar { display: flex; align-items: center; justify-content: flex-end; padding: 0 var(--space-5); }
-
 /**app.wxss**/
 .container {
   height: 100%;

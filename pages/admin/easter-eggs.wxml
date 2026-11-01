@@ -1,6 +1,6 @@
 <page-meta page-style="{{appearanceStyle}} {{editing || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
 <view class="egg-admin-page admin-page-enter">
-<view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text><appearance-toggle /></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
+<view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view>
   <block wx:if="{{allowed}}">
     <view class="page-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回管理"><image src="{{themeIcons.back}}" /></button><text class="grow">彩蛋管理</text><view class="action primary {{busy ? 'disabled' : ''}}" bindtap="edit">＋ 添加条目</view></view>
     <text class="page-hint">每个条目一张照片；上方、下方文字留空会使用默认文案。启用的条目随机展示。</text>

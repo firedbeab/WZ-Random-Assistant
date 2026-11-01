@@ -1,6 +1,6 @@
 <page-meta page-style="{{appearanceStyle}} {{viewportStyle}} {{sheet || _adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
 <import src="../../templates/community.wxml" />
-<view class="info-page community"><app-navigation id="pageNavigation" back parent="/pages/feedback/index" /><view class="info-head"><view class="info-heading-row"><text class="info-title">我的反馈</text><appearance-toggle id="pageAppearance" /></view></view><view class="c-content">
+<view class="info-page community"><app-navigation id="pageNavigation" back parent="/pages/feedback/index" /><view class="info-head"><view class="info-heading-row"><text class="info-title">我的反馈</text></view></view><view class="c-content">
 <template is="community-feedback-list" data="{{entries, themeIcons}}" />
 <view class="c-state" wx:if="{{error}}"><text class="c-title">暂时无法读取</text><text class="c-sub">{{error}}</text><button class="c-link" bindtap="retry">重新加载</button></view>
 <view class="c-state" wx:elif="{{loading && !entries.length}}"><text class="c-title">正在读取反馈记录</text></view>

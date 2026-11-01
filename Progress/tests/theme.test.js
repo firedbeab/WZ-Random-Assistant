@@ -48,7 +48,7 @@ test('浅深色的正文、辅助文字、品牌操作和状态文字均保有�
     }
   }
 });
-test('颜色生成物无漂移，九页均接入外观变量和切换按钮，所有语义变量均有定义', () => {
+test('颜色生成物无漂移，全页共用外观且不再显示临时切换按钮，语义变量完整', () => {
   for (const [file, expected] of Object.entries(outputs())) assert.equal(fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'), expected);
   const app = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
   assert.equal(app.darkmode, true); assert.equal(app.themeLocation, 'theme.json');
@@ -59,7 +59,7 @@ test('颜色生成物无漂移，九页均接入外观变量和切换按钮，�
     const config = JSON.parse(fs.readFileSync(path.join(root, page + '.json'), 'utf8')), xml = fs.readFileSync(path.join(root, page + '.wxml'), 'utf8');
     assert.equal(config.navigationBarTextStyle, '@navigationBarTextStyle');
     assert.ok(xml.startsWith('<page-meta page-style="{{appearanceStyle}}'));
-    assert.ok(/<appearance-toggle(?:\s[^>]*)?\s*\/>/.test(xml)); assert.ok(config.usingComponents['appearance-toggle']);
+    assert.ok(!/<appearance-toggle\b/.test(xml)); assert.ok(!config.usingComponents['appearance-toggle']);
   }
 });
 test('系统主题初始化、单次监听、旧API与不可用API降级', () => {
@@ -129,13 +129,12 @@ test('组件附加与销毁保持原行为，SVG色值随外观更新而照片�
   def.lifetimes.detached.call(component); f.emit('light'); assert.equal(component.data.appearanceMode, 'dark');
   assert.deepEqual(calls, ['attached', 'detached']);
 });
-test('共用切换按钮更新所有已加载页面并保存选择，业务data不丢失', () => {
-  const f = fixture(); let toggle;
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'components/appearance-toggle/appearance-toggle.js'), 'utf8'), { Component: value => { toggle = value; }, require: () => f.theme });
+test('外观设置偏好更新所有已加载页面并保存选择，业务data不丢失', () => {
+  const f = fixture();
   const def = f.theme.page({ data: { note: '保留' } }), first = makePage(def), second = makePage(def);
-  def.onLoad.call(first); def.onLoad.call(second); toggle.methods.toggle();
+  def.onLoad.call(first); def.onLoad.call(second); f.theme.setPreference({ mode: 'dark' });
   assert.equal(first.data.appearanceMode, 'dark'); assert.equal(second.data.appearanceMode, 'dark'); assert.equal(first.data.note, '保留');
-  assert.equal(f.disk.get(f.theme.STORAGE_KEY).mode, 'dark'); toggle.methods.toggle(); assert.equal(first.data.appearanceMode, 'light');
+  assert.equal(f.disk.get(f.theme.STORAGE_KEY).mode, 'dark'); f.theme.setPreference({ mode: 'light' }); assert.equal(first.data.appearanceMode, 'light');
   def.onUnload.call(first); def.onUnload.call(second);
 });
 test('手动外观不让原生确认框在系统浅色背景使用浅粉色文字', () => {

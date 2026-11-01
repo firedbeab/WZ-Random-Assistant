@@ -6,7 +6,6 @@
   "backgroundColor": "@backgroundColor",
   "backgroundTextStyle": "@backgroundTextStyle",
   "usingComponents": {
-    "appearance-toggle": "../../components/appearance-toggle/appearance-toggle",
     "app-navigation": "../../components/app-navigation/app-navigation"
   },
   "navigationStyle": "custom"

@@ -9,7 +9,6 @@ button[disabled]:not([type]) { color: var(--text-disabled); background: var(--su
 .admin-meta { display: flex; align-items: center; gap: 16rpx; min-height: 68rpx; }
 .environment-tag { font-size: 22rpx; color: var(--warn); margin-right: auto; }
 .environment-tag::before { content: ''; display: inline-block; width: 8rpx; height: 8rpx; border-radius: 50%; background: currentColor; margin-right: 10rpx; vertical-align: middle; }
-.admin-meta appearance-toggle { margin-left: auto; }
 .text-button { display: inline-flex; align-items: center; justify-content: center; min-height: 88rpx; margin: 0; padding: 0 12rpx; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-2); font-size: 26rpx; line-height: 1.4; }
 button::after { border: none; }
 button[disabled] { opacity: .45; }

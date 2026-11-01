@@ -2,7 +2,7 @@
 <view class="info-page">
   <app-navigation back parent="/pages/about/index" />
   <view class="info-head">
-    <view class="info-heading-row"><text class="info-title">使用说明</text><appearance-toggle /></view>
+    <view class="info-heading-row"><text class="info-title">使用说明</text></view>
     <text class="info-desc">点开条目，查看规则和操作方法。</text>
   </view>
 

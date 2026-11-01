@@ -3,7 +3,7 @@
 <view class="container" bindtouchstart="onAdminTouchStart" bindtouchmove="onAdminTouchMove" bindtouchend="onAdminTouchEnd" bindtouchcancel="onAdminTouchCancel">
   <view class="admin-hero">
     <view class="admin-heading"><text class="admin-title">管理后台</text><button class="notify-button" wx:if="{{!subscribed}}" bindtap="onEnableNotification" aria-label="开启审核通知"><image src="{{themeIcons.bellMuted}}" /></button><view class="notify-button notify-enabled" wx:else aria-label="已开启审核通知"><image src="{{themeIcons.bell}}" /><view class="notify-dot" /></view></view>
-    <view class="admin-meta"><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text><appearance-toggle id="pageAppearance" /></view>
+    <view class="admin-meta" wx:if="{{isTestMode}}"><text class="environment-tag">测试模式</text></view>
   </view>
   <view class="tab-bar" wx:if="{{currentTab === 'audit' || currentTab === 'codes' || currentTab === 'test' || currentTab === 'manage'}}">
     <view class="tab-item {{currentTab === 'audit' ? 'active' : ''}}" bindtap="switchTab" data-tab="audit">审核</view>

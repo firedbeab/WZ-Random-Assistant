@@ -66,7 +66,7 @@
 .home-entry-row { display: grid; grid-template-columns: minmax(0,1fr) 112rpx; gap: 20rpx; margin-top: var(--space-4); }
 .home-entry-row .playlist-entry { margin-top: 0; height: 112rpx; min-height: 112rpx; padding: 12rpx 20rpx; gap: 12rpx; }
 .home-entry-row .entry-icon { width: 56rpx; height: 56rpx; }.home-entry-row .entry-description { font-size: 22rpx; }
-.home-entry-row .my-entry { width: 112rpx; padding: 12rpx; flex-direction: column; justify-content: center; gap: 4rpx; text-align: center; }.home-entry-row .my-entry .entry-icon { width: 40rpx; height: 40rpx; background: transparent; }.home-entry-row .my-entry .entry-icon-image { width: 40rpx; height: 40rpx; }.home-entry-row .my-entry .entry-title { font-size: 26rpx; }
+.home-entry-row .my-entry { width: 112rpx; padding: 8rpx 12rpx; flex-direction: column; justify-content: center; gap: 4rpx; text-align: center; }.home-entry-row .my-entry .entry-icon { width: 56rpx; height: 56rpx; background: var(--accent-weak); }.home-entry-row .my-entry .entry-icon-image { width: 36rpx; height: 36rpx; }.home-entry-row .my-entry .entry-title { font-size: 26rpx; line-height: 1.2; }
 .opening-note { margin-top: var(--space-4); color: var(--text-3); font-size: var(--font-xs); text-align: center; line-height: 1.6; }
 .result-msg { margin-top: var(--space-4); color: var(--accent); font-size: var(--font-sm); text-align: center; line-height: 1.5; }
 .home-footer { margin-top: auto; display: flex; align-items: center; justify-content: center; padding: var(--space-5); padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom)); }

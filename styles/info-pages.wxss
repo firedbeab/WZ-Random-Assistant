@@ -18,12 +18,12 @@
 .info-page { padding-bottom:calc(var(--space-5) + env(safe-area-inset-bottom) + var(--keyboard-page-space, 0px)); }
 
 /* Static theme motif: clipped, low contrast, no interaction or bitmap assets. */
-.ornament-page{position:relative;overflow:hidden}.ornament-head{position:relative;z-index:1}.ornament-head .info-heading-row,.ornament-head .info-desc{position:relative;z-index:1}.page-ornament{position:absolute;right:-70rpx;top:calc(var(--navigation-height, 64px) + 8rpx);width:260rpx;height:260rpx;opacity:.12;filter:none;pointer-events:none;-webkit-mask-image:linear-gradient(135deg,#000 0%,#000 48%,transparent 96%);mask-image:linear-gradient(135deg,#000 0%,#000 48%,transparent 96%)}
+.ornament-page{position:relative;overflow:hidden}.ornament-head{position:relative;z-index:1}.ornament-head .info-heading-row,.ornament-head .info-desc{position:relative;z-index:1}.page-ornament{position:absolute;right:-100rpx;top:calc(var(--navigation-height, 64px) + 8rpx);width:350rpx;height:350rpx;opacity:.12;pointer-events:none;-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 40%,rgba(0,0,0,.55) 60%,transparent 85%);mask-image:linear-gradient(180deg,#000 0%,#000 40%,rgba(0,0,0,.55) 60%,transparent 85%)}
 
 /* Pages with no subtitle use a tighter heading-to-content rhythm. */
 .compact-head{padding-bottom:24rpx}
 
-.page-ornament.motif-edge{opacity:.04;filter:blur(2px);-webkit-mask-image:linear-gradient(135deg,transparent 45%,#000 75%,transparent 100%);mask-image:linear-gradient(135deg,transparent 45%,#000 75%,transparent 100%)}
+.page-ornament.motif-edge{opacity:.04;filter:blur(2px);-webkit-mask-image:linear-gradient(180deg,transparent 40%,#000 65%,transparent 88%);mask-image:linear-gradient(180deg,transparent 40%,#000 65%,transparent 88%)}
 
 /* Decoration sits beneath every content surface, not above normal-flow cards. */
 .ornament-page{isolation:isolate}.page-ornament{z-index:0}.ornament-page .info-content,.ornament-page .c-content,.ornament-page .info-footer{position:relative;z-index:1}
