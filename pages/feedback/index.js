@@ -1,10 +1,11 @@
+const { APP_VERSION } = require('../../utils/version');
 const theme = require('../../utils/theme');
 const feedback = require('../../utils/admin-feedback');
 const community = require('../../utils/community');
 const { isTestMode } = require('../../utils/runtime');
 Page(theme.page(feedback.page({
-  data: { tab: 'feedback', categories: ['使用问题', '功能建议', '其他'], category: '使用问题', content: '',
-    version: '1.9', isTestMode: isTestMode(), entries: [], polls: [], loading: true, error: '', hasMore: false, offset: 0,
+  data: { appVersion: APP_VERSION, tab: 'feedback', categories: ['使用问题', '功能建议', '其他'], category: '使用问题', content: '',
+    version: APP_VERSION, isTestMode: isTestMode(), entries: [], polls: [], loading: true, error: '', hasMore: false, offset: 0,
     sheet: '', sheetClosing: false, dirty: false, busy: false, detail: null, endedExpanded:false, activePolls:[], endedPolls:[] },
   ...community.sheetMethods,
   onLoad() { this._alive = true; this._requestId = community.requestId(); this.load(); },

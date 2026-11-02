@@ -10,6 +10,14 @@ test('页内加载与成功反馈独立，关闭加载不会清掉提示', () =>
   const f = fixture(); f.feedback.showLoading(f.page,{title:'保存中',mask:true}); f.feedback.showToast(f.page,{title:'已保存',icon:'success'}); f.feedback.hideLoading(f.page);
   assert.equal(f.page.data._adminFeedbackLoading,false); assert.equal(f.page.data._adminFeedbackMask,false); assert.equal(f.page.data._adminFeedbackMessage,'已保存'); f.flush(); assert.equal(f.page.data._adminFeedbackMessage,'');
 });
+
+test('页面卸载后取消延时返回，避免手动返回后再次退页', () => {
+  const f=fixture(); let navigations=0;
+  f.feedback.deferNavigation(f.page,()=>{navigations++;},1000);
+  f.page.onUnload();f.flush();assert.equal(navigations,0);
+  f.feedback.deferNavigation(f.page,()=>{navigations++;},1000);f.flush();assert.equal(navigations,0);
+  const live=fixture();live.feedback.deferNavigation(live.page,()=>{navigations++;},1000);live.flush();assert.equal(navigations,1);
+});
 test('新提示替换旧提示并清理旧定时器，反馈不跨页面共享', () => {
   const f = fixture(), other = {data:{},setData(p){Object.assign(this.data,p);}};
   f.feedback.showToast(f.page,{title:'A'}); f.feedback.showToast(f.page,{title:'B'}); assert.equal(f.timers.size,1);

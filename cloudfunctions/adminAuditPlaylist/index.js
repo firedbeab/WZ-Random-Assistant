@@ -1,7 +1,34 @@
+// BEGIN shared text safety: only an explicit pass may be published.
+async function checkTextSafety(cloud, openid, content, testMode = false) {
+  if (testMode || !content.trim()) return { passed: true, unavailable: false };
+  const unavailable = { passed: false, unavailable: true, code: 'SAFETY_UNAVAILABLE', message: '内容检查暂时不可用，请稍后重试；填写内容已保留' };
+  try {
+    const result = await cloud.openapi.security.msgSecCheck({ openid, scene: 2, version: 2, content });
+    if (!result || (result.errCode !== undefined && result.errCode !== 0)) return unavailable;
+    const suggest = result.result && result.result.suggest;
+    if (suggest === 'pass') return { passed: true, unavailable: false };
+    if (suggest === 'risky' || suggest === 'review') return { passed: false, unavailable: false, code: 'CONTENT_REJECTED', message: '内容未通过安全检查，请修改后重试' };
+    return unavailable;
+  } catch (error) {
+    const sdkCode = error && Number.isInteger(error.errCode) ? error.errCode : 'UNKNOWN';
+    console.warn('[内容安全] 检查未完成', { code: sdkCode });
+    return { ...unavailable, sdkCode };
+  }
+}
+// END shared text safety.
+
+// Read-only health check: production superadmin only, never bypasses safety in test mode.
+async function probeTextSafety(event, openid) {
+  if (!event || event.action !== 'checkTextSafety') return null;
+  if (!await isProductionSuperadmin(db, openid)) return { success: false, code: 'FORBIDDEN', message: '无权限访问' };
+  if (typeof event.content !== 'string' || !event.content.trim() || event.content.length > 300) return { success: false, message: '请输入1至300字的检查内容' };
+  return { success: true, data: await checkTextSafety(cloud, openid, event.content.trim(), false) };
+}
+
 // cloudfunctions/adminAuditPlaylist/index.js
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
-const { createDataScope, canUseTestData } = require('./dataScope');
+const { createDataScope, canUseTestData , isProductionSuperadmin } = require('./dataScope');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
@@ -162,6 +189,7 @@ async function notifyStudents(weekKey, scope) {
 exports.main = async (event, context) => {
   const { action, playlistId, dayIndex, songIndex, reason } = event;
   const { OPENID } = cloud.getWXContext();
+  const probe = await probeTextSafety(event, OPENID); if (probe) return probe;
   const scope = createDataScope(event);
   if (!(await canUseTestData(db, OPENID, scope))) {
     return { success: false, message: '测试数据仅限超级管理员访问' };
@@ -262,7 +290,7 @@ exports.main = async (event, context) => {
       });
       return { success: true, message: `已将 ${markedItems.length} 首标记为待删除` };
     } catch (e) {
-      await tx.rollback();
+      try { await tx.rollback(); } catch (_) {}
       console.warn('[审核] 标记待删除失败:', e.message || '未知错误');
       return { success: false, message: safeOperationMessage(e, '操作失败，请稍后重试') };
     }
@@ -315,7 +343,7 @@ exports.main = async (event, context) => {
       });
       return { success: true, message: `已撤销 ${restored} 首的删除状态` };
     } catch (e) {
-      await tx.rollback();
+      try { await tx.rollback(); } catch (_) {}
       console.warn('[审核] 撤销待删除失败:', e.message || '未知错误');
       return { success: false, message: safeOperationMessage(e, '撤销失败，请稍后重试') };
     }
@@ -448,7 +476,7 @@ exports.main = async (event, context) => {
       return { success: true, message: replacement ? '已替换' : '已移除 (无替补)' };
 
     } catch (e) {
-      await tx.rollback();
+      try { await tx.rollback(); } catch (_) {}
       console.warn('[审核] 标记异常失败:', e.message || '未知错误');
       return { success: false, message: safeOperationMessage(e, '操作失败，请稍后重试') };
     }
@@ -504,9 +532,9 @@ exports.main = async (event, context) => {
       if (removedSubmissionIds.length > 0) {
         // 跳过某一天只是当天停播，曲目本身仍然有效：转回候补池，下周还有机会被抽到，
         // 不能打成 rejected（rejected 永不参与抽取，等于把学生的投稿永久作废）。
-        await tx.collection(submissionsCollection)
-          .where({ _id: _.in(removedSubmissionIds) })
-          .update({ data: { status: 'carryover', carryover_at: db.serverDate() } });
+        for (const id of new Set(removedSubmissionIds)) {
+          await tx.collection(submissionsCollection).doc(id).update({ data: { status: 'carryover', carryover_at: db.serverDate() } });
+        }
       }
 
       await tx.commit();
@@ -520,7 +548,7 @@ exports.main = async (event, context) => {
       return { success: true, message: `已跳过「${dayLabel}」` };
 
     } catch (e) {
-      await tx.rollback();
+      try { await tx.rollback(); } catch (_) {}
       console.warn('[审核] 跳过日期失败:', e.message || '未知错误');
       return { success: false, message: safeOperationMessage(e, '操作失败，请稍后重试') };
     }
@@ -535,6 +563,8 @@ exports.main = async (event, context) => {
     if (note !== undefined && (typeof note !== 'string' || note.length > 100)) {
       return { success: false, message: '发布备注不能超过100个字符' };
     }
+    const safety = await checkTextSafety(cloud, OPENID, (note || '').trim(), scope.testMode);
+    if (!safety.passed) return { success: false, code: safety.code, message: safety.message };
     let weekKey;
 
     // 事务：读取 + 状态检查 + 状态更新（防止重复发布和中途失败）
@@ -545,13 +575,13 @@ exports.main = async (event, context) => {
 
       // 防止重复发布
       if (schedule.status !== 'pending') {
-        await tx.rollback();
+        try { await tx.rollback(); } catch (_) {}
         return { success: false, message: '该排期已发布或状态已变更' };
       }
 
       // 版本校验：页面停留期间别人改过排期时拒绝，避免用旧数据覆盖新数据。
       if (event.revision !== undefined && (Number(event.revision) || 1) !== (Number(schedule.revision) || 1)) {
-        await tx.rollback();
+        try { await tx.rollback(); } catch (_) {}
         return { success: false, message: '页面数据已过期，请刷新后重试' };
       }
 
@@ -569,7 +599,7 @@ exports.main = async (event, context) => {
 
       // 空列表发布必须填写说明备注：否则学生端会看到“本期已发布但列表空白”，也没有任何解释。
       if (finalCount === 0 && !(typeof note === 'string' && note.trim())) {
-        await tx.rollback();
+        try { await tx.rollback(); } catch (_) {}
         return { success: false, code: 'EMPTY_NEEDS_NOTE', message: '本期列表为空，请先填写发布说明备注再发布' };
       }
 
@@ -584,9 +614,9 @@ exports.main = async (event, context) => {
       });
 
       if (finalizedSubmissionIds.length > 0) {
-        await tx.collection(submissionsCollection)
-          .where({ _id: _.in(finalizedSubmissionIds) })
-          .update({ data: { status: 'rejected', rejected_at: db.serverDate() } });
+        for (const id of new Set(finalizedSubmissionIds)) {
+          await tx.collection(submissionsCollection).doc(id).update({ data: { status: 'rejected', rejected_at: db.serverDate() } });
+        }
         await tx.collection(exceptionsCollection).add({ data: {
           schedule_id: playlistId,
           week_key: schedule.week_key,
@@ -606,7 +636,7 @@ exports.main = async (event, context) => {
         after: { status: 'published', admin_note: note || '', removed_count: finalizedItems.length }
       });
     } catch (e) {
-      await tx.rollback();
+      try { await tx.rollback(); } catch (_) {}
       return { success: false, message: '发布失败，请重试' };
     }
 
@@ -649,22 +679,8 @@ exports.main = async (event, context) => {
     }
     let tx;
     try {
-      // 文本安全检查（管理员备注也需过审）
-      if (note && note.trim()) {
-        try {
-          const secResult = await cloud.openapi.security.msgSecCheck({
-            openid: OPENID,
-            scene: 2,       // 评论场景
-            version: 2,
-            content: note.trim()
-          });
-          if (secResult && secResult.result && secResult.result.suggest === 'risky') {
-            return { success: false, message: '备注包含敏感词，请修改后重试' };
-          }
-        } catch (secErr) {
-          console.warn('[安全检查] updateNote msgSecCheck 调用失败，已跳过:', secErr.errCode || secErr.message);
-        }
-      }
+      const safety = await checkTextSafety(cloud, OPENID, (note || '').trim(), scope.testMode);
+      if (!safety.passed) return { success: false, code: safety.code, message: safety.message };
 
       tx = await db.startTransaction();
       const plRes = await tx.collection(schedulesCollection).doc(playlistId).get();
@@ -681,7 +697,7 @@ exports.main = async (event, context) => {
         throw new Error('项目索引无效');
       }
       if (schedule[dayKey][songIndex].audit_state === 'pending_remove') {
-        await tx.rollback(); tx = null;
+        try { await tx.rollback(); } catch (_) {} tx = null;
         return { success: false, message: '待删除项目请先撤销删除状态' };
       }
 
@@ -712,7 +728,7 @@ exports.main = async (event, context) => {
         data: { special_note: savedNote, revision: (Number(schedule.revision) || 1) + 1 }
       };
     } catch (err) {
-      if (tx) { try { await tx.rollback(); } catch (_) { /* 保留原错误。 */ } }
+      if (tx) { try { try { await tx.rollback(); } catch (_) {} } catch (_) { /* 保留原错误。 */ } }
       console.warn('[审核] 更新备注失败:', err.message || '未知错误');
       return { success: false, message: safeOperationMessage(err, '更新失败，请稍后重试') };
     }

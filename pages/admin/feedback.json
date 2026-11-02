@@ -6,6 +6,8 @@
   "backgroundColor": "@backgroundColor",
   "backgroundTextStyle": "@backgroundTextStyle",
   "usingComponents": {
-    "privacy-popup": "../../components/privacy-popup/privacy-popup"
-  }
+    "privacy-popup": "../../components/privacy-popup/privacy-popup",
+    "app-navigation": "/components/app-navigation/app-navigation"
+  },
+  "navigationStyle": "custom"
 }

@@ -17,11 +17,12 @@ Page(theme.page(feedback.page({
         cloudCall({ name: 'getUserInfo' }), this.api({ action: 'listAll' })
       ]);
       if (!res.result || !res.result.success || res.result.data.role !== 'superadmin') throw new Error('仅超级管理员可维护彩蛋');
+      if (!feedback.isLive(this)) return;
       this.setData({ allowed: true }); this.applyEntries(result);
     } catch (err) {
       feedback.showToast(this, { title: err.message || '无法验证身份', icon: 'none' });
-      setTimeout(() => wx.navigateBack(), 1200);
-    } finally { this.setData({ loading: false }); }
+      feedback.deferNavigation(this, () => wx.navigateBack(), 1200);
+    } finally { if (feedback.isLive(this)) this.setData({ loading: false }); }
   },
   async api(data) {
     const res = await cloudCall({ name: 'manageEasterEggs', data });
@@ -29,7 +30,7 @@ Page(theme.page(feedback.page({
     return res.result.data;
   },
   async loadEntries() {
-    if (!this.data.allowed) return;
+    if (!feedback.isLive(this) || !this.data.allowed) return;
     this.setData({ loading: true });
     try {
       const result = await this.api({ action: 'listAll' });
@@ -38,6 +39,7 @@ Page(theme.page(feedback.page({
     finally { this.setData({ loading: false }); }
   },
   applyEntries(result) {
+    if (!feedback.isLive(this)) return;
     this.setData({ entries: result.entries.map(item => ({ ...item, displayTop: item.topText || DEFAULT_TOP, displayBottom: item.bottomText || DEFAULT_BOTTOM })), revision: result.revision });
   },
   backFromEditor() { wx.navigateBack(); },
@@ -51,6 +53,7 @@ Page(theme.page(feedback.page({
       previewTop: item.topText || DEFAULT_TOP, previewBottom: item.bottomText || DEFAULT_BOTTOM, dirty: false });
   },
   markDirty(patch) {
+    if (!feedback.isLive(this)) return;
     this.setData({ ...patch, dirty: true });
     if (wx.enableAlertBeforeUnload) wx.enableAlertBeforeUnload({ message: '彩蛋修改尚未保存，确定离开吗？' });
   },
@@ -72,7 +75,7 @@ Page(theme.page(feedback.page({
     if (this.data.editorClosing) return;
     this.setData({ editorClosing: true });
     this._editorCloseTimer = setTimeout(() => {
-      this.setData({ editing: false, dirty: false, editorClosing: false });
+      if (feedback.isLive(this)) this.setData({ editing: false, dirty: false, editorClosing: false });
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
     }, feedback.DRAWER_CLOSE_MS);
   },
@@ -119,13 +122,14 @@ Page(theme.page(feedback.page({
       }
       await this.api({ action: 'save', revision: this.data.revision, id: this.data.id, fileID,
         topText: this.data.topText.trim(), bottomText: this.data.bottomText.trim(), enabled: this.data.enabled });
+      if (!feedback.isLive(this)) return;
       this.setData({ dirty: false }); this.animateEditorClose(); if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       feedback.showToast(this, { title: '彩蛋已保存', icon: 'success' }); await this.loadEntries();
     } catch (err) {
       if (uploaded) { try { await this.api({ action: 'deleteFiles', fileIDs: [uploaded] }); } catch (_) { /* 保存错误优先。 */ } }
       if (/内容已更新/.test(err.message)) await this.loadEntries();
       feedback.showToast(this, { title: err.message, icon: 'none', duration: 2500 });
-    } finally { feedback.hideLoading(this); this.setData({ busy: false }); }
+    } finally { feedback.hideLoading(this); if (feedback.isLive(this)) this.setData({ busy: false }); }
   },
   async changeEnabled(e) {
     if (this.data.busy || !this.data.allowed) return;

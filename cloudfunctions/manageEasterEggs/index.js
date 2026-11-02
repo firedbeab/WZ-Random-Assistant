@@ -1,3 +1,30 @@
+// BEGIN shared text safety: only an explicit pass may be published.
+async function checkTextSafety(cloud, openid, content, testMode = false) {
+  if (testMode || !content.trim()) return { passed: true, unavailable: false };
+  const unavailable = { passed: false, unavailable: true, code: 'SAFETY_UNAVAILABLE', message: '内容检查暂时不可用，请稍后重试；填写内容已保留' };
+  try {
+    const result = await cloud.openapi.security.msgSecCheck({ openid, scene: 2, version: 2, content });
+    if (!result || (result.errCode !== undefined && result.errCode !== 0)) return unavailable;
+    const suggest = result.result && result.result.suggest;
+    if (suggest === 'pass') return { passed: true, unavailable: false };
+    if (suggest === 'risky' || suggest === 'review') return { passed: false, unavailable: false, code: 'CONTENT_REJECTED', message: '内容未通过安全检查，请修改后重试' };
+    return unavailable;
+  } catch (error) {
+    const sdkCode = error && Number.isInteger(error.errCode) ? error.errCode : 'UNKNOWN';
+    console.warn('[内容安全] 检查未完成', { code: sdkCode });
+    return { ...unavailable, sdkCode };
+  }
+}
+// END shared text safety.
+
+// Read-only health check: production superadmin only, never bypasses safety in test mode.
+async function probeTextSafety(event, openid) {
+  if (!event || event.action !== 'checkTextSafety') return null;
+  if (!await isProductionSuperadmin(db, openid)) return { success: false, code: 'FORBIDDEN', message: '无权限访问' };
+  if (typeof event.content !== 'string' || !event.content.trim() || event.content.length > 300) return { success: false, message: '请输入1至300字的检查内容' };
+  return { success: true, data: await checkTextSafety(cloud, openid, event.content.trim(), false) };
+}
+
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
 const { createDataScope, canUseTestData, isProductionSuperadmin } = require('./dataScope');
@@ -52,8 +79,8 @@ async function checkText(openid, entry, scope) {
   if (scope.testMode || !entry.enabled) return;
   const content = [entry.topText, entry.bottomText].filter(Boolean).join('\n');
   if (!content) return;
-  const res = await cloud.openapi.security.msgSecCheck({ openid, scene: 2, version: 2, content });
-  if (!res.result || res.result.suggest !== 'pass') throw new Error('文字未通过安全检查，请修改或稍后重试');
+  const safety = await checkTextSafety(cloud, openid, content, false);
+  if (!safety.passed) throw new Error(safety.message);
 }
 async function cleanup(files, scope) {
   try {
@@ -66,6 +93,7 @@ async function cleanup(files, scope) {
 
 exports.main = async (event = {}) => {
   const { OPENID } = cloud.getWXContext();
+  const probe = await probeTextSafety(event, OPENID); if (probe) return probe;
   const scope = createDataScope(event);
   try {
     if (!await canUseTestData(db, OPENID, scope)) return { ...fail('仅超级管理员可使用测试环境'), code: 'TEST_ACCESS_DENIED' };
@@ -160,7 +188,7 @@ exports.main = async (event = {}) => {
     if (previous && (event.action === 'delete' || previous.fileID !== entry.fileID)) await cleanup([previous.fileID], scope);
     return ok({ id: entry ? entry.id : id, revision: event.revision + 1 });
   } catch (err) {
-    const expected = ['内容已更新，请刷新后再操作', '最多保留60个彩蛋条目', '文字未通过安全检查，请修改或稍后重试'].includes(err.message);
+    const expected = ['内容已更新，请刷新后再操作', '最多保留60个彩蛋条目', '内容未通过安全检查，请修改后重试', '内容检查暂时不可用，请稍后重试；填写内容已保留'].includes(err.message);
     if (!expected) await recordServerError(scope, event.action, err);
     return { ...fail(expected ? err.message : '操作失败，请稍后重试'), code: expected ? 'OPERATION_REJECTED' : 'BACKEND_UNAVAILABLE' };
   }

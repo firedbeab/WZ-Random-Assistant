@@ -3,7 +3,7 @@
 <view class="page admin-page-enter" wx:if="{{!loading}}">
 <view class="admin-hero" wx:if="{{!isChangelog}}"><view class="admin-heading"><text class="admin-title">管理后台</text></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view><view class="sub-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回上级"><image src="{{themeIcons.back}}" /></button><text>{{isChangelog ? '编辑更新日志' : '编辑说明'}}</text></view>
   <view class="form-card">
-    <block wx:if="{{isChangelog}}"><view class="field"><text class="field-label">版本号</text><input class="field-input" value="{{logVersion}}" bindinput="onVersionInput" maxlength="24" placeholder="例如：v1.9" placeholder-class="form-placeholder" /></view><view class="field"><text class="field-label">发布日期</text><button class="log-date-field" bindtap="chooseReleaseDate"><text>{{releaseDate}}</text><image src="{{themeIcons.chevron}}" mode="aspectFit"/></button></view></block>
+    <block wx:if="{{isChangelog}}"><view class="field"><text class="field-label">版本号</text><input class="field-input" value="{{logVersion}}" bindinput="onVersionInput" maxlength="24" placeholder="例如：v2.0" placeholder-class="form-placeholder" /></view><view class="field"><text class="field-label">发布日期</text><button class="log-date-field" bindtap="chooseReleaseDate"><text>{{releaseDate}}</text><image src="{{themeIcons.chevron}}" mode="aspectFit"/></button></view></block>
     <view class="field">
       <text class="field-label">标题</text>
       <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="40" placeholder="{{isChangelog ? '例如：新增点歌记录与点赞' : '例如：如何提交歌曲'}}" placeholder-class="form-placeholder" />

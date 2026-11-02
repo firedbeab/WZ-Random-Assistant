@@ -10,7 +10,7 @@
     <view class="info-surface intro-card">
       <text class="intro-title">WZ随机助手</text>
       <text class="intro-content">用于校园广播站每周点歌、随机抽取与排期发布。提交通道通常在每周五 20:00 至周日 20:00 开放。</text>
-      <text class="version-label">版本 v1.9</text>
+      <text class="version-label">版本 v{{appVersion}}</text>
     </view>
 
     <view class="info-surface entry-list profile-entries">

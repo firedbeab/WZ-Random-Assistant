@@ -1,3 +1,4 @@
+const { APP_VERSION } = require('../../utils/version');
 const theme = require('../../utils/theme');
 const feedback = require('../../utils/admin-feedback');
 const community = require('../../utils/community');
@@ -15,7 +16,7 @@ async function readUser(data) {
   return res.result.data;
 }
 Page(theme.page(feedback.page({
-  data: { alias: '点歌同学', profileReady: false, firstUseText: '正在读取首次使用日期', loading: true, error: '', refreshError: '',
+  data: { appVersion: APP_VERSION, alias: '点歌同学', profileReady: false, firstUseText: '正在读取首次使用日期', loading: true, error: '', refreshError: '',
     submission: null, week: presentation.loading(), sheet: '', sheetClosing: false, busy: false, dirty: false,
     aliasVisible: false, aliasClosing: false, aliasDraft: '', aliasError: '', focusedField: '', isTestMode: isTestMode(),
     modes: [{ id: 'system', label: '跟随系统' }, { id: 'light', label: '浅色' }, { id: 'dark', label: '深色' }],

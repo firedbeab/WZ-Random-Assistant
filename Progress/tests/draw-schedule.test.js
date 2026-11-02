@@ -11,7 +11,7 @@ function loadDrawFn(seed) {
     schedules: seed.schedules || {},
     submissions: seed.submissions || {},
     added: [],
-    updates: []
+    updates: [], configs: {}
   };
   const command = {
     in: value => ({ __op: 'in', value }),
@@ -33,6 +33,7 @@ function loadDrawFn(seed) {
   const storeOf = name => {
     if (name === 'schedules' || name === 'test_schedules') return state.schedules;
     if (name === 'submissions' || name === 'test_submissions') return state.submissions;
+    if (name === 'configs' || name === 'test_configs') return state.configs;
     if (name === 'message_subscriptions' || name === 'users') return {};
     return {};
   };
@@ -65,6 +66,7 @@ function loadDrawFn(seed) {
         state.updates.push({ name, ids: ref._docId, query: ref._query, data });
         return { stats: { updated } };
       },
+      async set({data}) { storeOf(name)[ref._docId]={_id:ref._docId,...data};return {stats:{updated:1}}; },
       async add(payload) {
         const id = 'generated-1';
         storeOf(name)[id] = Object.assign({ _id: id }, payload.data);
@@ -141,7 +143,7 @@ function loadDrawFn(seed) {
     check(fn.state.submissions.x1.status, 'carryover', '被作废排期里的投稿应回到候补池');
     const released = fn.state.updates.find(u => u.name === 'submissions' && u.data && u.data.status === 'carryover');
     check(Boolean(released), true, '作废时应把 selected 状态的投稿改回 carryover');
-    check(res.success !== undefined, true, '主流程应返回结果');
+    check(res.success, true, '遗留排期处理后仍应成功抽取');
   }
 
   // 2) 本周有投稿时，新排期不应带 carryover_only 标记。
@@ -154,7 +156,8 @@ function loadDrawFn(seed) {
     });
     await fn.main({}, {});
     const created = fn.state.added.find(item => item.name === 'schedules');
-    if (created) check(created.data.carryover_only, false, '本周有投稿时不应标记为纯候补生成');
+    check(Boolean(created), true, '本周候选必须实际生成排期');
+    check(created.data.carryover_only, false, '本周有投稿时不应标记为纯候补生成');
   }
 
   console.log(`PASS: ${checks} draw assertions; stale pending schedule voided with submissions back to carryover, carryover_only flag present`);

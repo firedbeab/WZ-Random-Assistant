@@ -151,6 +151,12 @@ test('迟到的状态响应不能清除新状态或本地投稿缓存', async ()
   assert.equal(page.data.hasSubmitted, true);
   assert.ok(disk.has('test_last_submission'));
 });
+
+test('首页卸载作废在途状态响应，不再更新卡片或启动后续刷新',async()=>{
+ let resolve;const f=fixture({call:()=>new Promise(done=>{resolve=done;})});const task=f.page.checkTimeAndSubmission();
+ f.page.onUnload();const snapshot=structuredClone(f.page.data);resolve({result:{success:true,data:{day1:[{song_name:'迟到'}]}}});await task;
+ assert.deepEqual(f.page.data,snapshot);const count=f.calls.length;await f.page.checkTimeAndSubmission();assert.equal(f.calls.length,count);
+});
 test('输入焦点竞争、说明/往期入口及原提交字段契约', async () => {
   const { page, routes, calls, disk } = fixture();
   page.onFieldFocus({ currentTarget: { dataset: { field: 'title' } } });

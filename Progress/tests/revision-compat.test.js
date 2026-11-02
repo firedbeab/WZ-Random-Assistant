@@ -94,7 +94,7 @@ function loadConsoleFn(seed) {
           init() {}, DYNAMIC_CURRENT_ENV: 'env',
           getWXContext: () => ({ OPENID: 'mock-super' }),
           database: () => db,
-          openapi: { security: { msgSecCheck: async () => ({ errCode: 0 }) } }
+          openapi: { security: { msgSecCheck: async () => ({ errCode: 0, result: {suggest: 'pass'} }) } }
         };
       }
       return {};

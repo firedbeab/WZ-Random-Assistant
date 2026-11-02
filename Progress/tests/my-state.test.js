@@ -37,7 +37,8 @@ function fixture() {
   vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../../pages/my/index.js'),'utf8'),{
     Page(value){definition=value;},wx:{stopPullDownRefresh(){},navigateTo(){},reLaunch(){}},console,
     setTimeout(fn){const id=++serial;timers.set(id,fn);return id;},clearTimeout(id){timers.delete(id);},
-    require(name){
+    require(name) {
+      if(name.endsWith('/version')) return require('../../utils/version');
       if(name.includes('/theme'))return theme;
       if(name.includes('/admin-feedback'))return {page:v=>v,showToast(){}};
       if(name.includes('/community'))return common;

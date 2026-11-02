@@ -2,6 +2,21 @@
 const DRAWER_CLOSE_MS = 300;
 const timers = new WeakMap();
 const disposed = new WeakSet();
+const navigationTimers = new WeakMap();
+
+function deferNavigation(page, action, delay) {
+  if (!live(page)) return;
+  clearTimeout(navigationTimers.get(page));
+  navigationTimers.set(page, setTimeout(() => {
+    navigationTimers.delete(page);
+    if (!live(page)) return;
+    if (typeof getCurrentPages === 'function') {
+      const stack = getCurrentPages();
+      if (stack[stack.length - 1] !== page) return;
+    }
+    action();
+  }, delay));
+}
 const dialogs = new WeakMap();
 const closingTimers = new WeakMap();
 const dateTimers = new WeakMap();
@@ -80,6 +95,7 @@ function showDatePicker(page, options = {}) {
   const promise=showModal(page,{...options,title:options.title||'选择日期',_date:state,choices:[]});dateFields(page,state);return promise;
 }
 function clear(page) {
+  clearTimeout(navigationTimers.get(page)); navigationTimers.delete(page);
   clearTimeout(timers.get(page)); timers.delete(page); clearTimeout(closingTimers.get(page)); closingTimers.delete(page);
   clearTimeout(dateTimers.get(page)); dateTimers.delete(page);
   const dialog=dialogs.get(page); dialogs.delete(page); if(dialog) dialog.resolve({ confirm:false,cancel:true,content:'' });
@@ -118,4 +134,4 @@ function notifications(definition) {
   const unload = definition.onUnload;
   return { onFeedbackTouchMove() {}, ...definition, onUnload(...args) { clear(this); if (typeof unload === 'function') return unload.apply(this, args); } };
 }
-module.exports = { DRAWER_CLOSE_MS, showLoading, hideLoading, showToast, showClipboardToast, showModal, showChoice, showDatePicker, showActionSheet, page, notifications, clear };
+module.exports = { DRAWER_CLOSE_MS, showLoading, hideLoading, showToast, showClipboardToast, showModal, showChoice, showDatePicker, showActionSheet, page, notifications, clear, deferNavigation, isLive: live };

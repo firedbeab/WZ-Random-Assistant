@@ -238,7 +238,7 @@ exports.main = async (event, context) => {
   const subscriptionsCollection = scope.collection('message_subscriptions');
   const usersCollection = scope.collection('users');
   // ===== 权限校验：仅管理员或定时任务可调用 =====
-  const { OPENID } = cloud.getWXContext();
+  const { OPENID, SOURCE } = cloud.getWXContext();
   if (OPENID) {
     if (!(await canUseTestData(db, OPENID, scope))) {
       return { success: false, message: '仅超级管理员可使用测试环境' };
@@ -250,7 +250,10 @@ exports.main = async (event, context) => {
       return { success: false, message: '无权限访问' };
     }
   }
-  // OPENID 为空 → 定时任务触发，放行
+  else if (SOURCE !== 'wx_trigger' || scope.testMode) {
+    return { success: false, code: 'FORBIDDEN', message: '无权限访问' };
+  }
+  // Only platform-authenticated timer invocations may run without a user.
 
   const weekKey = getWeekKey();
   console.log(`[抽取任务] 启动 | 周标识: ${weekKey}`);
@@ -357,14 +360,23 @@ exports.main = async (event, context) => {
     // 6. 事务写入
     const tx = await db.startTransaction();
     try {
-      // 6.0 竞态检查：防止重复抽取（事务内检查是否已有待审核排期）
-      const existingPending = await tx.collection(schedulesCollection)
-        .where({ week_key: weekKey, status: 'pending' })
-        .count();
-      if (existingPending.total > 0) {
-        await tx.rollback();
-        return { success: false, message: '本周已有待审核排期，请勿重复抽取' };
+      // A shared document serializes this week's draws; queries alone do not lock an empty result.
+      const guardId = 'draw_guard_' + weekKey;
+      const guards = scope.collection('configs');
+      const guard = (await tx.collection(guards).where({ _id: guardId }).limit(1).get()).data[0];
+      const existing = await tx.collection(schedulesCollection)
+        .where({ week_key: weekKey, status: _.in(['pending', 'published']) }).limit(1).get();
+      if (existing.data.length) {
+        try { await tx.rollback(); } catch (_) {}
+        return { success: false, code: 'ALREADY_DRAWN', message: '本周已有待审核或已发布歌单，请刷新查看' };
       }
+      // Candidates were sampled outside the transaction. Verify they are still eligible before writing.
+      for (const id of selectedIds) {
+        const row = (await tx.collection(submissionsCollection).doc(id).get()).data;
+        const eligible = row && ((row.status === 'pending' && row.week_key === weekKey) || (row.status === 'carryover' && historyKeys.includes(row.week_key)));
+        if (!eligible) throw Object.assign(new Error('候选状态已变化，请刷新后重新抽取'), { businessCode: 'CANDIDATES_CHANGED' });
+      }
+      await tx.collection(guards).doc(guardId).set({ data: { revision: (Number(guard && guard.revision) || 0) + 1, updated_at: db.serverDate() } });
 
       // 6.1 写入周排期
       await tx.collection(schedulesCollection).add({
@@ -382,26 +394,26 @@ exports.main = async (event, context) => {
 
       // 6.2 更新请求状态
       if (selectedIds.length > 0) {
-        await tx.collection(submissionsCollection)
-          .where({ _id: _.in(selectedIds) })
-          .update({ data: { status: 'selected', picked_at: db.serverDate() } });
+        for (const id of selectedIds) {
+          await tx.collection(submissionsCollection).doc(id).update({ data: { status: 'selected', picked_at: db.serverDate() } });
+        }
       }
 
       await tx.commit();
       console.log(`[抽取] ✅ 成功 | 已排期 ${selectedIds.length} 项`);
 
       // 抽取成功后，通知所有已订阅的管理员前往审核
-      await notifyAdmins(weekKey, scope);
+      try { await notifyAdmins(weekKey, scope); } catch (_) { console.warn('[抽取] 已完成，管理员通知未确认'); }
 
       return { success: true, message: `抽取完成，共 ${selectedIds.length} 个项目`, count: selectedIds.length };
 
     } catch (e) {
-      await tx.rollback();
+      try { await tx.rollback(); } catch (_) {}
       throw e;
     }
 
   } catch (err) {
     console.warn('[抽取] 异常:', err.message || '未知错误');
-    return { success: false, message: '抽取失败，请稍后重试' };
+    return { success: false, code: err.businessCode || 'DRAW_UNCONFIRMED', message: err.businessCode ? err.message : '抽取结果暂未确认，请刷新查看本周歌单后再操作' };
   }
 };

@@ -89,6 +89,15 @@ test('生产读取仍筛选发布状态；通知周期不随历史标签，复�
   f.page.onPullDownRefresh();await tick();assert.ok(f.calls.includes('stop-refresh'));
 });
 
+test('订阅已获同意后离开页面仍保存订阅，但迟到结果不再更新已卸载页面',async()=>{
+  const f=fixture({prod:true});let finish;
+  f.wx.requestSubscribeMessage=({tmplIds})=>new Promise(resolve=>{finish=()=>resolve({[tmplIds[0]]:'accept'});});
+  const task=f.page.onEnableSub();f.page.onUnload();
+  f.page.setData=()=>{throw new Error('卸载后不应更新页面');};
+  finish();await task;assert.equal(f.writes.length,1);
+  await f.page.onEnableSub();assert.equal(f.writes.length,1);
+});
+
 test('左右滑动按三期顺序切换，到两端停止；点击仍共用相同读取路径',async()=>{
   const f=fixture();
   await swipe(f.page,[270,220],[110,225]);assert.equal(f.page.data.activeTab,1);

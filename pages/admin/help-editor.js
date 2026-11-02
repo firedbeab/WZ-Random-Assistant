@@ -44,7 +44,7 @@ Page(theme.page(feedback.page({
     const isChangelog=options.kind==='changelog';
     this.setData({ articleId,isChangelog,serviceName:isChangelog?'manageChangelog':'manageHelpContent' });
     const allowed = await this.checkPermission();
-    if (!allowed) return;
+    if (!allowed || !feedback.isLive(this)) return;
     if (articleId) {
       await this.loadArticle(articleId);
     } else {
@@ -55,6 +55,7 @@ Page(theme.page(feedback.page({
   async checkPermission() {
     try {
       const res = await cloudCall({ name: 'getUserInfo' });
+      if (!feedback.isLive(this)) return false;
       if (res.result && res.result.success && res.result.data.role === 'superadmin') {
         return true;
       }
@@ -62,7 +63,7 @@ Page(theme.page(feedback.page({
       // 统一按无权限处理，避免暴露内部错误。
     }
     feedback.showToast(this, { title: '仅超级管理员可编辑', icon: 'none' });
-    setTimeout(() => wx.navigateBack(), 1200);
+    feedback.deferNavigation(this, () => wx.navigateBack(), 1200);
     return false;
   },
 
@@ -73,6 +74,7 @@ Page(theme.page(feedback.page({
         name: this.data.serviceName,
         data: { action: 'getForAdmin', articleId }
       });
+      if (!feedback.isLive(this)) return;
       if (!res.result || !res.result.success) {
         throw new Error('load failed');
       }
@@ -94,13 +96,14 @@ Page(theme.page(feedback.page({
       });
     } catch (err) {
       feedback.showToast(this, { title: '说明加载失败', icon: 'none' });
-      setTimeout(() => wx.navigateBack(), 1200);
+      feedback.deferNavigation(this, () => wx.navigateBack(), 1200);
     } finally {
       feedback.hideLoading(this);
     }
   },
 
   markDirty(patch = {}) {
+    if (!feedback.isLive(this)) return;
     const wasDirty = this.data.dirty;
     this.setData(Object.assign({}, patch, { dirty: true }));
     if (!wasDirty && wx.enableAlertBeforeUnload) {
@@ -400,7 +403,7 @@ Page(theme.page(feedback.page({
   },
 
   async saveArticle(isPublished) {
-    if (this.data.saving || this.data.choosingImages || !this.validateForm()) return;
+    if (!feedback.isLive(this) || this.data.saving || this.data.choosingImages || !this.validateForm()) return;
     this.setData({ saving: true });
     feedback.showLoading(this, { title: '保存中...' });
     const uploadedFileIDs = [];
@@ -443,10 +446,11 @@ Page(theme.page(feedback.page({
         throw new Error((res.result && res.result.message) || 'save failed');
       }
 
+      if (!feedback.isLive(this)) return;
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       this.setData({ dirty: false, isPublished });
       feedback.showToast(this, { title: isPublished ? '已发布' : '草稿已保存', icon: 'success' });
-      setTimeout(() => wx.navigateBack(), 800);
+      feedback.deferNavigation(this, () => wx.navigateBack(), 800);
     } catch (err) {
       await this.cleanupUploadedFiles(uploadedFileIDs);
       const message = err && err.message && err.message !== 'save failed'
@@ -455,7 +459,7 @@ Page(theme.page(feedback.page({
       feedback.showToast(this, { title: message, icon: 'none', duration: 2500 });
     } finally {
       feedback.hideLoading(this);
-      this.setData({ saving: false });
+      if (feedback.isLive(this)) this.setData({ saving: false });
     }
   }
 })));

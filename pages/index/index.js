@@ -43,6 +43,7 @@ Page(theme.page(feedback.notifications({
         const res = await cloudCall({ name: 'getUserInfo' });
         if (res.result.success) {
           const userInfo = res.result.data;
+          if (this._homeUnloaded) return;
           this.setData({ userInfo });
           getApp().globalData.userInfo = userInfo;
         }
@@ -102,6 +103,7 @@ Page(theme.page(feedback.notifications({
 
     // 每次进入页面实时判断：时间窗口 + 通道开关 + 是否已提交
     async checkTimeAndSubmission() {
+      if (this._homeUnloaded) return;
       // 并发令牌：只采纳最后一次状态检查的结果，迟到的旧响应直接丢弃。
       const token = (this._statusToken = (this._statusToken || 0) + 1);
       let hasCachedSubmission = false;
@@ -228,6 +230,7 @@ Page(theme.page(feedback.notifications({
     },
 
     async onLoad() {
+      this._homeUnloaded = false;
       this._diceTapTarget = unlockTapCount(this.data.isTestMode);
       this._diceTapCount = 0;
       this._diceUnlocked = false;
@@ -258,6 +261,8 @@ Page(theme.page(feedback.notifications({
     },
 
     onUnload() {
+      this._homeUnloaded = true;
+      this._statusToken = (this._statusToken || 0) + 1;
       this.cancelDiceShake();
       if (this._statusMsgTimer) clearTimeout(this._statusMsgTimer);
       this._statusMsgTimer = null;
@@ -286,7 +291,7 @@ Page(theme.page(feedback.notifications({
           name: 'getUserInfo',
           data: { action: 'getSubmitCount', weekKey }
         });
-        if (res.result && res.result.success) {
+        if (!this._homeUnloaded && res.result && res.result.success) {
           this.setData({ totalSubmissions: res.result.data });
         }
       } else {
@@ -294,7 +299,7 @@ Page(theme.page(feedback.notifications({
           .collection(collectionName('submission_counters'))
           .doc(weekKey)
           .get();
-        if (res.data && res.data.count !== undefined) {
+        if (!this._homeUnloaded && res.data && res.data.count !== undefined) {
           this.setData({ totalSubmissions: res.data.count });
         }
       }
@@ -319,6 +324,7 @@ Page(theme.page(feedback.notifications({
 
   // 提交内容
   async submitRequest() {
+    if (this._homeUnloaded) return;
     if (this.data.loading) return;
     const { weeklyCode, title, remark, specialNote } = this.data;
 
@@ -341,6 +347,7 @@ Page(theme.page(feedback.notifications({
         }
       });
 
+      if (this._homeUnloaded) return;
       if (res.result.success) {
         const count = res.result.totalSubmissions;
         const countText = count ? `（本周第 ${count} 次提交）` : '';
@@ -374,10 +381,11 @@ Page(theme.page(feedback.notifications({
         if (['ALREADY_SUBMITTED', 'SUBMISSION_UNCERTAIN'].includes(res.result.code)) await this.checkTimeAndSubmission();
       }
     } catch (err) {
+      if (this._homeUnloaded) return;
       feedback.showToast(this, { title: '暂时无法确认提交结果，正在同步；填写内容已保留', icon: 'none' });
       await this.checkTimeAndSubmission();
     } finally {
-      this.setData({ loading: false });
+      if (!this._homeUnloaded) this.setData({ loading: false });
       feedback.hideLoading(this);
     }
   },

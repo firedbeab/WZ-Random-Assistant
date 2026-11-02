@@ -1,6 +1,7 @@
 // cloudfunctions/autoGenerateWeeklyCode/index.js
 const cloud = require('wx-server-sdk');
 const crypto = require('crypto');
+const { createDataScope, canUseTestData } = require('./dataScope');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
@@ -13,18 +14,23 @@ function generateCode() {
   return code;
 }
 
-exports.main = async (event, context) => {
+exports.main = async (event = {}, context) => {
+  const scope = createDataScope(event);
+  const codesCollection = scope.collection('weekly_codes');
+  const configsCollection = scope.collection('configs');
   // ===== 权限校验：仅管理员或定时任务可调用 =====
-  const { OPENID } = cloud.getWXContext();
+  const { OPENID, SOURCE } = cloud.getWXContext();
   if (OPENID) {
-    const userRes = await db.collection('users')
+    if (!await canUseTestData(db, OPENID, scope)) return { success: false, code: 'TEST_ACCESS_DENIED', message: '无权限使用测试数据' };
+    const userRes = await db.collection(scope.collection('users'))
       .where({ openid: OPENID }).limit(1).get();
     if (userRes.data.length === 0 ||
         !['admin', 'superadmin'].includes(userRes.data[0].role)) {
       return { success: false, message: '无权限访问' };
     }
   }
-  // OPENID 为空 → 定时任务触发，放行
+  else if (SOURCE !== 'wx_trigger' || scope.testMode) return { success: false, code: 'FORBIDDEN', message: '无权限访问' };
+  // Only a platform timer may generate production codes without a user.
 
   // 计算本周日日期（用于 week_key 标识，与其他云函数保持一致）
   const now = new Date();
@@ -37,13 +43,16 @@ exports.main = async (event, context) => {
 
   console.log(`[自动生成周验证码] 本周标识(周日): ${weekKey}`);
 
+  let tx;
   try {
+    tx = await db.startTransaction();
+    const guardId = 'code_guard_' + weekKey;
+    const guard = (await tx.collection(configsCollection).where({ _id: guardId }).limit(1).get()).data[0];
     // 检查本周是否已有验证码
-    const existRes = await db.collection('weekly_codes')
-      .where({ week_key: weekKey })
-      .count();
+    const existRes = await tx.collection(codesCollection).where({ week_key: weekKey }).limit(1).get();
 
-    if (existRes.total > 0) {
+    if (existRes.data.length > 0) {
+      await tx.rollback();
       return { success: false, message: '本周验证码已存在，跳过生成' };
     }
 
@@ -67,7 +76,7 @@ exports.main = async (event, context) => {
 
     // 写入数据库
     const addPromises = codes.map(code =>
-      db.collection('weekly_codes').add({
+      tx.collection(codesCollection).add({
         data: {
           code,
           week_key: weekKey,
@@ -81,12 +90,15 @@ exports.main = async (event, context) => {
       })
     );
     await Promise.all(addPromises);
+    await tx.collection(configsCollection).doc(guardId).set({ data: { revision: (Number(guard && guard.revision) || 0) + 1, updated_at: db.serverDate() } });
+    await tx.commit();
 
-    console.log(`[自动生成周验证码] 成功生成3个: ${codes.join(', ')}`);
+    console.log('[自动生成周验证码] 已生成3个', { testMode: scope.testMode, weekKey });
     return { success: true, message: '自动生成3个周验证码', codes: codes.map(c => c.substring(0, 2) + '****') };
 
   } catch (err) {
-    console.warn('[自动生成周验证码] 异常:', err.message || '未知错误');
-    return { success: false, message: '生成失败，请稍后重试' };
+    if (tx) { try { await tx.rollback(); } catch (_) {} }
+    console.warn('[自动生成周验证码] 生成结果未确认');
+    return { success: false, message: '生成结果暂未确认，请刷新验证码列表后再操作' };
   }
 };

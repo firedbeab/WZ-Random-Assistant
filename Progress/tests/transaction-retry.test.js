@@ -4,10 +4,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const test = require('node:test');
 const files = ['checkWeeklyCode/index.js', 'manageFeedback/service.js', 'manageSongLikes/service.js'];
-const helpers = files.map(file => fs.readFileSync(path.join(__dirname, '../../cloudfunctions', file), 'utf8').split('// END shared transaction retry.')[0]);
+const helpers = files.map(file => fs.readFileSync(path.join(__dirname, '../../cloudfunctions', file), 'utf8').split('// BEGIN shared transaction retry:')[1].split('// END shared transaction retry.')[0]);
 function fixture() {
   const delays = [], box = { setTimeout(fn, delay) { delays.push(delay); fn(); }, Math };
-  vm.createContext(box); vm.runInContext(`${helpers[0]};this.retry=transactionWithRetry;this.conflict=isTransactionConflict`, box);
+  vm.createContext(box); vm.runInContext(`// BEGIN shared transaction retry:${helpers[0]};this.retry=transactionWithRetry;this.conflict=isTransactionConflict`, box);
   return { ...box, delays };
 }
 test('三个部署包使用相同的有限重试策略，仅识别明确的数据库冲突', () => {

@@ -116,3 +116,12 @@ test('日志编辑携带版本日期和修订号，原说明保存参数不增�
     assert.equal(call.data.version,isChangelog?'v1.9':undefined);assert.equal(call.data.revision,isChangelog?4:undefined);
   }
 });
+
+test('编辑器保存成功的迟到响应不更新已卸载页面，也不再次返回',async()=>{
+  let finish;
+  const f=fixture('pages/admin/help-editor.js',{call:()=>new Promise(resolve=>{finish=resolve;})}),p=f.page;
+  p.data.title='标题';p.data.content='正文';
+  const saving=p.saveArticle(false);await new Promise(resolve=>setImmediate(resolve));
+  p.onUnload();p.setData=()=>{throw new Error('卸载后不应更新编辑器');};
+  finish({result:{success:true}});await saving;
+});

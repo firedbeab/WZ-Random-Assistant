@@ -1,0 +1,187 @@
+[
+  {
+    "name": "checkWeeklyCode",
+    "file": "config.json",
+    "sha256": "d55ea5ad29659dc39a9a56264ff4e47ed3b6460e41a9d9035813ab5fc665aa26"
+  },
+  {
+    "name": "checkWeeklyCode",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "checkWeeklyCode",
+    "file": "index.js",
+    "sha256": "2a0b8fef1a630c8c8321e0b5ec248bb6a35e08e9b9d44b51b8aecea3b153c11d"
+  },
+  {
+    "name": "checkWeeklyCode",
+    "file": "package.json",
+    "sha256": "ea4ef21ba4f550bf4716013e787a09a158d5a8a998f32f31b239da986a18e660"
+  },
+  {
+    "name": "adminAuditPlaylist",
+    "file": "config.json",
+    "sha256": "78f579bc65513d6d19b1a66340ab31ee7083cc3771f0192f3b48cd44b4b866dc"
+  },
+  {
+    "name": "adminAuditPlaylist",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "adminAuditPlaylist",
+    "file": "index.js",
+    "sha256": "ad9558efd89f2606424071adabdd3a092e4b57eb46fe915484acd2182b172e0c"
+  },
+  {
+    "name": "adminAuditPlaylist",
+    "file": "package.json",
+    "sha256": "867a693683e3025ca111b67bfb00fafb8d61d7e7cd2d610908ad699caa339e77"
+  },
+  {
+    "name": "drawWeeklyPlaylist",
+    "file": "config.json",
+    "sha256": "c71d69ad95e53d9b43b62840ded321af1b70ac0163c48640f36d1618226247eb"
+  },
+  {
+    "name": "drawWeeklyPlaylist",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "drawWeeklyPlaylist",
+    "file": "index.js",
+    "sha256": "933c8913ca9d5ce764d0ea0b052e3947a61b90e59a6e3e57aefebc8e0e276716"
+  },
+  {
+    "name": "drawWeeklyPlaylist",
+    "file": "package.json",
+    "sha256": "32d313ec5edd2ce5bdb84277bb2cb601e11c8295a7404aa5a2d091c27774ab92"
+  },
+  {
+    "name": "drawWeeklyPlaylist",
+    "file": "scheduleRetention.js",
+    "sha256": "0957108e1854fc5cc12ac845c20e72896c8f97d319d76f8e98de19a473ed0339"
+  },
+  {
+    "name": "manageHelpContent",
+    "file": "config.json",
+    "sha256": "d55ea5ad29659dc39a9a56264ff4e47ed3b6460e41a9d9035813ab5fc665aa26"
+  },
+  {
+    "name": "manageHelpContent",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "manageHelpContent",
+    "file": "index.js",
+    "sha256": "c20b49b7f9b930c58eef59735c9aba44be134cb5cf8c59937b7a70c142b24e33"
+  },
+  {
+    "name": "manageHelpContent",
+    "file": "package.json",
+    "sha256": "840a4b57d925c8cc1d5c97c8fdd2fd736a2891b2d5c355eb94798749e5163db6"
+  },
+  {
+    "name": "autoGenerateWeeklyCode",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "autoGenerateWeeklyCode",
+    "file": "index.js",
+    "sha256": "1c407253e09a1fc979f0026ce10103f8a8c2ebeebcf61c02531f57d3eca4487f"
+  },
+  {
+    "name": "autoGenerateWeeklyCode",
+    "file": "package.json",
+    "sha256": "cdc3a027b97100ff1bd3087f9814f5ccf4755228755fb1e05869be86a65ecb1c"
+  },
+  {
+    "name": "superAdminConsole",
+    "file": "config.json",
+    "sha256": "d55ea5ad29659dc39a9a56264ff4e47ed3b6460e41a9d9035813ab5fc665aa26"
+  },
+  {
+    "name": "superAdminConsole",
+    "file": "dataScope.js",
+    "sha256": "c7ea5ff08561453fd244d83ca05c86a393246e33c504641ef6fef9c0dc3f5857"
+  },
+  {
+    "name": "superAdminConsole",
+    "file": "index.js",
+    "sha256": "21b123c3510b246260862281e3714c4e73ed068377958d2f9066011c594b1027"
+  },
+  {
+    "name": "superAdminConsole",
+    "file": "package.json",
+    "sha256": "e771c5de6ae18055aeef0a47b5d77cdd3313a4d400b2b42b28fe03d71a13c86a"
+  },
+  {
+    "name": "manageChangelog",
+    "file": "config.json",
+    "sha256": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8"
+  },
+  {
+    "name": "manageChangelog",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "manageChangelog",
+    "file": "index.js",
+    "sha256": "23cedd58abfca31c9a43674984b12d5e0f5bf09dd78350362cc8c4e56ea6ccab"
+  },
+  {
+    "name": "manageChangelog",
+    "file": "package.json",
+    "sha256": "f2897803618cefbad55184b2062229aea0ec232bb70f8585388d2e091c44fdc7"
+  },
+  {
+    "name": "manageFeedback",
+    "file": "config.json",
+    "sha256": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8"
+  },
+  {
+    "name": "manageFeedback",
+    "file": "dataScope.js",
+    "sha256": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a"
+  },
+  {
+    "name": "manageFeedback",
+    "file": "index.js",
+    "sha256": "039872524c0d481eaf4d81b6279993434586db7642999f227b7ed2305c0ca250"
+  },
+  {
+    "name": "manageFeedback",
+    "file": "package.json",
+    "sha256": "cbe47c6222fcfb268ea5bbadf301d5cb195d5bd9b9ff1da7aade10254795832f"
+  },
+  {
+    "name": "manageFeedback",
+    "file": "service.js",
+    "sha256": "fe992674a91651ffdf4129e907333c78d7daa06faeecd961f87dfcf398711bd8"
+  },
+  {
+    "name": "manageEasterEggs",
+    "file": "config.json",
+    "sha256": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8"
+  },
+  {
+    "name": "manageEasterEggs",
+    "file": "dataScope.js",
+    "sha256": "3e9b94bf4e41b8183c5d342052bd6f6f7321ef4beb90518e978690f0170f03b4"
+  },
+  {
+    "name": "manageEasterEggs",
+    "file": "index.js",
+    "sha256": "72944e36d82a10562a1f3c96823b708f3c65e5ae60537424d0c4f79f4f3abdae"
+  },
+  {
+    "name": "manageEasterEggs",
+    "file": "package.json",
+    "sha256": "4e286c03da7df70aac770bad449aa63ea3ab7e8726fa205475ecae45bcc740ec"
+  }
+]

@@ -1,3 +1,30 @@
+// BEGIN shared text safety: only an explicit pass may be published.
+async function checkTextSafety(cloud, openid, content, testMode = false) {
+  if (testMode || !content.trim()) return { passed: true, unavailable: false };
+  const unavailable = { passed: false, unavailable: true, code: 'SAFETY_UNAVAILABLE', message: '内容检查暂时不可用，请稍后重试；填写内容已保留' };
+  try {
+    const result = await cloud.openapi.security.msgSecCheck({ openid, scene: 2, version: 2, content });
+    if (!result || (result.errCode !== undefined && result.errCode !== 0)) return unavailable;
+    const suggest = result.result && result.result.suggest;
+    if (suggest === 'pass') return { passed: true, unavailable: false };
+    if (suggest === 'risky' || suggest === 'review') return { passed: false, unavailable: false, code: 'CONTENT_REJECTED', message: '内容未通过安全检查，请修改后重试' };
+    return unavailable;
+  } catch (error) {
+    const sdkCode = error && Number.isInteger(error.errCode) ? error.errCode : 'UNKNOWN';
+    console.warn('[内容安全] 检查未完成', { code: sdkCode });
+    return { ...unavailable, sdkCode };
+  }
+}
+// END shared text safety.
+
+// Read-only health check: production superadmin only, never bypasses safety in test mode.
+async function probeTextSafety(event, openid) {
+  if (!event || event.action !== 'checkTextSafety') return null;
+  if (!await isProductionSuperadmin(db, openid)) return { success: false, code: 'FORBIDDEN', message: '无权限访问' };
+  if (typeof event.content !== 'string' || !event.content.trim() || event.content.length > 300) return { success: false, message: '请输入1至300字的检查内容' };
+  return { success: true, data: await checkTextSafety(cloud, openid, event.content.trim(), false) };
+}
+
 // BEGIN shared transaction retry: only confirmed transaction aborts may be replayed.
 function isTransactionConflict(error) {
   if (!error || error.businessCode || error.isBusiness) return false;
@@ -24,7 +51,7 @@ async function transactionWithRetry(db, operation) {
 // cloudfunctions/checkWeeklyCode/index.js
 //用于提交内容时的验证
 const cloud = require('wx-server-sdk');
-const { createDataScope, canUseTestData } = require('./dataScope');
+const { createDataScope, canUseTestData , isProductionSuperadmin } = require('./dataScope');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
@@ -53,7 +80,7 @@ function normalizeSongName(value) {
 // 新记录直接用 song_key 精确判重；同时扫描最多 250 条旧记录，兼容升级前
 // 没有 song_key 的数据。removed / rejected 不再占用同名限制。
 async function inspectWeekSubmissions(transaction, submissionsCollection, weekKey, songKey) {
-  const [exact, legacy, pendingCount] = await Promise.all([
+  const [exact, legacy, pendingRows] = await Promise.all([
     transaction.collection(submissionsCollection)
       .where({ week_key: weekKey, song_key: songKey })
       .field({ _id: true, status: true })
@@ -66,7 +93,7 @@ async function inspectWeekSubmissions(transaction, submissionsCollection, weekKe
       .get(),
     transaction.collection(submissionsCollection)
       .where({ week_key: weekKey, status: 'pending' })
-      .count()
+      .field({ _id: true }).limit(250).get()
   ]);
 
   const isActive = item => !['removed', 'rejected'].includes(item.status);
@@ -76,13 +103,14 @@ async function inspectWeekSubmissions(transaction, submissionsCollection, weekKe
   );
 
   return {
-    pendingTotal: pendingCount.total,
+    pendingTotal: pendingRows.data.length,
     duplicate: exactDuplicate || legacyDuplicate
   };
 }
 
 exports.main = async (event, context) => {
   const { OPENID } = cloud.getWXContext();
+  const probe = await probeTextSafety(event, OPENID); if (probe) return probe;
   const scope = createDataScope(event);
   if (!(await canUseTestData(db, OPENID, scope))) {
     return { success: false, message: '测试数据仅限超级管理员访问' };
@@ -156,29 +184,9 @@ exports.main = async (event, context) => {
     }
   }
 
-  // 3. 文本内容安全检查（调用微信 msgSecCheck 接口）
-  // 将 title 和 remark 合并检查，不通过则拒绝提交
-  if (!scope.testMode) {
-    try {
-      const checkContent = specialNote ? `${title} ${remark} ${specialNote}` : `${title} ${remark}`;
-      const secResult = await cloud.openapi.security.msgSecCheck({
-        openid: OPENID,
-        scene: 2,       // 评论场景
-        version: 2,
-        content: checkContent
-      });
-
-      if (secResult && secResult.result && secResult.result.suggest === 'risky') {
-        return { success: false, message: '内容包含敏感词，请检查后重新输入' };
-      }
-    } catch (secErr) {
-      // 安全检查接口失败时不阻断用户正常提交，仅记录警告日志
-      // 若持续失败需排查：openid 是否过期、接口配额是否用尽
-      console.warn('[安全检查] msgSecCheck 调用失败，已跳过:', secErr.errCode || secErr.message);
-    }
-  } else {
-    console.log('[测试环境] 已跳过投稿内容安全调用');
-  }
+  // Safety completes before the transaction; service failures never silently pass.
+  const safety = await checkTextSafety(cloud, OPENID, [title, remark, specialNote].filter(Boolean).join(' '), scope.testMode);
+  if (!safety.passed) return { success: false, code: safety.code, message: safety.message };
 
   const weekKey = getWeekKey(bjTime); // 基于北京时间获取本周日标识
   try {

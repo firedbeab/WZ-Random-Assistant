@@ -9,6 +9,7 @@ function fixture(file) {
     Page(value) { definition = value; }, wx: { stopPullDownRefresh() {}, navigateBack() {} }, console,
     setTimeout(fn) { const n = ++serial; timers.set(n, fn); return n; }, clearTimeout(id) { timers.delete(id); },
     require(name) {
+      if(name.endsWith('/version')) return require('../../utils/version');
       if (name.includes('theme')) return { page: value => value, getState: () => ({ mode: 'system', palette: 'green' }), setPreference: () => true };
       if (name.includes('admin-feedback')) return notify;
       if (name.includes('community')) return common;

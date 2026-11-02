@@ -158,6 +158,7 @@ Page(theme.page(feedback.notifications({
   // 按 week_key 加载指定周的排期
   // forceRefresh: true 时跳过缓存（下拉刷新）
   async loadWeekPlaylist(offset, forceRefresh) {
+    if (this._playlistUnloaded) return;
     const weekKey = this.getWeekKeyByOffset(offset);
     const cacheKey = storageKey(`schedule_cache_${weekKey}`);
     const requestId = this._playlistRequestId = this._scheduleRequestSequence = (this._scheduleRequestSequence || 0) + 1;
@@ -221,7 +222,7 @@ Page(theme.page(feedback.notifications({
     try {
       const schedule = await this.fetchPublishedSchedule(weekKey);
       // 同一期更晚的请求优先；旧期可更新自己的缓存，但不能覆盖当前标签。
-      if (this._weekRequests[weekKey] !== requestId) return;
+      if (this._playlistUnloaded || this._weekRequests[weekKey] !== requestId) return;
       const isCurrent = this.data.activeTab === offset && this._playlistRequestId === requestId;
 
       if (schedule) {
@@ -239,11 +240,11 @@ Page(theme.page(feedback.notifications({
       }
     } catch (err) {
       console.warn('加载排期失败');
-      if (this.data.activeTab === offset && this._playlistRequestId === requestId) {
+      if (!this._playlistUnloaded && this.data.activeTab === offset && this._playlistRequestId === requestId) {
         this.setData({ loadError: true, showingCached: !!this.data.schedule });
       }
     } finally {
-      if (this.data.activeTab === offset && this._playlistRequestId === requestId) {
+      if (!this._playlistUnloaded && this.data.activeTab === offset && this._playlistRequestId === requestId) {
         this.setData({ loading: false, revalidating: false });
         if (!this.data.loadError) this._prefetchTask = this.prefetchOtherWeeks(offset);
       }
@@ -290,7 +291,7 @@ Page(theme.page(feedback.notifications({
       const res = await db.collection(collectionName('message_subscriptions'))
         .where({ openid: '{openid}', template_id: STUDENT_TPL_ID, type: 'student', week_key: weekKey, consumed: false })
         .limit(1).get();
-      this.setData({ subscribed: res.data.length > 0 });
+      if (!this._playlistUnloaded) this.setData({ subscribed: res.data.length > 0 });
     } catch (e) {
       // 检查失败不影响主流程
     }
@@ -298,7 +299,7 @@ Page(theme.page(feedback.notifications({
 
   // 按钮点击：开启发布通知
   async onEnableSub() {
-    if (this.data.subscribed || this.data.subscribing) return;
+    if (this._playlistUnloaded || this.data.subscribed || this.data.subscribing) return;
     if (this.data.isTestMode) {
       this.setData({ subscribed: true });
       feedback.showToast(this, { title: '测试环境已模拟订阅', icon: 'none' });
@@ -328,13 +329,15 @@ Page(theme.page(feedback.notifications({
             }
           });
         }
-        this.setData({ subscribed: true });
-        feedback.showToast(this, { title: '已开启通知', icon: 'success' });
+        if (!this._playlistUnloaded) {
+          this.setData({ subscribed: true });
+          feedback.showToast(this, { title: '已开启通知', icon: 'success' });
+        }
       }
     } catch (err) {
       console.warn('订阅失败:', err);
     } finally {
-      this.setData({ subscribing: false });
+      if (!this._playlistUnloaded) this.setData({ subscribing: false });
     }
   }
 })));

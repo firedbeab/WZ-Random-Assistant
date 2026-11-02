@@ -16,20 +16,22 @@ Page(theme.page(feedback.notifications({
     this.setData({ loading: true });
     try {
       const res = await cloudCall({ name: 'getUserInfo' });
+      if (!feedback.isLive(this)) return;
       if (res.result && res.result.success) {
         const userInfo = res.result.data;
         const role = userInfo.role;
         if (role === 'admin' || role === 'superadmin') {
           getApp().globalData.userInfo = userInfo;
           this.saveAdminAuth(role);
-          wx.redirectTo({ url: '/pages/admin/admin' });
+          this._leaving = true;
+          wx.redirectTo({ url: '/pages/admin/admin', fail: () => { if (feedback.isLive(this)) { this._leaving = false; this.setData({ loading: false }); } } });
           return;
         }
       }
     } catch (err) {
       console.warn('管理员身份恢复失败');
     } finally {
-      this.setData({ loading: false });
+      if (!this._leaving && feedback.isLive(this)) this.setData({ loading: false });
     }
   },
 
@@ -57,6 +59,7 @@ Page(theme.page(feedback.notifications({
         data: { action: 'verify', adminCode: adminCode.trim() }
       });
 
+      if (!feedback.isLive(this)) return;
       if (res.result.success) {
         const role = res.result.role || 'admin';
         const isSuperAdmin = role === 'superadmin';
@@ -71,16 +74,14 @@ Page(theme.page(feedback.notifications({
         }
 
         feedback.showToast(this, { title: isSuperAdmin ? '超管验证成功' : '验证成功', icon: 'success' });
-        setTimeout(() => {
-          wx.redirectTo({ url: '/pages/admin/admin' });
-        }, 1000);
+        feedback.deferNavigation(this, () => wx.redirectTo({ url: '/pages/admin/admin' }), 1000);
       } else {
         feedback.showToast(this, { title: res.result.message, icon: 'none' });
       }
     } catch (err) {
       feedback.showToast(this, { title: '网络异常', icon: 'none' });
     } finally {
-      this.setData({ loading: false });
+      if (feedback.isLive(this)) this.setData({ loading: false });
       feedback.hideLoading(this);
     }
   }

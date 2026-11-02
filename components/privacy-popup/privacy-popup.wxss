@@ -28,6 +28,7 @@
 }
 
 .privacy-body {
+  max-height: 56vh;
   margin-bottom: 40rpx;
 }
 

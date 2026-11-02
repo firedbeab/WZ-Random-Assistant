@@ -1,3 +1,30 @@
+// BEGIN shared text safety: only an explicit pass may be published.
+async function checkTextSafety(cloud, openid, content, testMode = false) {
+  if (testMode || !content.trim()) return { passed: true, unavailable: false };
+  const unavailable = { passed: false, unavailable: true, code: 'SAFETY_UNAVAILABLE', message: '内容检查暂时不可用，请稍后重试；填写内容已保留' };
+  try {
+    const result = await cloud.openapi.security.msgSecCheck({ openid, scene: 2, version: 2, content });
+    if (!result || (result.errCode !== undefined && result.errCode !== 0)) return unavailable;
+    const suggest = result.result && result.result.suggest;
+    if (suggest === 'pass') return { passed: true, unavailable: false };
+    if (suggest === 'risky' || suggest === 'review') return { passed: false, unavailable: false, code: 'CONTENT_REJECTED', message: '内容未通过安全检查，请修改后重试' };
+    return unavailable;
+  } catch (error) {
+    const sdkCode = error && Number.isInteger(error.errCode) ? error.errCode : 'UNKNOWN';
+    console.warn('[内容安全] 检查未完成', { code: sdkCode });
+    return { ...unavailable, sdkCode };
+  }
+}
+// END shared text safety.
+
+// Read-only health check: production superadmin only, never bypasses safety in test mode.
+async function probeTextSafety(event, openid) {
+  if (!event || event.action !== 'checkTextSafety') return null;
+  if (!await isProductionSuperadmin(db, openid)) return { success: false, code: 'FORBIDDEN', message: '无权限访问' };
+  if (typeof event.content !== 'string' || !event.content.trim() || event.content.length > 300) return { success: false, message: '请输入1至300字的检查内容' };
+  return { success: true, data: await checkTextSafety(cloud, openid, event.content.trim(), false) };
+}
+
 const cloud = require('wx-server-sdk');
 const { createDataScope, isProductionSuperadmin, canUseTestData } = require('./dataScope');
 
@@ -43,7 +70,7 @@ function clampPage(value, fallback, max) {
 
 function publicError(err, fallback) {
   const allowed = new Set([
-    '记录不存在', '记录状态已变化，请刷新后重试', '页面数据已过期，请刷新后重试',
+    '内容检查暂时不可用，请稍后重试；填写内容已保留', '记录不存在', '记录状态已变化，请刷新后重试', '页面数据已过期，请刷新后重试',
     '存在同名内容，请修改后重试', '排期中存在重复内容', '排期至少需要保留一个项目'
   ]);
   return err && allowed.has(err.message) ? err.message : fallback;
@@ -78,20 +105,9 @@ async function safeAudit(scope, entry) {
 }
 
 async function checkText(openid, content, testMode) {
-  if (!content) return true;
-  if (testMode) {
-    console.log('[测试环境] 已跳过超管编辑内容安全调用');
-    return true;
-  }
-  try {
-    const res = await cloud.openapi.security.msgSecCheck({
-      openid, scene: 2, version: 2, content
-    });
-    return !(res && res.result && res.result.suggest === 'risky');
-  } catch (err) {
-    console.warn('[内容安全] 检查失败，已跳过:', err.errCode || err.message);
-    return true;
-  }
+  const safety = await checkTextSafety(cloud, openid, content, testMode);
+  if (safety.unavailable) throw new Error(safety.message);
+  return safety.passed;
 }
 
 function toScheduleItem(item) {
@@ -163,6 +179,7 @@ async function adjustCounter(countersCollection, weekKey, delta) {
 
 exports.main = async event => {
   const { OPENID } = cloud.getWXContext();
+  const probe = await probeTextSafety(event, OPENID); if (probe) return probe;
   const scope = createDataScope(event);
   if (!OPENID || !(await isProductionSuperadmin(db, OPENID))) {
     return { success: false, message: '仅超级管理员可访问' };

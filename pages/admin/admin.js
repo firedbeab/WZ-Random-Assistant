@@ -157,6 +157,7 @@ Page(theme.page(feedback.page({
     feedback.showLoading(this, { title: '验证身份...' });
     try {
       const res = await cloudCall({ name: 'getUserInfo' });
+      if (!feedback.isLive(this)) return;
       if (res.result.success && (res.result.data.role === 'admin' || res.result.data.role === 'superadmin')) {
         const app = getApp();
         const userInfo = res.result.data;
@@ -187,7 +188,7 @@ Page(theme.page(feedback.page({
     } catch (err) {
       console.warn('身份验证失败');
       toastLater(this, { title: '网络异常', icon: 'none' });
-      setTimeout(() => wx.navigateBack(), 1500);
+      feedback.deferNavigation(this, () => wx.navigateBack(), 1500);
     } finally {
       feedback.hideLoading(this);
     }
@@ -212,7 +213,7 @@ Page(theme.page(feedback.page({
 
   showNoPermission() {
     toastLater(this, { title: '无权限访问', icon: 'none' });
-    setTimeout(() => wx.navigateBack(), 1500);
+    feedback.deferNavigation(this, () => wx.navigateBack(), 1500);
   },
 
   // 管理员身份绑定微信账号，返回首页不会清除云端角色

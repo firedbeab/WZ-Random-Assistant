@@ -5,27 +5,28 @@
     <view class="privacy-title">隐私保护指引</view>
 
     <!-- 说明文本 -->
-    <view class="privacy-body">
+    <scroll-view class="privacy-body" scroll-y show-scrollbar="{{false}}">
       <text class="privacy-text">在使用「WZ随机助手」前，请阅读并同意</text>
       <text class="privacy-link" bindtap="openContract">《隐私保护指引》</text>
       <text class="privacy-text">。继续使用即表示你已阅读并同意该指引。</text>
 
       <view class="privacy-detail">
-        <text class="privacy-detail-title">本小程序将会收集以下信息：</text>
+        <text class="privacy-detail-title">信息用途说明：</text>
         <view class="privacy-detail-item">
           <text class="privacy-dot"></text>
-          <text class="privacy-detail-text">设备信息：用于获取设备型号和屏幕尺寸，适配页面显示效果</text>
+          <text class="privacy-detail-text">微信用户标识：用于识别本人，关联点歌、点赞、投票及反馈记录</text>
         </view>
         <view class="privacy-detail-item">
           <text class="privacy-dot"></text>
-          <text class="privacy-detail-text">剪切板：用于复制内容信息，方便粘贴到其他应用中使用</text>
+          <text class="privacy-detail-text">主动填写的内容：包括歌名、歌手、备注、自定义称呼和反馈；不会读取你的微信昵称</text>
         </view>
         <view class="privacy-detail-item">
           <text class="privacy-dot"></text>
-          <text class="privacy-detail-text">所选图片：仅在超级管理员主动上传使用说明图片时读取，不会读取未选择的照片</text>
+          <text class="privacy-detail-text">可选操作：按你的操作复制文字、申请订阅提醒；管理员选择的图片用于说明、更新日志或彩蛋展示，不读取未选择的照片</text>
         </view>
+        <view class="privacy-detail-item"><text class="privacy-dot"></text><text class="privacy-detail-text">页面布局使用屏幕尺寸，外观偏好保存在本机。具体处理方式请查看完整指引。</text></view>
       </view>
-    </view>
+    </scroll-view>
 
     <!-- 按钮区域 -->
     <view class="privacy-btns">

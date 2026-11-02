@@ -1,7 +1,8 @@
+const { APP_VERSION } = require('../../utils/version');
 const feedback = require('../../utils/admin-feedback');
 const theme = require('../../utils/theme');
 Page(theme.page(feedback.notifications({
-  data: {},
+  data: { appVersion: APP_VERSION,},
 
   goHelp() {
     wx.navigateTo({ url: '/pages/help/index' });
