@@ -67,12 +67,33 @@ test('本人投稿历史按月份与身份读取，只以正式发布及原投�
  const f=fixture();f.seed('submissions','a',{user_id:'alice',song_name:'稻香',singer:'周杰伦',special_note:'原版',week_key:'2026-10-25',submit_time:new Date('2026-10-25T02:00:00Z'),status:'selected'});
  f.seed('submissions','private',{user_id:'bob',song_name:'别人的歌',week_key:'2026-10-25',submit_time:new Date('2026-10-25T02:00:00Z')});
  const r=await f.call('listSubmissions',{month:'2026-10',owner:'bob'});assert.equal(r.success,true);assert.equal(r.data.items.length,1);assert.equal(r.data.items[0].note,'原版');assert.equal(r.data.items[0].placement.weekKey,'2026-10-25');assert(!JSON.stringify(r).includes('alice'));assert(!JSON.stringify(r).includes('别人的歌'));
- f.rows.get('schedules/schedule').status='pending';const draft=await f.call('listSubmissions',{month:'2026-10'});assert.equal(draft.data.items[0].placement,null);assert.equal(draft.data.items[0].statusLabel,'等待结果');
+ f.rows.get('schedules/schedule').status='pending';const draft=await f.call('listSubmissions',{month:'2026-10'});assert.equal(draft.data.items[0].placement,null);assert.equal(draft.data.items[0].statusLabel,'');
  assert.equal((await f.call('listSubmissions',{month:'2026-10',_testMode:true})).code,'TEST_ACCESS_DENIED');
 });
 test('投稿历史保存六个月不延长候补，overflow仍能查看且过期不可见',async()=>{
  const f=fixture();f.seed('submissions','over',{user_id:'alice',song_name:'超额记录',week_key:'2026-08-02',submit_time:new Date('2026-08-02T02:00:00Z'),status:'overflow'});f.seed('submissions','expired',{user_id:'alice',song_name:'到期记录',week_key:'2026-04-26',submit_time:new Date('2026-04-26T02:00:00Z'),status:'carryover'});
- assert.equal((await f.call('listSubmissions',{month:'2026-08'})).data.items[0].statusLabel,'未进入候选');assert.equal((await f.call('listSubmissions',{month:'2026-04'})).data.items.length,0);
+ assert.equal((await f.call('listSubmissions',{month:'2026-08'})).data.items[0].statusLabel,'');assert.equal((await f.call('listSubmissions',{month:'2026-04'})).data.items.length,0);
  const fetchAll=async(n,w)=>(await f.db.collection(n).where(w).get()).data;
  await retention.cleanupSubmissions({db:f.db,command:f.db.command,collection:'submissions',fetchAll,now:Date.UTC(2026,9,31)});assert(f.rows.has('submissions/over'));assert(!f.rows.has('submissions/expired'));
+});
+
+test('未确认入选的全部投稿返回空状态，不改变内部状态或候补范围',async()=>{
+ const f=fixture();
+ for(const status of ['pending','carryover','overflow','rejected','selected'])f.seed('submissions','unplaced-'+status,{user_id:'alice',song_name:'稻香',singer:'周杰伦',week_key:'2026-10-25',submit_time:new Date('2026-10-25T02:00:00Z'),status});
+ f.seed('submissions','ended',{user_id:'alice',song_name:'候补已结束',week_key:'2026-08-02',submit_time:new Date('2026-10-01T02:00:00Z'),status:'carryover'});
+ const before=structuredClone([...f.rows]),r=await f.call('listSubmissions',{month:'2026-10'});
+ assert.equal(r.success,true);assert.equal(r.data.items.length,6);
+ for(const row of r.data.items){assert.equal(row.statusLabel,'');assert.equal(row.placement,null);}
+ assert.deepEqual([...f.rows],before);
+});
+
+test('已发布曲目的旧_id关联与跨期候补均显示已入选，新submission_id优先且不按名称猜测',async()=>{
+ const f=fixture();f.seed('submissions','a',{user_id:'alice',song_name:'稻香',week_key:'2026-10-25',submit_time:new Date('2026-10-25T02:00:00Z'),status:'carryover'});
+ f.rows.get('schedules/schedule').day1=[{_id:'a',song_name:'稻香'}];
+ let r=await f.call('listSubmissions',{month:'2026-10'});assert.equal(r.data.items[0].statusLabel,'已入选');assert.equal(r.data.items[0].placement.day,1);
+ f.rows.get('schedules/schedule').day1=[{_id:'a',submission_id:'another',song_name:'稻香'}];
+ r=await f.call('listSubmissions',{month:'2026-10'});assert.equal(r.data.items[0].statusLabel,'');assert.equal(r.data.items[0].placement,null);
+ f.rows.get('schedules/schedule').day1=[];
+ f.seed('schedules','later',{week_key:'2026-11-08',status:'published',day3:[{submission_id:'a',song_name:'稻香'}]});
+ r=await f.call('listSubmissions',{month:'2026-10'});assert.equal(r.data.items[0].statusLabel,'已入选');assert.equal(r.data.items[0].placement.weekKey,'2026-11-08');assert.equal(r.data.items[0].placement.day,3);
 });

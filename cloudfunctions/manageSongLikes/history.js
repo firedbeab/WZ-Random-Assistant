@@ -16,10 +16,11 @@ async function listSubmissions({db,scope,owner,event,now}){
  const schedules=weeks.length?(await db.collection(scope.collection('schedules')).where({status:'published',week_key:db.command.in(weeks)}).limit(100).get()).data:[];
  const items=page.map(r=>{
   const placements=[];
-  for(const s of schedules)for(let d=1;d<=5;d++)if((s['day'+d]||[]).some(song=>song.submission_id===r._id))placements.push({weekKey:s.week_key,day:d});
+  for(const s of schedules)for(let d=1;d<=5;d++)if((s['day'+d]||[]).some(song=>song&&(song.submission_id||song._id)===r._id))placements.push({weekKey:s.week_key,day:d});
   placements.sort((a,b)=>a.weekKey.localeCompare(b.weekKey)||a.day-b.day);
-  const placement=placements[0],waiting=shift(r.week_key,3)>new Date(now+8*3600000).toISOString().slice(0,10);
-  const statusLabel=placement?'已入选':r.status==='overflow'?'未进入候选':waiting?'等待结果':'未见入选记录';
+  // Only confirmed published placement is user-facing. Pending, carryover,
+  // overflow and expired candidacy remain internal, without a status label.
+  const placement=placements[0],statusLabel=placement?'已入选':'';
   return {id:r._id,title:r.song_name||'',singer:r.singer||'',note:r.special_note||'',submittedAt:millis(r.submit_time),weekKey:r.week_key,statusLabel,placement:placement||null};
  });
  return {items,hasMore:result.data.length>20,offset:offset+Math.min(20,result.data.length)};
