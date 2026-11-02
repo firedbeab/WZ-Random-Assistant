@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 function page(file) {
   const calls = [], timers = new Map(); let definition, nextTimer = 0;
-  const api = { response: { success: true, data: {} }, confirm: true };
+  const api = { response: { success: true, data: {} }, confirm: true, testMode: true };
   const wx = {
     showModal: async options => { api.modal = options; return { confirm: api.confirm }; },
     showToast() {}, showLoading() {}, hideLoading() {}, stopPullDownRefresh() {},
@@ -24,7 +24,7 @@ function page(file) {
         showModal: async (page, options) => { api.modal = options; return { confirm: api.confirm, content: api.content || '' }; } };
       if (name.includes('theme')) return { page: value => value, getNativeColors: () => ({ accent: '#287e56', danger: '#a00' }) };
       if (name.includes('easter-egg-photos')) return { DEFAULT_TOP: '默认上方', DEFAULT_BOTTOM: '默认下方' };
-      if (name.includes('runtime')) return { isTestMode: () => true, collectionName: name => name, storageKey: name => name,
+      if (name.includes('runtime')) return { isTestMode: () => api.testMode, collectionName: name => name, storageKey: name => name,
         cloudCall: async request => { calls.push(request); return { result: api.handler ? await api.handler(request) : api.response }; } };
       throw new Error(name);
     }
@@ -39,6 +39,31 @@ function page(file) {
   return { instance, api, wx, calls, flush() { while (timers.size) { const [id, fn] = timers.entries().next().value; timers.delete(id); fn(); } } };
 }
 const event = dataset => ({ currentTarget: { dataset } });
+
+test('模拟抽取由客户端携带身份直调，不再经过testTool转调', async()=>{
+  const f=page('admin.js'),p=f.instance;let refreshed=0;
+  p.setData({isSuperAdmin:true});p.loadTestStats=()=>{refreshed++;};
+  await p.onTestDraw();assert.equal(f.calls.length,0);
+  await f.api.modal.success({confirm:true});
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].name,'drawWeeklyPlaylist');
+  assert.equal(Object.keys(f.calls[0].data).length,0);assert.equal(refreshed,1);
+  const cancelled=page('admin.js');cancelled.instance.setData({isSuperAdmin:true});
+  await cancelled.instance.onTestDraw();await cancelled.api.modal.success({confirm:false});assert.equal(cancelled.calls.length,0);
+});
+
+test('正式模式、非超管、确认前离页或身份变化均不触发模拟抽取',async()=>{
+  for(const state of [{mode:false,superadmin:true},{mode:true,superadmin:false}]){
+    const f=page('admin.js');f.api.testMode=state.mode;f.instance.setData({isSuperAdmin:state.superadmin});
+    await f.instance.onTestDraw();assert.equal(f.calls.length,0);assert.equal(f.api.modal,undefined);
+  }
+  for(const change of ['unload','role','mode']){
+    const f=page('admin.js');f.instance.setData({isSuperAdmin:true});await f.instance.onTestDraw();
+    if(change==='unload')f.instance._adminUnloaded=true;
+    if(change==='role')f.instance.setData({isSuperAdmin:false});
+    if(change==='mode')f.api.testMode=false;
+    await f.api.modal.success({confirm:true});assert.equal(f.calls.length,0);
+  }
+});
 
 test('后台切页同步响应，不等待动画定时器，角色保护与卸载保持', () => {
   const p = page('admin.js'), a = p.instance, loaded = [];

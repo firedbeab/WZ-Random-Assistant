@@ -8,6 +8,20 @@ const root=path.resolve(__dirname,'../..');
 const user={_id:'admin',openid:'admin',role:'superadmin'};
 const schedule={_id:'s',status:'pending',week_key:'2026-11-01',revision:1,day1:[{submission_id:'a',song_name:'甲'},{submission_id:'b',song_name:'乙',audit_state:'pending_remove'}],day2:[],day3:[],day4:[],day5:[],total_count:2};
 const seeds=()=>({users:{admin:user},schedules:{s:structuredClone(schedule)},submissions:{a:{_id:'a',status:'selected'},b:{_id:'b',status:'selected'}}});
+
+test('有身份的测试管理员可以直接抽取，匿名转调仍拒绝且不放开正式定时源',async()=>{
+ const seed={users:{admin:user},test_users:{admin:user},
+  schedules:{formal:{_id:'formal',week_key:'2026-11-01',status:'published',day1:[]}},
+  submissions:{formal:{_id:'formal',week_key:'2026-11-01',status:'pending'}},
+  test_submissions:{a:{_id:'a',user_id:'tester',status:'pending',week_key:'2026-11-01',song_name:'测试内容',submit_time:new Date('2026-11-01T02:00:00Z')}}};
+ const f=fixture('drawWeeklyPlaylist',seed);const original=structuredClone({schedules:f.state.rows.schedules,submissions:f.state.rows.submissions});
+ assert.equal((await f.main({_testMode:true})).success,true);assert.equal(Object.keys(f.state.rows.test_schedules).length,1);
+ assert.equal(f.state.rows.test_submissions.a.status,'selected');assert.deepEqual({schedules:f.state.rows.schedules,submissions:f.state.rows.submissions},original);
+ const anonymous=fixture('drawWeeklyPlaylist',seed,{owner:null,source:'wx_cloud_function'});
+ assert.equal((await anonymous.main({_testMode:true})).code,'FORBIDDEN');assert.equal(anonymous.state.requests.length,0);
+ const ordinary=fixture('drawWeeklyPlaylist',{...seed,users:{admin:{...user,role:'user'}},test_users:{admin:{...user,role:'user'}}});
+ assert.equal((await ordinary.main({_testMode:true})).success,false);assert.equal(ordinary.state.commits,0);
+});
 test('七个文本入口只接受明确通过，异常与缺失结果不放行，测试域不消耗正式检查',async()=>{
  const names=['checkWeeklyCode','adminAuditPlaylist','manageHelpContent','manageChangelog','superAdminConsole','manageFeedback','manageEasterEggs'];
  const helpers=names.map(n=>fs.readFileSync(path.join(root,'cloudfunctions',n,'index.js'),'utf8').split('// END shared text safety.')[0]);

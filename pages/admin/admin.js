@@ -1223,16 +1223,23 @@ Page(theme.page(feedback.page({
   },
 
   async onTestDraw() {
+    if (!isTestMode() || !this.data.isSuperAdmin) {
+      feedback.showToast(this, { title: '仅测试版超级管理员可模拟抽取', icon: 'none' });
+      return;
+    }
     feedback.showModal(this, {
       title: '一键抽取',
       content: '将执行本周抽取任务，是否继续？',
       success: async (res) => {
         if (res.confirm) {
+          if (this._adminUnloaded || !isTestMode() || !this.data.isSuperAdmin) return;
           feedback.showLoading(this, { title: '抽取中...' });
           try {
+            // Client invocation carries platform-authenticated user identity.
+            // Do not relay through testTool as an anonymous cloud-to-cloud call.
             const ret = await cloudCall({
-              name: 'testTool',
-              data: { action: 'runDraw' }
+              name: 'drawWeeklyPlaylist',
+              data: {}
             });
             feedback.hideLoading(this);
             if (ret.result.success) {
