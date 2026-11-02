@@ -1,0 +1,8 @@
+/* 我的与关于共用入口几何；长文字仍可自然增高。 */
+.profile-entries { padding: 0 28rpx; }
+.profile-entries .profile-entry { display:flex; align-items:center; gap:20rpx; width:100%; min-height:126rpx; box-sizing:border-box; margin:0; padding:24rpx 0; text-align:left; border-radius:0; background:transparent; color:var(--text-1); line-height:1.5; }
+.profile-entry + .profile-entry { border-top:1rpx solid var(--line); }
+.profile-entry .profile-entry-title { display:block; font-size:30rpx; font-weight:600; line-height:1.55; }
+.profile-entry .profile-entry-caption { display:block; margin-top:6rpx; font-size:24rpx; color:var(--text-2); line-height:1.75; }
+.profile-entry .profile-entry-icon { display:flex; align-items:center; justify-content:center; flex:none; width:56rpx; height:56rpx; border-radius:var(--radius-md); background:var(--accent-weak); }
+.profile-entry .profile-entry-icon image,.profile-entry>.profile-entry-arrow { display:block; flex:none; width:34rpx; height:34rpx; }

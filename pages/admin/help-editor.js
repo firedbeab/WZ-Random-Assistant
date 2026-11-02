@@ -15,6 +15,7 @@ const IMAGE_COMPRESSION_STEPS = [
 Page(theme.page(feedback.page({
   data: {
     isTestMode: isTestMode(),
+    isChangelog:false,serviceName:'manageHelpContent',logVersion:'',releaseDate:new Date(Date.now()+8*3600000).toISOString().slice(0,10),revision:1,
     articleId: '',
     title: '',
     summary: '',
@@ -38,9 +39,10 @@ Page(theme.page(feedback.page({
     }
     wx.navigateBack();
   },
-  async onLoad(options) {
+  async onLoad(options = {}) {
     const articleId = options.id ? decodeURIComponent(options.id) : '';
-    this.setData({ articleId });
+    const isChangelog=options.kind==='changelog';
+    this.setData({ articleId,isChangelog,serviceName:isChangelog?'manageChangelog':'manageHelpContent' });
     const allowed = await this.checkPermission();
     if (!allowed) return;
     if (articleId) {
@@ -68,7 +70,7 @@ Page(theme.page(feedback.page({
     feedback.showLoading(this, { title: '加载中...' });
     try {
       const res = await cloudCall({
-        name: 'manageHelpContent',
+        name: this.data.serviceName,
         data: { action: 'getForAdmin', articleId }
       });
       if (!res.result || !res.result.success) {
@@ -83,6 +85,7 @@ Page(theme.page(feedback.page({
       this.setData({
         title: article.title || '',
         summary: article.summary || '',
+        logVersion:article.version || '',releaseDate:article.release_date || this.data.releaseDate,revision:article.revision || 1,
         content: article.content || '',
         images,
         isPublished: Boolean(article.is_published),
@@ -117,6 +120,8 @@ Page(theme.page(feedback.page({
     return value;
   },
 
+  onVersionInput(e){this.markDirty({logVersion:e.detail.value});},
+  async chooseReleaseDate(){const r=await feedback.showDatePicker(this,{title:'选择发布日期',value:this.data.releaseDate});if(r.confirm)this.markDirty({releaseDate:r.value});},
   onContentInput(e) {
     const value = e.detail.value;
     this.markDirty({ content: value });
@@ -346,7 +351,7 @@ Page(theme.page(feedback.page({
     const safeExtension = ['jpg', 'jpeg', 'png', 'webp'].includes(extension) ? extension : 'jpg';
     const randomPart = Math.random().toString(36).slice(2, 12);
     const upload = await wx.cloud.uploadFile({
-      cloudPath: `${isTestMode() ? 'test/help' : 'help'}/${Date.now()}-${randomPart}.${safeExtension}`,
+      cloudPath: `${isTestMode() ? 'test/' : ''}${this.data.isChangelog ? 'changelog' : 'help'}/${Date.now()}-${randomPart}.${safeExtension}`,
       filePath: image.tempPath
     });
     if (!upload || !upload.fileID) {
@@ -359,7 +364,7 @@ Page(theme.page(feedback.page({
     if (!fileIDs.length) return;
     try {
       await cloudCall({
-        name: 'manageHelpContent',
+        name: this.data.serviceName,
         data: { action: 'deleteFiles', fileIDs }
       });
     } catch (err) {
@@ -368,6 +373,7 @@ Page(theme.page(feedback.page({
   },
 
   validateForm() {
+    if(this.data.isChangelog&&(!/^v?\d+\.\d+(?:\.\d+)?(?:[-+][\w.-]+)?$/.test(this.data.logVersion.trim())||!/^\d{4}-\d{2}-\d{2}$/.test(this.data.releaseDate))){feedback.showToast(this,{title:'请填写有效版本号和发布日期'});return false;}
     if (this.data.images.length > MAX_IMAGES) {
       feedback.showToast(this, { title: '每条说明最多添加10张图片', icon: 'none' });
       return false;
@@ -387,16 +393,10 @@ Page(theme.page(feedback.page({
     this.saveArticle(false);
   },
 
-  onPublish() {
-    if (!this.validateForm()) return;
-    feedback.showModal(this, {
-      title: '发布使用说明',
-      content: '发布后用户将立即看到这条说明，是否继续？',
-      confirmText: '发布',
-      success: res => {
-        if (res.confirm) this.saveArticle(true);
-      }
-    });
+  async onPublish() {
+    if (!this.validateForm() || this.data.saving || this.data.choosingImages) return;
+    const res=await feedback.showModal(this,{title:this.data.isChangelog?'发布更新日志':'发布使用说明',content:'发布后用户将立即看到这条内容，是否继续？',confirmText:'发布'});
+    if(res.confirm)await this.saveArticle(true);
   },
 
   async saveArticle(isPublished) {
@@ -426,12 +426,13 @@ Page(theme.page(feedback.page({
       const finalImages = uploadResults.map(result => result.fileID);
 
       const res = await cloudCall({
-        name: 'manageHelpContent',
+        name: this.data.serviceName,
         data: {
           action: 'save',
           articleId: this.data.articleId,
           title: this.data.title.trim(),
           summary: this.data.summary.trim(),
+          ...(this.data.isChangelog?{version:this.data.logVersion.trim(),releaseDate:this.data.releaseDate,revision:this.data.revision}:{}),
           content: this.data.content.trim(),
           images: finalImages,
           newImageIDs: uploadedFileIDs,

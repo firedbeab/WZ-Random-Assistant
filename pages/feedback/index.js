@@ -5,7 +5,7 @@ const { isTestMode } = require('../../utils/runtime');
 Page(theme.page(feedback.page({
   data: { tab: 'feedback', categories: ['使用问题', '功能建议', '其他'], category: '使用问题', content: '',
     version: '1.9', isTestMode: isTestMode(), entries: [], polls: [], loading: true, error: '', hasMore: false, offset: 0,
-    sheet: '', sheetClosing: false, dirty: false, busy: false, detail: null },
+    sheet: '', sheetClosing: false, dirty: false, busy: false, detail: null, endedExpanded:false, activePolls:[], endedPolls:[] },
   ...community.sheetMethods,
   onLoad() { this._alive = true; this._requestId = community.requestId(); this.load(); },
   onUnload() { this._alive = false; clearTimeout(this._sheetTimer); },
@@ -40,11 +40,14 @@ Page(theme.page(feedback.page({
       const items = result.items.map(tab === 'feedback' ? community.feedbackView : community.pollView);
       const combined = more ? this.data[field].concat(items) : items;
       this.setData({ [field]: [...new Map(combined.map(item => [item._id, item])).values()], hasMore: result.hasMore, offset: result.offset });
+      if(tab==='polls')this.updatePollGroups();
     } catch (e) { if (this._alive && seq === this._seq) this.setData({ error: e.message }); }
     finally { if (this._alive && seq === this._seq) this.setData({ loading: false }); }
   },
   loadMore() { if (!this.data.busy) this.load(true); },
   retry() { this.load(); },
+  updatePollGroups(){this.setData({activePolls:this.data.polls.filter(p=>!p.ended),endedPolls:this.data.polls.filter(p=>p.ended)});},
+  toggleEnded(){this.setData({endedExpanded:!this.data.endedExpanded});},
   async submit() {
     if (this.data.busy) return;
     if (this.data.content.trim().length < 2) { feedback.showToast(this, { title: '请至少填写两个字，描述具体一点更方便处理。' }); return; }
@@ -76,14 +79,17 @@ Page(theme.page(feedback.page({
     const optimistic = { ...previous, choice, total, options, votePending: true };
     this._seq = (this._seq || 0) + 1; // Ignore any list request started before this vote.
     this.setData({ busy: true, loading: false, polls: this.data.polls.map(poll => poll._id === id ? optimistic : poll) });
+    this.updatePollGroups();
     try {
       await community.api('vote', { id, choice }); if (!this._alive) return;
       this.setData({ polls: this.data.polls.map(poll => poll._id === id ? { ...poll, votePending: false } : poll) });
+      this.updatePollGroups();
       feedback.showToast(this, { title: '选择已记录', icon: 'success' }); await this.load();
     }
     catch (e) {
       if (this._alive) this.setData({ polls: this.data.polls.map(poll => poll._id === id ? previous : poll) });
-      this.fail(e); if (e.code === 'POLL_CLOSED' && this._alive) await this.load();
+      if(this._alive)this.updatePollGroups();
+      this.fail(e); if (['POLL_CLOSED','POLL_HIDDEN','NOT_FOUND'].includes(e.code) && this._alive) await this.load();
     }
     finally { if (this._alive) this.setData({ busy: false }); }
   }

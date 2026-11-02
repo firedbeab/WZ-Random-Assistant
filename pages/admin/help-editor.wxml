@@ -1,21 +1,23 @@
-<page-meta page-style="{{appearanceStyle}} {{_adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
+<page-meta page-style="{{appearanceStyle}} {{viewportStyle}} {{_adminDialogVisible ? 'overflow:hidden;' : 'overflow:auto;'}}" />
+<app-navigation back parent="{{isChangelog ? '/pages/changelog/index' : '/pages/admin/admin'}}" />
 <view class="page admin-page-enter" wx:if="{{!loading}}">
-<view class="admin-hero"><view class="admin-heading"><text class="admin-title">管理后台</text></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view><view class="sub-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回说明管理"><image src="{{themeIcons.back}}" /></button><text>编辑说明</text></view>
+<view class="admin-hero" wx:if="{{!isChangelog}}"><view class="admin-heading"><text class="admin-title">管理后台</text></view><text class="environment-tag" wx:if="{{isTestMode}}">测试模式</text></view><view class="sub-heading"><button class="sub-back" bindtap="backFromEditor" aria-label="返回上级"><image src="{{themeIcons.back}}" /></button><text>{{isChangelog ? '编辑更新日志' : '编辑说明'}}</text></view>
   <view class="form-card">
+    <block wx:if="{{isChangelog}}"><view class="field"><text class="field-label">版本号</text><input class="field-input" value="{{logVersion}}" bindinput="onVersionInput" maxlength="24" placeholder="例如：v1.9" placeholder-class="form-placeholder" /></view><view class="field"><text class="field-label">发布日期</text><button class="log-date-field" bindtap="chooseReleaseDate"><text>{{releaseDate}}</text><image src="{{themeIcons.chevron}}" mode="aspectFit"/></button></view></block>
     <view class="field">
       <text class="field-label">标题</text>
-      <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="40" placeholder="例如：如何提交歌曲" placeholder-class="form-placeholder" />
+      <input class="field-input" value="{{title}}" bindinput="onTitleInput" maxlength="40" placeholder="{{isChangelog ? '例如：新增点歌记录与点赞' : '例如：如何提交歌曲'}}" placeholder-class="form-placeholder" />
       <text class="field-count">{{title.length}}/40</text>
     </view>
 
     <view class="field">
-      <text class="field-label">折叠状态下的简短提示（可选）</text>
-      <input class="field-input" value="{{summary}}" bindinput="onSummaryInput" maxlength="80" placeholder="用一句话概括本条说明" placeholder-class="form-placeholder" />
+      <text class="field-label">{{isChangelog ? '更新摘要（可选）' : '折叠状态下的简短提示（可选）'}}</text>
+      <input class="field-input" value="{{summary}}" bindinput="onSummaryInput" maxlength="80" placeholder="{{isChangelog ? '用一句话概括本次变化' : '用一句话概括本条说明'}}" placeholder-class="form-placeholder" />
       <text class="field-count">{{summary.length}}/80</text>
     </view>
 
     <view class="field">
-      <text class="field-label">详细说明</text>
+      <text class="field-label">{{isChangelog ? '更新内容' : '详细说明'}}</text>
       <textarea class="content-input" value="{{content}}" bindinput="onContentInput" maxlength="5000" placeholder="输入详细内容，支持换行和分段" placeholder-class="form-placeholder" auto-height></textarea>
       <text class="field-count">{{content.length}}/5000</text>
     </view>
@@ -24,7 +26,7 @@
   <view class="form-card">
     <view class="image-heading">
       <view>
-        <text class="field-label">说明图片</text>
+        <text class="field-label">{{isChangelog ? '更新配图' : '说明图片'}}</text>
         <text class="image-subtitle">每条最多10张，可分批添加；超过2MB将自动压缩</text>
       </view>
       <text class="image-total">{{images.length}}/10</text>

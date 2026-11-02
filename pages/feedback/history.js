@@ -2,7 +2,7 @@ const theme = require('../../utils/theme');
 const feedback = require('../../utils/admin-feedback');
 const community = require('../../utils/community');
 Page(theme.page(feedback.page({
- data: { entries: [], loading: true, error: '', offset: 0, hasMore: false, sheet: '', sheetClosing: false, detail: null, busy: false },
+ data: { entries: [], loading: true, error: '', offset: 0, hasMore: false, sheet: '', sheetClosing: false, detail: null, busy: false, status: '', statuses: [{id:'',label:'全部'},{id:'received',label:'已收到'},{id:'handling',label:'处理中'},{id:'done',label:'已处理'}] },
  ...community.sheetMethods,
  onLoad() { this._alive = true; },
  onShow() { this.load(); },
@@ -13,7 +13,7 @@ Page(theme.page(feedback.page({
    const seq = this._seq = (this._seq || 0) + 1;
    this.setData({ loading: true, error: '' });
    try {
-     const result = await community.api('listMine', { offset: more ? this.data.offset : 0 });
+     const result = await community.api('listMine', { offset: more ? this.data.offset : 0, status: this.data.status });
      if (!this._alive || seq !== this._seq) return;
      const items = (more ? this.data.entries : []).concat(result.items.map(community.feedbackView));
      this.setData({ entries: [...new Map(items.map(item => [item._id, item])).values()], offset: result.offset, hasMore: result.hasMore });
@@ -21,6 +21,7 @@ Page(theme.page(feedback.page({
    finally { if (this._alive && seq === this._seq) this.setData({ loading: false }); }
  },
  retry() { this.load(); }, loadMore() { this.load(true); },
+ filterStatus(e) {const status=e.currentTarget.dataset.id;if(this.data.busy||this.data.sheet||!this.data.statuses.some(s=>s.id===status)||status===this.data.status)return;this.setData({status,entries:[],hasMore:false,offset:0});this.load();},
   async openFeedback(e) {
     if (this.data.busy) return;
     const entry = this.data.entries.find(item => item._id === e.currentTarget.dataset.id); if (!entry) return;

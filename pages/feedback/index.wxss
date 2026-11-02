@@ -9,3 +9,5 @@
 .feedback-categories .c-chip.active { border-color: var(--accent); }
 .feedback-categories .c-chip::after { border: 0; }
 .feedback-history-entry { background: var(--surface); }
+
+.feedback-section-note{display:flex;align-items:center;min-height:76rpx;margin:0 0 20rpx;color:var(--text-2);font-size:24rpx;line-height:1.7}.feedback-history-entry{border:1rpx solid var(--line);box-shadow:var(--shadow-md)}.ended-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;margin:16rpx 0;padding:18rpx 4rpx;background:transparent;color:var(--text-2);font-size:27rpx;min-height:80rpx}.ended-toggle image{width:30rpx;height:30rpx;transition:transform 300ms}.ended-toggle image.expanded{transform:rotate(180deg)}.ended-group{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows 320ms,opacity 260ms,visibility 320ms}.ended-group.expanded{grid-template-rows:1fr;opacity:1;visibility:visible}.ended-group-inner{min-height:0;overflow:hidden}.no-active-polls{padding:16rpx 4rpx 24rpx}@media(prefers-reduced-motion:reduce){.ended-group,.ended-toggle image{transition:none}}

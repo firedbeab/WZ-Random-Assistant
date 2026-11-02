@@ -1,7 +1,7 @@
 <page-meta page-style="{{appearanceStyle}} {{viewportStyle}}" />
-<view class="info-page">
+<view class="info-page ornament-page">
   <app-navigation back parent="/pages/about/index" />
-  <view class="info-head">
+  <image class="page-ornament" src="{{themeIcons.helpDecor}}" mode="aspectFit" aria-hidden="true"/><image class="page-ornament motif-edge" src="{{themeIcons.helpDecor}}" mode="aspectFit" aria-hidden="true"/><view class="info-head ornament-head">
     <view class="info-heading-row"><text class="info-title">使用说明</text></view>
     <text class="info-desc">点开条目，查看规则和操作方法。</text>
   </view>

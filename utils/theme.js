@@ -102,17 +102,20 @@ function iconSources(tokens) {
     appearance: svg('<circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 0 0 14V3Z" fill="'+tokens.accent+'" stroke="none"/>', tokens.accent),
     feedback: svg('<path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-4 2v-2.5A1.5 1.5 0 0 1 2.5 13V6A1.5 1.5 0 0 1 4 4.5Z"/><path d="M6 8h8M6 11h5"/>', tokens.accent),
     about: svg('<circle cx="10" cy="10" r="7.5"/><path d="M10 9v4.5M10 6.5h.01"/>', tokens.accent),
+    help: svg('<path d="M7 13c0-2-3-3-3-6a6 6 0 0 1 12 0c0 3-3 4-3 6H7ZM7 16h6M8 18h4M10 13V9M8 7l2 2 2-2"/>', tokens.accent),
+    admin: svg('<path d="m10 2 7 3v5c0 4-4 6.5-7 8-3-1.5-7-4-7-8V5l7-3Z"/><path d="m6.5 10 2.3 2.3 4.7-4.7"/>', tokens.accent),
+    changelog: svg('<path d="M12 2H4v16h12V6l-4-4Zm0 0v4h4M7 9h6M7 12h6M7 15h4"/>', tokens.accent),
     journal: svg('<circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="10" r="4.5"/><circle cx="10" cy="10" r="1.2"/><path d="M10 1v2M10 17v2"/>', tokens.accent),
     heart: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z"/>', tokens['text-3']),
     heartFilled: svg('<path d="M10 17 3.7 11A4 4 0 0 1 10 5a4 4 0 0 1 6.3 6Z" fill="'+tokens.accent+'"/>', tokens.accent),
-    musicList: svg('<path d="M7.2 16.4V6.1a.9.9 0 0 1 .6-.85l8.5-2.95a.9.9 0 0 1 1.2.85V13.3M7.2 9.4l10.3-3.6"/><circle cx="4.4" cy="16.4" r="2.8"/><circle cx="14.7" cy="13.3" r="2.8"/>', tokens.accent),
+    musicList: svg('<path d="M3 4h10M3 8h7M3 12h5M14 15V6l3 1.5"/><ellipse cx="11.5" cy="15.5" rx="2.5" ry="2"/>', tokens.accent),
     history: svg('<path d="M3 8a7 7 0 1 1 0 5M3 4v4h4M10 6v4l3 2"/>', tokens.accent),
     messageSuccess: svg('<circle cx="10" cy="10" r="8" fill="'+tokens.accent+'" stroke="'+tokens.accent+'"/><path d="m6 10 2.5 2.5 5-5" stroke="'+tokens['on-accent']+'"/>', tokens.accent),
     messageInfo: svg('<circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h.01"/>', tokens['text-2']),
     person: svg('<circle cx="10" cy="6" r="3"/><path d="M4 17v-2a6 6 0 0 1 12 0v2"/>', tokens.accent)
   };
   // Explicit intrinsic size avoids low-resolution decoding on large wx:image.
-  for (const key of ['journal','heartFilled','about','feedback','appearance','person']) {
+  for (const key of ['journal','heartFilled','about','feedback','appearance','person','help','changelog']) {
     const body=decodeURIComponent(icons[key].split(',')[1]).replace('<svg ','<svg width="512" height="512" ');
     icons[key+'Decor']='data:image/svg+xml,'+encodeURIComponent(body);
   }

@@ -20,3 +20,7 @@
 .info-footer { padding: 32rpx var(--space-5) 0; gap: 0; }
 .privacy-link { align-items: flex-end; padding: 0 var(--space-4) 4rpx; line-height: 1.5; }
 .attribution { margin-top: 4rpx; line-height: 1.5; }
+
+.info-entry-icon{display:flex;align-items:center;justify-content:center;flex:none;width:56rpx;height:56rpx;border-radius:var(--radius-md);background:var(--accent-weak)}.info-entry-icon image{width:34rpx;height:34rpx}.info-entry{gap:20rpx}
+
+@import "../../styles/profile-entries.wxss";

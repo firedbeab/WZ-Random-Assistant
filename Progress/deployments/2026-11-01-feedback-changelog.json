@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-01 America/New_York",
+  "backupCommit": "62b779e",
+  "frontendPublished": false,
+  "functions": [
+    {
+      "name": "manageFeedback",
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeout": 3,
+      "files": {
+        "service.js": "4e367b05e2d91939814a8ffc73fc73362300360797a991c7e564714c6007f368",
+        "index.js": "ee2e4a14b67520412f8526f0af93cab9f0290d2dfc8d3292e062505382abd0a1",
+        "dataScope.js": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+        "package.json": "cbe47c6222fcfb268ea5bbadf301d5cb195d5bd9b9ff1da7aade10254795832f",
+        "config.json": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8"
+      },
+      "downloadVerified": true
+    },
+    {
+      "name": "manageChangelog",
+      "status": "Active",
+      "runtime": "Nodejs16.13",
+      "timeout": 3,
+      "files": {
+        "index.js": "b18c12dab587cdab1b0041c003ede008696dbfce1d16ceb3993e6f87cf1836a6",
+        "dataScope.js": "e21b42c3cdf30f9b72b9f92986beff7ee20414f7110a43aa3b90ab4786c80d9a",
+        "package.json": "f2897803618cefbad55184b2062229aea0ec232bb70f8585388d2e091c44fdc7",
+        "config.json": "16734b104c7d32e828cfcd13149373b21b4544a4e65aae1aabebf124e12679c8"
+      },
+      "downloadVerified": true
+    }
+  ],
+  "collections": {
+    "changelog_articles": "ADMINONLY",
+    "test_changelog_articles": "ADMINONLY"
+  },
+  "aclEvidence": "User supplied both console screenshots; subsequent client reads each denied -502003; cloud function listPublished succeeded with zero entries",
+  "indexes": [
+    {
+      "collections": [
+        "user_feedback",
+        "test_user_feedback"
+      ],
+      "name": "owner_status_created_v1",
+      "keys": [
+        "owner:1",
+        "status:1",
+        "created_at:-1"
+      ]
+    },
+    {
+      "collections": [
+        "feedback_polls",
+        "test_feedback_polls"
+      ],
+      "name": "visible_created_v1",
+      "keys": [
+        "deleted:1",
+        "hidden:1",
+        "created_at:-1"
+      ]
+    }
+  ],
+  "indexesReadBack": true,
+  "tests": 164,
+  "compiled": {
+    "wxml": 23,
+    "wxss": 29
+  },
+  "sourceBytes": 649729,
+  "notes": [
+    "New function initial upload failed while Creating; second confirmed deploy succeeded.",
+    "No formal submissions, schedules or polls were mutated for testing.",
+    "Log layout sample only existed in simulator memory and was cleared.",
+    "Actual iOS/Android and ordinary-account acceptance still required."
+  ]
+}

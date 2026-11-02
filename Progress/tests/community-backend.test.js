@@ -6,7 +6,7 @@ function fixture() {
   let time = Date.UTC(2026, 9, 27), safetyReject = false, unavailable = false;
   const records = new Map(), versions = new Map(), safety = [], reads = [];
   const key = (collection, id) => collection + '/' + id;
-  const db = { collection: collection => reference(collection), async startTransaction() {
+  const db = { command: {neq: expected => ({matches: value => value !== expected})}, collection: collection => reference(collection), async startTransaction() {
     const observed = new Map(), writes = new Map();
     return { collection: name => reference(name, observed, writes), async rollback() {}, async commit() {
       for (const [k, version] of observed) if ((versions.get(k) || 0) !== version) throw Error('CONCURRENT_MODIFICATION');
@@ -16,7 +16,7 @@ function fixture() {
   function reference(collection, observed, writes) {
     let where = {}, offset = 0, limit = 100;
     const ref = { where(value) { where = value; return ref; }, orderBy() { return ref; }, limit(value) { limit = value; return ref; }, skip(value) { offset = value; return ref; },
-      async get() { if (unavailable) throw Error('DATABASE_OFFLINE'); reads.push(collection); return { data: [...records.entries()].filter(([k, value]) => k.startsWith(collection + '/') && Object.entries(where).every(([f, v]) => value[f] === v)).map(([, value]) => structuredClone(value)).sort((a,b) => b.created_at-a.created_at).slice(offset, offset+limit) }; },
+      async get() { if (unavailable) throw Error('DATABASE_OFFLINE'); reads.push(collection); return { data: [...records.entries()].filter(([k, value]) => k.startsWith(collection + '/') && Object.entries(where).every(([f, v]) => v && v.matches ? v.matches(value[f]) : value[f] === v)).map(([, value]) => structuredClone(value)).sort((a,b) => b.created_at-a.created_at).slice(offset, offset+limit) }; },
       doc(id) { const k = key(collection, id); return {
         async get() { if (unavailable) throw Error('DATABASE_OFFLINE'); reads.push(collection); if (observed) observed.set(k, versions.get(k) || 0); return { data: records.has(k) ? structuredClone(records.get(k)) : null }; },
         async set({ data }) { const value = { ...data, _id: id }; if (writes) writes.set(k, value); else { records.set(k, value); versions.set(k, (versions.get(k)||0)+1); } },
@@ -96,4 +96,15 @@ test('分页只返回规定条数，异常不伪装空列表；新模块没有�
   const a=await f.call('listMine'),b=await f.call('listMine',{offset:a.data.offset});assert.equal(a.data.items.length,20);assert.equal(a.data.hasMore,true);assert.equal(b.data.items.length,5);assert.equal(b.data.hasMore,false);
   assert(!f.reads.some(name=>/schedules|submissions|weekly_codes/.test(name)));
   f.offline();assert.equal((await f.call('listMine')).code,'BACKEND_UNAVAILABLE');
+});
+
+test('投票隐藏、恢复与中途删除由正式超管操作，保留计票并阻止旧页继续投票',async()=>{
+ const f=fixture(),created=await f.call('createPoll',{title:'下一步做什么',description:'',options:['方案一','方案二'],days:7,requestId:'poll_lifecycle_0001'},'admin');const id=created.data.id;await f.call('vote',{id,choice:0});
+ assert.equal((await f.call('setPollVisibility',{id,revision:1,hidden:true})).code,'FORBIDDEN');assert.equal((await f.call('setPollVisibility',{id,revision:1,hidden:true},'admin')).success,true);assert.equal((await f.call('listPolls')).data.items.length,0);assert.equal((await f.call('vote',{id,choice:1})).code,'POLL_HIDDEN');
+ const admin=(await f.call('adminListPolls',{},'admin')).data.items[0];assert.equal(admin.hidden,true);assert.equal(admin.total,1);assert.equal((await f.call('deletePoll',{id,revision:1},'admin')).code,'CONFLICT');assert.equal((await f.call('setPollVisibility',{id,revision:2,hidden:false},'admin')).success,true);assert.equal((await f.call('listPolls')).data.items[0].total,1);
+ assert.equal((await f.call('deletePoll',{id,revision:3},'admin')).success,true);assert.equal((await f.call('listPolls')).data.items.length,0);assert.equal((await f.call('adminListPolls',{},'admin')).data.items.length,0);assert.equal((await f.call('vote',{id,choice:1})).code,'NOT_FOUND');
+});
+test('本人处理状态筛选在服务端分页，不能通过状态或owner伪造越权',async()=>{
+ const f=fixture();await f.call('submitFeedback',form());f.advance(60001);const second=await f.call('submitFeedback',form('request_status_0002'));await f.call('adminUpdate',{id:second.data._id,revision:1,reply:'正在看',status:'handling'},'admin');
+ assert.equal((await f.call('listMine',{status:'handling'})).data.items.length,1);assert.equal((await f.call('listMine',{status:'done'})).data.items.length,0);assert.equal((await f.call('listMine',{status:'handling',owner:'alice'},'stranger')).data.items.length,0);assert.equal((await f.call('listMine',{status:'invented'})).code,'INVALID_INPUT');
 });

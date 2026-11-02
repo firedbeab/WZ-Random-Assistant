@@ -13,7 +13,8 @@
     "pages/feedback/index",
     "pages/admin/feedback",
     "pages/feedback/history",
-    "pages/likes/index"
+    "pages/likes/index",
+    "pages/changelog/index"
   ],
   "window": {
     "navigationBarTextStyle": "@navigationBarTextStyle",

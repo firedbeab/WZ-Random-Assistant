@@ -75,8 +75,18 @@ Page(theme.page(feedback.page({
     const result = await feedback.showModal(this, { title: '结束这个投票？', content: '结束后不能再投票或改票，结果会保留。', confirmText: '结束投票' });
     if (!result.confirm || !this._alive) return;
     this.setData({ busy: true });
-    try { await community.api('endPoll', { id }); if (!this._alive) return; feedback.showToast(this, { title: '投票已结束', icon: 'success' }); await this.load(); }
+    try { await community.api('endPoll', { id, revision:this.data.polls.find(p=>p._id===id)?.revision }); if (!this._alive) return; feedback.showToast(this, { title: '投票已结束', icon: 'success' }); await this.load(); }
     catch (e) { this.fail(e); }
     finally { if (this._alive) this.setData({ busy: false }); }
+  },
+  async changePollVisibility(e){
+    const poll=this.data.polls.find(p=>p._id===e.currentTarget.dataset.id);if(!poll||!this.data.allowed||this.data.busy)return;
+    const r=await feedback.showModal(this,{title:poll.hidden?'恢复展示这个投票？':'隐藏这个投票？',content:poll.hidden?'恢复后用户可以查看，未截止时可继续投票。':'用户端将不再展示，也不能继续投票；已有票数保留，可随时恢复。',confirmText:poll.hidden?'恢复展示':'隐藏'});if(!r.confirm||!this._alive)return;
+    this.setData({busy:true});try{await community.api('setPollVisibility',{id:poll._id,revision:poll.revision,hidden:!poll.hidden});if(this._alive){feedback.showToast(this,{title:poll.hidden?'已恢复展示':'已隐藏'});await this.load();}}catch(err){this.fail(err);}finally{if(this._alive)this.setData({busy:false});}
+  },
+  async deletePoll(e){
+    const poll=this.data.polls.find(p=>p._id===e.currentTarget.dataset.id);if(!poll||!this.data.allowed||this.data.busy)return;
+    const r=await feedback.showModal(this,{title:'删除这个投票？',content:'进行中和已结束的投票都可删除。删除后立即下架、停止投票，不能恢复展示。',confirmText:'删除投票',danger:true});if(!r.confirm||!this._alive)return;
+    this.setData({busy:true});try{await community.api('deletePoll',{id:poll._id,revision:poll.revision});if(this._alive){feedback.showToast(this,{title:'投票已删除'});await this.load();}}catch(err){this.fail(err);}finally{if(this._alive)this.setData({busy:false});}
   }
 })));

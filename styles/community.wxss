@@ -42,3 +42,5 @@
 .c-sheet-scroll { overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }.c-poll-fill { z-index:0; }.c-poll-option text { z-index:1; }
 
 .c-option-check { flex:none; display:flex; align-items:center; justify-content:center; width:32rpx; height:32rpx; border-radius:50%; background:var(--accent); color:var(--on-accent); font-size:22rpx; line-height:1; font-weight:650; }
+
+.poll-admin-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:12rpx;border-top:1rpx solid var(--line);margin-top:20rpx}.poll-admin-actions .c-link{font-size:24rpx;min-height:76rpx}.feedback-record-list{background:transparent;padding:0;overflow:visible}.feedback-record-list .c-item{padding:28rpx;background:var(--surface);border-radius:var(--radius-lg);border:1rpx solid var(--line);box-shadow:var(--shadow-md);box-sizing:border-box}.feedback-record-list .c-item+.c-item{margin-top:20rpx;border-top:1rpx solid var(--line)}

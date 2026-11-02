@@ -13,6 +13,7 @@ Page(theme.page(feedback.notifications({
   },
 
   goFeedback() { wx.navigateTo({ url: '/pages/feedback/index' }); },
+  goChangelog() { wx.navigateTo({ url: '/pages/changelog/index' }); },
 
   // 查看隐私保护指引
   openPrivacy() {

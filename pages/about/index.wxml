@@ -13,21 +13,22 @@
       <text class="version-label">版本 v1.9</text>
     </view>
 
-    <view class="info-surface entry-list">
-      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goFeedback"><view class="entry-text"><text class="entry-label">反馈中心</text><text class="entry-caption">使用反馈与功能投票</text></view><image class="info-chevron entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" /></button>
-      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goHelp">
-        <view class="entry-text">
-          <text class="entry-label">使用说明</text>
-          <text class="entry-caption">点歌规则、歌单查看与常见问题</text>
+    <view class="info-surface entry-list profile-entries">
+      <button class="info-button info-entry profile-entry" hover-class="info-pressed" bindtap="goFeedback"><view class="info-entry-icon profile-entry-icon"><image src="{{themeIcons.feedback}}" mode="aspectFit" /></view><view class="entry-text"><text class="entry-label profile-entry-title">反馈中心</text><text class="entry-caption profile-entry-caption">使用反馈与功能投票</text></view><image class="info-chevron entry-arrow profile-entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" /></button>
+      <button class="info-button info-entry profile-entry" hover-class="info-pressed" bindtap="goHelp">
+        <view class="info-entry-icon profile-entry-icon"><image src="{{themeIcons.help}}" mode="aspectFit" /></view><view class="entry-text">
+          <text class="entry-label profile-entry-title">使用说明</text>
+          <text class="entry-caption profile-entry-caption">点歌规则、歌单查看与常见问题</text>
         </view>
-        <image class="info-chevron entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
+        <image class="info-chevron entry-arrow profile-entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
       </button>
-      <button class="info-button info-entry" hover-class="info-pressed" bindtap="goAdminLogin">
-        <view class="entry-text">
-          <text class="entry-label">管理员验证</text>
-          <text class="entry-caption">管理人员使用</text>
+      <button class="info-button info-entry profile-entry" hover-class="info-pressed" bindtap="goChangelog"><view class="info-entry-icon profile-entry-icon"><image src="{{themeIcons.changelog}}" mode="aspectFit" /></view><view class="entry-text"><text class="entry-label profile-entry-title">更新日志</text><text class="entry-caption profile-entry-caption">查看版本变化与改进</text></view><image class="info-chevron entry-arrow profile-entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" /></button>
+      <button class="info-button info-entry profile-entry" hover-class="info-pressed" bindtap="goAdminLogin">
+        <view class="info-entry-icon profile-entry-icon"><image src="{{themeIcons.admin}}" mode="aspectFit" /></view><view class="entry-text">
+          <text class="entry-label profile-entry-title">管理员验证</text>
+          <text class="entry-caption profile-entry-caption">管理人员使用</text>
         </view>
-        <image class="info-chevron entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
+        <image class="info-chevron entry-arrow profile-entry-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
       </button>
     </view>
   </view>

@@ -11,13 +11,14 @@ function fixture(file, options = {}) {
   const wx = {
     env: { USER_DATA_PATH: '/fixture' },
     showToast: value => toasts.push(value.title), showLoading() {}, hideLoading() {},
-    previewImage: value => previews.push(value),
+    previewImage: value => previews.push(value), navigateBack() {},
     async chooseMedia(value) { picks.push(value.count); return options.pick ? options.pick(value) : { tempFiles: Array.from({ length: value.count }, (_, i) => ({ tempFilePath: `/chosen-${picks.length}-${i}.jpg` })) }; }
   };
   if (options.legacy) { wx.chooseImage = wx.chooseMedia; delete wx.chooseMedia; }
   vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), {
     wx, Page: value => { page = value; }, console, setTimeout, clearTimeout,
-    require(name) {
+    require: function testRequire(name) {
+      if (name.endsWith('/article-reader')) {const mod={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(root,'utils/article-reader.js'),'utf8'),{module:mod,wx,console,setTimeout,clearTimeout,require:testRequire});return mod.exports;}
       if (name.includes('admin-feedback')) return require('../../utils/admin-feedback');
       if (name.endsWith('/theme')) return require('../../utils/theme');
       if (name.endsWith('/runtime')) return { isTestMode: () => false, storageKey: key => key, cloudCall: options.call || (async () => ({ result: { success: true } })) };
@@ -94,4 +95,24 @@ test('选择进行中不能重复打开或保存，取消后解除状态', async
   rejectPick({ errMsg: 'chooseMedia:fail cancel' }); await picking;
   assert.equal(f.page.data.choosingImages, false);
   assert.equal(f.page.data.images.length, 0);
+});
+
+
+test('说明与日志发布须等自定义确认，取消不保存，确认后沿用共享保存逻辑', async () => {
+  for (const isChangelog of [false, true]) {
+    const f=fixture('pages/admin/help-editor.js'),p=f.page;
+    p.data.title='标题';p.data.content='正文';p.data.isChangelog=isChangelog;p.data.logVersion='v1.9';
+    const saved=[];p.saveArticle=async published=>saved.push(published);
+    const cancel=p.onPublish();assert.equal(saved.length,0);p.onAdminDialogCancel();await cancel;assert.equal(saved.length,0);
+    const confirm=p.onPublish();assert.equal(saved.length,0);p.onAdminDialogConfirm();await confirm;assert.deepEqual(saved,[true]);
+  }
+});
+
+test('日志编辑携带版本日期和修订号，原说明保存参数不增加日志字段', async () => {
+  for (const isChangelog of [false,true]) {
+    const calls=[],f=fixture('pages/admin/help-editor.js',{call:async value=>{calls.push(value);return {result:{success:true,data:{_id:'saved'}}};}}),p=f.page;
+    p.data.title='标题';p.data.content='正文';p.data.isChangelog=isChangelog;p.data.serviceName=isChangelog?'manageChangelog':'manageHelpContent';p.data.logVersion='v1.9';p.data.revision=4;
+    await p.saveArticle(false);const call=calls.find(c=>c.data.action==='save');assert.equal(call.name,p.data.serviceName);
+    assert.equal(call.data.version,isChangelog?'v1.9':undefined);assert.equal(call.data.revision,isChangelog?4:undefined);
+  }
 });

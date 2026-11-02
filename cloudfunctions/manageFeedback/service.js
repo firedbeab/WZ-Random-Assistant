@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const CATEGORIES = ['使用问题', '功能建议', '其他'];
 const STATUSES = ['received', 'handling', 'done'];
-const ADMIN = ['adminList', 'adminUpdate', 'adminListPolls', 'createPoll', 'endPoll'];
+const ADMIN = ['adminList', 'adminUpdate', 'adminListPolls', 'createPoll', 'endPoll', 'setPollVisibility', 'deletePoll'];
 const hash = (...parts) => crypto.createHash('sha256').update(JSON.stringify(parts)).digest('hex');
 const userKey = openid => hash('feedback-user-v1', openid).slice(0, 12);
 const error = (message, code = 'INVALID_INPUT') => { const e = new Error(message); e.businessCode = code; throw e; };
@@ -44,7 +44,7 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
       const ended = poll.closed === true || now() >= poll.ends_at;
       const visible = admin || ended || !!vote;
       return { _id: poll._id, title: poll.title, description: poll.description, createdAt: poll.created_at,
-        endsAt: poll.ends_at, ended, total: poll.total || 0, choice: vote ? vote.choice : -1,
+        endsAt: poll.ends_at, ended, hidden: poll.hidden === true, revision: poll.revision || 1, total: poll.total || 0, choice: vote ? vote.choice : -1,
         resultsVisible: visible, options: poll.options.map((label, i) => ({ label, count: visible ? poll.counts[i] : null })) };
     };
     try {
@@ -85,9 +85,9 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
         });
       } else if (action === 'listMine' || action === 'adminList') {
         const where = action === 'listMine' ? { owner: openid } : {};
+        if (event.status && !STATUSES.includes(event.status)) error('状态无效');
+        if (event.status) where.status = event.status;
         if (action === 'adminList') {
-          if (event.status && !STATUSES.includes(event.status)) error('状态无效');
-          if (event.status) where.status = event.status;
           if (event.userKey) { if (!/^[a-f0-9]{12}$/.test(event.userKey)) error('用户编号无效'); where.user_key = event.userKey; }
         }
         const batch = await page('user_feedback', where);
@@ -119,7 +119,9 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
           return safeFeedback({ ...entry, ...patch }, true);
         });
       } else if (action === 'listPolls' || action === 'adminListPolls') {
-        const batch = await page('feedback_polls', {});
+        const where = { deleted: db.command.neq(true) };
+        if (!admin) where.hidden = db.command.neq(true);
+        const batch = await page('feedback_polls', where);
         result = { ...batch, items: await Promise.all(batch.items.map(poll => pollView(poll, admin))) };
       } else if (action === 'createPoll') {
         const title = text(event.title, 50, 2), description = text(event.description || '', 100, 0);
@@ -133,14 +135,15 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
           if (old) return { id: key };
           const timestamp = now();
           await put('feedback_polls', key, { title, description, options, counts: options.map(() => 0), total: 0,
-            ends_at: timestamp + event.days * 86400000, closed: false, created_at: timestamp }, tx);
+            ends_at: timestamp + event.days * 86400000, closed: false, hidden: false, deleted: false, revision: 1, created_at: timestamp }, tx);
           return { id: key };
         });
       } else if (action === 'vote') {
         const key = id(event.id), choice = event.choice;
         result = await transact(async tx => {
           const poll = await read('feedback_polls', key, tx);
-          if (!poll) error('投票不存在', 'NOT_FOUND');
+          if (!poll || poll.deleted) error('投票已删除或不存在，请刷新列表', 'NOT_FOUND');
+          if (poll.hidden) error('投票已隐藏，请刷新列表', 'POLL_HIDDEN');
           if (poll.closed || now() >= poll.ends_at) error('投票已结束，请刷新查看结果', 'POLL_CLOSED');
           if (!Number.isInteger(choice) || choice < 0 || choice >= poll.options.length) error('请选择有效选项');
           const voteKey = hash(key, openid), old = await read('feedback_votes', voteKey, tx), counts = poll.counts.slice();
@@ -152,12 +155,21 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
           await put('feedback_votes', voteKey, { poll_id: key, owner: openid, choice, updated_at: now() }, tx);
           return { voted: true };
         });
-      } else if (action === 'endPoll') {
+      } else if (['endPoll','setPollVisibility','deletePoll'].includes(action)) {
         const key = id(event.id);
         result = await transact(async tx => {
           const poll = await read('feedback_polls', key, tx);
-          if (!poll) error('投票不存在', 'NOT_FOUND');
-          await col('feedback_polls', tx).doc(key).update({ data: { closed: true, closed_at: now() } });
+          if (!poll || poll.deleted) error('投票已删除或不存在，请刷新列表', 'NOT_FOUND');
+          const revision=poll.revision || 1;
+          if ((action !== 'endPoll' || event.revision !== undefined) && event.revision !== revision) error('投票状态已被其他管理员修改，请刷新后再操作', 'CONFLICT');
+          if(action==='setPollVisibility' && typeof event.hidden!=='boolean') error('显示状态无效');
+          const patch={revision:revision+1,updated_at:now()};
+          if(action==='endPoll')Object.assign(patch,{closed:true,closed_at:now()});
+          if(action==='setPollVisibility')Object.assign(patch,{hidden:event.hidden});
+          // Keep a private tombstone and votes together: late votes cannot
+          // recreate a removed topic, and aggregate history stays consistent.
+          if(action==='deletePoll')Object.assign(patch,{deleted:true,hidden:true,closed:true,deleted_at:now()});
+          await col('feedback_polls', tx).doc(key).update({ data: patch });
           return { id: key };
         });
       } else error('未知操作');

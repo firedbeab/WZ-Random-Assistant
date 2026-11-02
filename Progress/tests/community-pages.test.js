@@ -76,3 +76,17 @@ test('未授权后台不展示已有列表；新建投票失败保留选项、�
   const f=fixture('admin/feedback.js'),p=f.page;f.state.handler=async()=>{const e=Error('无权限');e.code='FORBIDDEN';throw e;};p.setData({allowed:true,entries:[{_id:'old'}]});await p.load();assert.equal(p.data.allowed,false);assert.equal(p.data.entries.length,0);
   p.setData({allowed:true});p.newPoll();p.setData({title:'优先做什么功能',options:['选项甲','选项乙'],days:14});f.state.handler=async()=>{throw Error('网络断开');};await p.createPoll();const id=f.calls.at(-1).requestId;await p.createPoll();assert.equal(f.calls.at(-1).requestId,id);assert.equal(p.data.days,14);assert.equal(p.data.options[1],'选项乙');assert.equal(p.data.sheet,'newPoll');
 });
+
+
+test('已结束投票默认折叠，列表刷新及乐观改票保持分组同步',async()=>{
+ const f=fixture('feedback/index.js'),p=f.page;
+ f.state.handler=async()=>({items:[{_id:'active',endsAt:Date.now()+100000,options:['甲','乙']},{_id:'closed',ended:true,endsAt:1,options:['甲','乙']}],hasMore:false,offset:2});
+ p.data.tab='polls';await p.load();assert.equal(p.data.activePolls.length,1);assert.equal(p.data.endedPolls.length,1);assert.equal(p.data.endedExpanded,false);p.toggleEnded();assert.equal(p.data.endedExpanded,true);
+});
+
+test('我的反馈切换状态从第一页查询，旧筛选响应不能覆盖当前分类',async()=>{
+ const f=fixture('feedback/history.js'),p=f.page;let old;
+ f.state.handler=(_,data)=>data.status==='received'?new Promise(r=>old=r):Promise.resolve({items:[{_id:'done',status:'done',createdAt:1}],hasMore:false,offset:1});
+ p.filterStatus(event({id:'received'}));p.filterStatus(event({id:'done'}));await new Promise(r=>setImmediate(r));old({items:[{_id:'received',status:'received',createdAt:1}],hasMore:true,offset:20});await new Promise(r=>setImmediate(r));
+ assert.equal(p.data.status,'done');assert.equal(p.data.entries[0]._id,'done');assert.equal(f.calls.at(-1).offset,0);assert.equal(f.calls.at(-1).status,'done');
+});
