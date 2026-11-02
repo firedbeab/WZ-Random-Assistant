@@ -85,6 +85,14 @@ test('外观即时应用，无保存草稿；展开自定义不改主题，再�
   p.openColor();p.selectPalette(event({id:'blue'}));assert.equal(p.data.colorEditing,false);assert.equal(p.data.dirty,false);p.closeSheet();assert.equal(p.data.sheetClosing,true);assert(f.themeCalls.some(v=>v.flush));
 });
 
+test('收起色盘、选择预设和关闭抽屉都主动清理色值键盘占位',()=>{
+  const f=fixture(),p=f.page();let resets=0;p.resetKeyboardAvoidance=()=>resets++;
+  p.openAppearance();p.openColor();p.data.colorScrollAnchor='color-input-end';p.openColor();
+  assert.equal(resets,1);assert.equal(p.data.colorScrollAnchor,'');
+  p.openColor();p.selectPalette(event({id:'blue'}));assert.equal(resets,2);
+  p.closeSheet();assert.equal(resets,3);assert.equal(p.data.sheetClosing,true);
+});
+
 
 test('我的在周五20点进入周日投稿期，周六与周日持续开放，截止后仍保留该期',()=>{
  for(const [time,open,weekKey]of [

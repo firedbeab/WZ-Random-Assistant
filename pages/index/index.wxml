@@ -4,7 +4,7 @@
   <view class="home-head">
     <view class="brand-row">
       <view class="brand">
-        <text class="dice" style="{{diceShakeStyle}}" bindtap="onSecretDiceTap" aria-label="骰子彩蛋">🎲</text>
+        <view class="dice" style="{{diceShakeStyle}}" bindtap="onSecretDiceTap" aria-label="{{easterEntryLeek ? '大葱彩蛋' : '骰子彩蛋'}}"><image wx:if="{{easterEntryLeek}}" class="leek-icon" src="/assets/icons/leek.svg" mode="aspectFit" aria-hidden="true" /><text wx:else>🎲</text></view>
         <text class="brand-name">WZ随机助手</text>
       </view>
 

@@ -187,7 +187,8 @@ function setPreference(next, options = {}) {
   return true;
 }
 function viewData(state = getState()) {
-  return { appearanceMode: state.resolved, appearanceStyle: state.style, themeIcons: state.icons, themeColors: state.tokens };
+  return { appearanceMode: state.resolved, appearanceStyle: state.style, themeIcons: state.icons, themeColors: state.tokens,
+    easterEntryLeek: state.palette === 'custom' && state.customColor === '#39c5bb' };
 }
 function syncNative(state) {
   const platform = api();
@@ -223,11 +224,19 @@ function page(definition) {
     page.setData({ viewportStyle: viewportStyle(metrics, overlap, space) });
     keyboardAvoid.schedule(page, api(), overlap, metrics);
   }
+  result.resetKeyboardAvoidance = function () {
+    clearTimeout(this._keyboardBlurTimer); clearTimeout(this._keyboardZeroTimer);
+    this._keyboardBlurTimer = null; this._keyboardZeroTimer = null;
+    this._keyboardHeight = 0; this._keyboardTarget = null; this._keyboardFocusEnded = true;
+    keyboardAvoid.clear(this);
+    if (this._appearanceVisible && this._viewport) this.setData({ viewportStyle: viewportStyle(this._viewport) });
+  };
   result.onKeyboardFieldFocus = function (e) {
     const data = e.currentTarget && e.currentTarget.dataset || {};
     if (!data.keyboardTarget) return;
     clearTimeout(this._keyboardBlurTimer); clearTimeout(this._keyboardZeroTimer);
     this._keyboardBlurTimer = null; this._keyboardZeroTimer = null;
+    this._keyboardFocusEnded = false;
     this._keyboardTarget = { selector: data.keyboardTarget, layer: data.keyboardLayer || 'page' };
     if (e.detail && Number(e.detail.height) > 0) this._keyboardHeight = Number(e.detail.height);
     updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
@@ -240,8 +249,7 @@ function page(definition) {
     // transition settles so the page does not collapse between focus events.
     clearTimeout(this._keyboardBlurTimer);
     this._keyboardBlurTimer = setTimeout(() => {
-      this._keyboardBlurTimer = null; this._keyboardTarget = null;
-      if (this._appearanceVisible && this._viewport) updateKeyboard(this, viewportMetrics(), this._keyboardHeight || 0);
+      result.resetKeyboardAvoidance.call(this);
     }, 180);
   };
   for (const name of ['onFieldFocus', 'onCommunityFieldFocus', 'onPublishNoteFocus']) {
@@ -258,10 +266,13 @@ function page(definition) {
     this.setData({ viewportStyle: viewportStyle(this._viewport) });
     this._keyboardListener = event => {
       const current = viewportMetrics(), height = Math.max(0, Number(event.height) || 0);
+      // Some clients omit the zero-height event or deliver a stale positive
+      // height after blur. Only a new input focus may start avoidance again.
+      if (this._keyboardFocusEnded) return;
       clearTimeout(this._keyboardZeroTimer);
       const apply = () => {
         this._keyboardZeroTimer = null; this._keyboardHeight = height;
-        if (!height) this._viewport = current;
+        if (!height && (current.width !== this._viewport.width || current.height >= this._viewport.height)) this._viewport = current;
         if (this._appearanceVisible) updateKeyboard(this, current, height);
       };
       if (!height && this._keyboardBlurTimer) this._keyboardZeroTimer = setTimeout(apply, 180);

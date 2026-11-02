@@ -24,7 +24,7 @@
     </view>
 
     <view class="article-list log-timeline" wx:else>
-      <view class="article-card log-entry info-surface {{expandedId === item._id ? 'expanded' : ''}}" wx:for="{{articles}}" wx:key="_id">
+      <view class="article-card log-entry info-surface {{canEdit ? 'can-edit' : ''}} {{expandedId === item._id ? 'expanded' : ''}}" wx:for="{{articles}}" wx:key="_id">
         <button class="article-header info-button" hover-class="info-pressed" bindtap="toggleArticle" data-id="{{item._id}}" aria-expanded="{{expandedId === item._id}}">
           <view class="article-heading">
             <view class="log-version-row"><text class="log-version">{{item.version}}</text><text class="log-date">{{item.release_date}}</text></view><text class="article-title">{{item.title}}</text>
@@ -33,7 +33,7 @@
           <image class="info-chevron article-arrow" src="{{themeIcons.chevron}}" mode="aspectFit" aria-hidden="true" />
         </button>
 
-        <button class="info-button log-edit" wx:if="{{canEdit}}" bindtap="editLog" data-id="{{item._id}}">编辑此条</button>
+        <button class="info-button log-edit" wx:if="{{canEdit}}" bindtap="editLog" data-id="{{item._id}}" aria-label="编辑{{item.version}}更新日志">编辑</button>
         <view class="article-body-wrap {{expandedId === item._id ? 'is-open' : ''}}" aria-hidden="{{expandedId !== item._id}}">
         <view class="article-body-clip">
         <view class="article-body" wx:if="{{item._opened}}">

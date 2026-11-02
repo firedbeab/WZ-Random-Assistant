@@ -104,9 +104,13 @@ Page(theme.page(feedback.page({
   selectMode(e) { const mode = e.currentTarget.dataset.id; if (theme.setPreference({ mode })) this.setData({ selectedMode: mode }); },
   selectPalette(e) {
     const palette = e.currentTarget.dataset.id;
-    if (theme.setPreference({ mode: theme.getState().mode, palette })) this.setData({ selectedPalette: palette, colorEditing: false });
+    if (theme.setPreference({ mode: theme.getState().mode, palette })) {
+      this.resetColorKeyboard();
+      this.setData({ selectedPalette: palette, colorEditing: false });
+    }
   },
   openColor() {
+    if (this.data.colorEditing) this.resetColorKeyboard();
     this.setData({ colorEditing: !this.data.colorEditing });
     // 只展开不修改选中的配色；实际调色时才切到自定义。
   },
@@ -117,6 +121,12 @@ Page(theme.page(feedback.page({
     this._colorScrollTimer = setTimeout(() => { if (this._alive && this.data.sheet === 'appearance' && this.data.colorEditing) this.setData({ colorScrollAnchor: 'color-input-end' }); }, 220);
   },
   onColorKeyboardBlur() { clearTimeout(this._colorScrollTimer); this.setData({ colorScrollAnchor: '' }); this.onKeyboardFieldBlur(); },
+  resetColorKeyboard() {
+    clearTimeout(this._colorScrollTimer);
+    this.setData({ colorScrollAnchor: '' });
+    if (typeof this.resetKeyboardAvoidance === 'function') this.resetKeyboardAvoidance();
+    if (typeof wx.hideKeyboard === 'function') wx.hideKeyboard();
+  },
   changeColor(e) {
     const value = e.detail.value;
     if (!colors.normalize(value)) return;
@@ -124,7 +134,7 @@ Page(theme.page(feedback.page({
     theme.setPreference({ mode: theme.getState().mode, palette: 'custom', customColor: value }, { deferSave: !e.detail.final });
   },
   closeSheet() {
-    if (this.data.sheet === 'appearance') { theme.flushPreference(); this.finishSheet(); }
+    if (this.data.sheet === 'appearance') { this.resetColorKeyboard(); theme.flushPreference(); this.finishSheet(); }
     else return community.sheetMethods.closeSheet.call(this);
   },
   openSubmission() { if (this.data.submission) this.openSheet('submission'); else this.goHome(); },

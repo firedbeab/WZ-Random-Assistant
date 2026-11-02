@@ -119,6 +119,39 @@ test('切换输入框时保留键盘占位，旧失焦事件和短暂零高度�
   assert.equal(p._keyboardTarget,null);assert.match(p.data.viewportStyle,/--keyboard-page-space:0px/);def.onUnload.call(p);
 });
 
+test('色值输入失焦后即使缺失收键盘事件也恢复抽屉，迟到的旧高度不会再抬升', async () => {
+  const f=fixture(),def=f.theme.page({data:{}}),p=makePage(def);def.onLoad.call(p);
+  const original=p.data.viewportStyle;
+  const event={currentTarget:{dataset:{keyboardTarget:'#color',keyboardLayer:'overlay'}},detail:{height:300}};
+  def.onKeyboardFieldFocus.call(p,event);assert.match(p.data.viewportStyle,/--keyboard-inset:300px/);
+  def.onKeyboardFieldBlur.call(p,event);
+  await new Promise(resolve=>setTimeout(resolve,220));
+  assert.equal(p.data.viewportStyle,original);assert.equal(p._keyboardHeight,0);
+  f.keyboard(300);assert.equal(p.data.viewportStyle,original);
+  def.onKeyboardFieldFocus.call(p,{...event,detail:{height:250}});
+  assert.match(p.data.viewportStyle,/--keyboard-inset:250px/);def.onUnload.call(p);
+});
+
+test('安卓收键盘零事件先于窗口恢复时不丢失完整高度基准',async()=>{
+  const f=fixture(),def=f.theme.page({data:{}}),p=makePage(def);def.onLoad.call(p);
+  const event={currentTarget:{dataset:{keyboardTarget:'#color',keyboardLayer:'overlay'}},detail:{height:300}};
+  def.onKeyboardFieldFocus.call(p,event);f.window({windowHeight:500});def.onResize.call(p);
+  def.onKeyboardFieldBlur.call(p,event);f.keyboard(0);
+  await new Promise(resolve=>setTimeout(resolve,220));
+  assert.equal(p._viewport.height,800);assert.match(p.data.viewportStyle,/--window-height:800px;--keyboard-inset:0px/);
+  f.window({windowHeight:800});def.onResize.call(p);assert.match(p.data.viewportStyle,/--sheet-scroll-height:492px/);def.onUnload.call(p);
+});
+
+test('自定义39c5bb替换入口图案，切换模式或返回首页保持；相邻色与预设恢复骰子',()=>{
+  const f=fixture(),def=f.theme.page({data:{}}),p=makePage(def);def.onLoad.call(p);
+  f.theme.setPreference({mode:'light',palette:'custom',customColor:'#39C5BB'});assert.equal(p.data.easterEntryLeek,true);
+  f.theme.setPreference({mode:'dark'});assert.equal(p.data.easterEntryLeek,true);
+  def.onHide.call(p);def.onShow.call(p);assert.equal(p.data.easterEntryLeek,true);
+  const restored=fixture({disk:f.disk}),again=restored.theme.page({data:{}}),other=makePage(again);again.onLoad.call(other);assert.equal(other.data.easterEntryLeek,true);again.onUnload.call(other);
+  f.theme.setPreference({mode:'light',customColor:'#39c5ba'});assert.equal(p.data.easterEntryLeek,false);
+  f.theme.setPreference({mode:'light',palette:'green',customColor:'#39c5bb'});assert.equal(p.data.easterEntryLeek,false);def.onUnload.call(p);
+});
+
 test('组件附加与销毁保持原行为，SVG色值随外观更新而照片数据原样保留', () => {
   const f = fixture(), calls = [];
   const def = f.theme.component({ data: { photo: '/original.jpg' }, lifetimes: { attached() { calls.push('attached'); }, detached() { calls.push('detached'); } } });

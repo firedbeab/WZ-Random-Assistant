@@ -12,6 +12,7 @@
 .brand { display: flex; align-items: center; min-width: 0; }
 .dice { display: inline-block; font-size: var(--font-lg); padding: var(--space-2); margin: calc(var(--space-2) * -1); line-height: 1; flex: none; }
 .dice:active { transform: rotate(-12deg) scale(.92); }
+.leek-icon { display: block; width: var(--font-lg); height: var(--font-lg); }
 .brand-name { margin-left: var(--space-2); font-size: var(--font-md); font-weight: 500; }
 .admin-link { flex: none; }
 .status-row { display: flex; align-items: center; flex-wrap: wrap; margin-top: var(--space-5); color: var(--text-2); font-size: var(--font-sm); line-height: 1.6; }
