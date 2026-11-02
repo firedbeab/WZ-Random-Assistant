@@ -125,7 +125,7 @@ exports.main = async (event, context) => {
     return { success: false, message: '参数不完整，请检查网络和输入' };
   }
 
-  // 2. 时间窗口校验 (周日 8:00 - 20:00)
+  // 2. 时间窗口校验（北京时间：周五20:00，含起点，至周日20:00，不含终点）
   const now = new Date();
   const bjTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
 
@@ -146,10 +146,10 @@ exports.main = async (event, context) => {
   }
 
   if (!channelForceOpen) {
-    const isSunday = bjTime.getUTCDay() === 0;
-    const isWithinHours = bjTime.getUTCHours() >= 8 && bjTime.getUTCHours() < 20;
-    if (!(isSunday && isWithinHours)) {
-      return { success: false, message: '提交通道仅在周日 8:00-20:00 开放' };
+    const day = bjTime.getUTCDay(), hour = bjTime.getUTCHours();
+    const isWithinWindow = (day === 5 && hour >= 20) || day === 6 || (day === 0 && hour < 20);
+    if (!isWithinWindow) {
+      return { success: false, message: '提交通道仅在每周五 20:00 至周日 20:00 开放' };
     }
   }
 

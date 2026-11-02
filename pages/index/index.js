@@ -72,7 +72,7 @@ Page(theme.page(feedback.notifications({
       return sun.toISOString().split('T')[0];
     },
 
-    // 关闭时展示的下次开放时间（北京时间，周日 8:00 起）
+    // 关闭时展示的下次开放时间（北京时间，周五 20:00 起）
     computeNextOpenText(bjTime) {
       return homePresentation.nextOpenText(bjTime, !!(this.data.userInfo && this.data.userInfo.channelForceClose));
     },
@@ -111,9 +111,7 @@ Page(theme.page(feedback.notifications({
         // 1. 计算北京时间
         const now = new Date();
         const bjTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-        const isSunday = bjTime.getUTCDay() === 0;
-        const isWithinHours = bjTime.getUTCHours() >= 8 && bjTime.getUTCHours() < 20;
-        let channelOpen = isSunday && isWithinHours;
+        let channelOpen = homePresentation.isRegularOpen(bjTime);
 
         // 2. 检查超管通道开关（强制关闭优先于强制开放）
         if (this.data.userInfo && this.data.userInfo.channelForceClose) {
@@ -126,7 +124,7 @@ Page(theme.page(feedback.notifications({
           canSubmit: channelOpen,
           statusError: false,
           scheduleLoadFailed: false,
-          beforeOpening: isSunday && bjTime.getUTCHours() < 8,
+          beforeOpening: bjTime.getUTCDay() === 5 && bjTime.getUTCHours() < 20,
           channelForceClosed: !!(this.data.userInfo && this.data.userInfo.channelForceClose),
           nextOpenText: this.computeNextOpenText(bjTime),
           hoursLeftText: channelOpen ? this.computeHoursLeft(bjTime) : ''
@@ -134,7 +132,7 @@ Page(theme.page(feedback.notifications({
 
         const currentWeekKey = this.getWeekKey();
         // 通道开放时检查当前提交周期；关闭后检查列表页的“最新一期”，
-        // 让发布提示从周日发布后持续到周六，下一周日自动进入新周期。
+        // 发布提示持续到下一次周五20:00开放，再进入本周日对应的新周期。
         const publishedWeekKey = channelOpen
           ? currentWeekKey
           : this.getLatestScheduleWeekKey();

@@ -25,13 +25,19 @@ test('圆点行只表达通道状态，已提交与发布结果不混入通道�
   }
 });
 test('下次开放跨周、跨年、开放前及强制关闭文案', () => {
-  assert.equal(presentation.nextOpenText(bj('2026-10-25T07:59:00')), '10 月 25 日 周日 8:00');
-  assert.equal(presentation.nextOpenText(bj('2026-10-25T20:00:00')), '11 月 1 日 周日 8:00');
-  assert.equal(presentation.nextOpenText(bj('2026-10-26T09:00:00')), '11 月 1 日 周日 8:00');
-  assert.equal(presentation.nextOpenText(bj('2026-12-31T09:00:00')), '1 月 3 日 周日 8:00');
+  assert.equal(presentation.nextOpenText(bj('2026-10-23T19:59:00')), '10 月 23 日 周五 20:00');
+  assert.equal(presentation.nextOpenText(bj('2026-10-23T20:00:00')), '10 月 30 日 周五 20:00');
+  assert.equal(presentation.nextOpenText(bj('2026-10-25T07:59:00')), '10 月 30 日 周五 20:00');
+  assert.equal(presentation.nextOpenText(bj('2026-10-25T20:00:00')), '10 月 30 日 周五 20:00');
+  assert.equal(presentation.nextOpenText(bj('2026-10-26T09:00:00')), '10 月 30 日 周五 20:00');
+  assert.equal(presentation.nextOpenText(bj('2026-12-31T09:00:00')), '1 月 1 日 周五 20:00');
   assert.equal(presentation.nextOpenText(bj('2026-10-26T09:00:00'), true), '通道暂时关闭，恢复时间待定');
 });
 test('剩余时间在最后一分钟准确，不在窗口内伪造倒计时', () => {
+  assert.equal(presentation.hoursLeftText(bj('2026-10-23T19:59:00')), '');
+  assert.equal(presentation.hoursLeftText(bj('2026-10-23T20:00:00')), '还剩 48 小时');
+  assert.equal(presentation.hoursLeftText(bj('2026-10-24T20:00:00')), '还剩 24 小时');
+  assert.equal(presentation.hoursLeftText(bj('2026-10-25T00:00:00')), '还剩 20 小时');
   assert.equal(presentation.hoursLeftText(bj('2026-10-25T08:00:00')), '还剩 12 小时');
   assert.equal(presentation.hoursLeftText(bj('2026-10-25T19:59:00')), '还剩 1 分钟');
   assert.equal(presentation.hoursLeftText(bj('2026-10-25T20:00:00')), '');
@@ -45,7 +51,7 @@ test('预览按播出日排序，最多四首真实曲目，不足四首不补�
   assert.equal(preview.previewSongs[3].day,'周五');
   assert.equal(presentation.schedulePreview({day1:[{song_name:'一'}]}).previewSongs.length,1);
   assert.equal(preview.previewSongs[1].day, '周二');
-  assert.equal(preview.previewWeekText, '2026.10.25');
+  assert.equal(preview.previewWeekText, '2026.10.26');
   assert.equal(presentation.schedulePreview({ admin_note: '本周暂停播出' }).previewNote, '本周暂停播出');
   assert.equal(presentation.schedulePreview(null).previewTotal, 0);
 });
@@ -217,4 +223,17 @@ test('旧缓存回源补齐备注；离线仍保留已提交展示，新缓存�
       assert.equal(f.calls.some(call => call.data && call.data.action === 'getMySubmission'), false);
     }
   }
+});
+
+
+test('周五晚开放切换到本周日周期，周六与周日共享投稿缓存，关闭后保留最近歌单',async()=>{
+ for(const [now,open,key,queried]of [
+ ['2026-11-06T11:59:59Z',false,'2026-11-08','2026-11-01'],
+ ['2026-11-06T12:00:00Z',true,'2026-11-08','2026-11-08'],
+ ['2026-11-07T00:00:00Z',true,'2026-11-08','2026-11-08'],
+ ['2026-11-08T00:00:00Z',true,'2026-11-08','2026-11-08'],
+ ['2026-11-08T12:00:00Z',false,'2026-11-08','2026-11-08']]){
+  const f=fixture({now});await f.page.checkTimeAndSubmission();assert.equal(f.page.data.canSubmit,open,now);assert.equal(f.page.getWeekKey(),key);assert.equal(f.calls.find(c=>c.data&&c.data.action==='getPublishedSchedule').data.weekKey,queried);
+ }
+ const f=fixture({now:'2026-11-07T04:00:00Z'});f.disk.set('test_last_submission',{week_key:'2026-11-08',song_name:'周五点的歌',remark:'歌手',special_note:''});await f.page.checkTimeAndSubmission();assert.equal(f.page.data.hasSubmitted,true);assert.equal(f.page.data.submittedTitle,'周五点的歌');
 });

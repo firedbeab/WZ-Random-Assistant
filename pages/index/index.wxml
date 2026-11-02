@@ -114,7 +114,7 @@
     <button class="playlist-entry my-entry" bindtap="goMy" hover-class="entry-pressed"><view class="entry-icon"><image class="entry-icon-image" src="{{themeIcons.person}}" mode="aspectFit" aria-hidden="true" /></view><text class="entry-title">我的</text></button>
     </view>
     <view class="result-msg" wx:if="{{statusMsg}}">{{statusMsg}}</view>
-    <view class="opening-note" wx:if="{{statusReady && !canSubmit && !hasSubmitted && !statusError}}">每周日 8:00–20:00 开放点歌</view>
+    <view class="opening-note" wx:if="{{statusReady && !canSubmit && !hasSubmitted && !statusError}}">每周五 20:00 至周日 20:00 开放点歌</view>
   </view>
   <view class="home-footer">
 

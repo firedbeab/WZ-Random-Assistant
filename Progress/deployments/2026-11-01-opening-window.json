@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-01 America/New_York",
+  "backupCommit": "b23ac70",
+  "timezone": "Asia/Shanghai",
+  "window": "Friday 20:00 inclusive -> Sunday 20:00 exclusive",
+  "frontendPublished": false,
+  "functions": [
+    {
+      "name": "checkWeeklyCode",
+      "file": "index.js",
+      "sha256": "0dd27fcd259fd9ab891883c80898d96abe95cdfcb6046a98586ff537b9ec21ca",
+      "timeout": 3
+    },
+    {
+      "name": "manageHelpContent",
+      "file": "index.js",
+      "sha256": "4df9f5cde900e39667e2911d4c05690bce1acd3300173efceadf287b393a41cf",
+      "timeout": 20
+    }
+  ],
+  "runtime": "Nodejs16.13",
+  "deployedFilesDownloadedMatch": true,
+  "otherOnlineFilesPreserved": true,
+  "preexistingMetadataDifference": "manageHelpContent local package license MIT, online ISC; unchanged by incremental deploy",
+  "helpUpdates": [
+    {
+      "collection": "help_articles",
+      "total": 9,
+      "matched": 1,
+      "modified": 1
+    },
+    {
+      "collection": "test_help_articles",
+      "total": 7,
+      "matched": 1,
+      "modified": 1
+    }
+  ],
+  "helpBackedUpLocally": true,
+  "tests": 171,
+  "sourceBytes": 650675,
+  "internalWeekKey": "Sunday unchanged",
+  "displayPeriod": "following Monday",
+  "smoke": "Closed-time test-domain request rejected with new window message; no submission written"
+}

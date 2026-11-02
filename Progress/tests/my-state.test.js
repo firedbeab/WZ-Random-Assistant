@@ -83,3 +83,14 @@ test('外观即时应用，无保存草稿；展开自定义不改主题，再�
   p.changeColor({detail:{value:'#25698e',final:true}});assert.equal(f.themeCalls.at(-1).options.deferSave,false);
   p.openColor();p.selectPalette(event({id:'blue'}));assert.equal(p.data.colorEditing,false);assert.equal(p.data.dirty,false);p.closeSheet();assert.equal(p.data.sheetClosing,true);assert(f.themeCalls.some(v=>v.flush));
 });
+
+
+test('我的在周五20点进入周日投稿期，周六与周日持续开放，截止后仍保留该期',()=>{
+ for(const [time,open,weekKey]of [
+ ['2026-11-06T19:59:59+08:00',false,'2026-11-01'],
+ ['2026-11-06T20:00:00+08:00',true,'2026-11-08'],
+ ['2026-11-07T00:00:00+08:00',true,'2026-11-08'],
+ ['2026-11-08T00:00:00+08:00',true,'2026-11-08'],
+ ['2026-11-08T19:59:59+08:00',true,'2026-11-08'],
+ ['2026-11-08T20:00:00+08:00',false,'2026-11-08']]){const c=presentation.context({},Date.parse(time));assert.equal(c.open,open,time);assert.equal(c.weekKey,weekKey,time);}
+});

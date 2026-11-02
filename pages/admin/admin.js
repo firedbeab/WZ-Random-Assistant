@@ -1109,7 +1109,7 @@ Page(theme.page(feedback.page({
       const names = { open: '强制开放', close: '强制关闭', reset: '正常时间' };
       const confirmed = await feedback.showModal(this, {
         title: `切换为${names[mode]}？`,
-        content: mode === 'open' ? '立即开放点歌，暂时忽略正常开放时段。' : mode === 'close' ? '立即暂停接收点歌，已有投稿不受影响。' : '恢复每周日 8:00–20:00 自动开放。',
+        content: mode === 'open' ? '立即开放点歌，暂时忽略正常开放时段。' : mode === 'close' ? '立即暂停接收点歌，已有投稿不受影响。' : '恢复每周五 20:00 至周日 20:00 自动开放。',
         confirmText: '确认切换',
         confirmColor: mode === 'close' ? theme.getNativeColors().danger : theme.getNativeColors().accent
       });

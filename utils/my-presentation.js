@@ -1,9 +1,10 @@
 // 只负责「我的」的周期与显示；提交权限仍由原云函数检查。
-const { nextOpenText } = require('./home-presentation');
+const { nextOpenText, isRegularOpen } = require('./home-presentation');
+const { mondayDateText } = require('./period-label');
 function context(user = {}, now = Date.now()) {
   user = user || {};
-  const bj = new Date(now + 28800000), day = bj.getUTCDay(), hour = bj.getUTCHours();
-  const regularOpen = day === 0 && hour >= 8 && hour < 20;
+  const bj = new Date(now + 28800000), day = bj.getUTCDay();
+  const regularOpen = isRegularOpen(bj);
   const open = !user.channelForceClose && (regularOpen || user.channelForceOpen === true);
   const period = new Date(bj.getTime());
   period.setUTCDate(bj.getUTCDate() + (open ? (7 - day) % 7 : -day));
@@ -19,7 +20,7 @@ function firstUse(value) {
 }
 function state({ period, submission, schedule }) {
   const published = !!schedule, submitted = !!submission;
-  const base = { weekLabel: period.weekKey.replace(/-/g, '.') + ' 期', submitted, published, open: period.open && !published };
+  const base = { weekLabel: mondayDateText(period.weekKey) + ' 期', submitted, published, open: period.open && !published };
   if (published) {
     const matched = submitted && Array.from({ length: 5 }, (_, i) => schedule['day' + (i + 1)] || [])
       .some(rows => rows.some(row => row && row.submission_id === submission._id));
