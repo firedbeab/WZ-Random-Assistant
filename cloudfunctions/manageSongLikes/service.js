@@ -1,6 +1,29 @@
+// BEGIN shared transaction retry: only confirmed transaction aborts may be replayed.
+function isTransactionConflict(error) {
+  if (!error || error.businessCode || error.isBusiness) return false;
+  return error.code === 'DATABASE_TRANSACTION_CONFLICT' || error.errCode === 'DATABASE_TRANSACTION_CONFLICT' ||
+    /\b(database transaction conflict|write conflict)\b/i.test(String(error.errMsg || error.message || ''));
+}
+async function transactionWithRetry(db, operation) {
+  for (let attempt = 0; ; attempt++) {
+    let transaction;
+    try {
+      transaction = await db.startTransaction();
+      const result = await operation(transaction);
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      if (transaction) { try { await transaction.rollback(); } catch (_) {} }
+      if (!isTransactionConflict(error) || attempt >= 2) throw error;
+      await new Promise(resolve => setTimeout(resolve, 40 * (attempt + 1) + Math.floor(Math.random() * 30)));
+    }
+  }
+}
+// END shared transaction retry.
+
 const {hash,dateKey,recentWeeks,expiresAt,items}=require('./model');
 const {listSubmissions}=require('./history');
-const fail=(message,code='INVALID_INPUT')=>{const e=Error(message);e.code=code;throw e;};
+const fail=(message,code='INVALID_INPUT')=>{const e=Error(message);e.code=code;e.isBusiness=true;throw e;};
 const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(id);
 function createService({db,createDataScope,canUseTestData,now=Date.now}){
  return async(event={},owner)=>{
@@ -22,8 +45,8 @@ function createService({db,createDataScope,canUseTestData,now=Date.now}){
    }
    if(event.action==='setLike'){
     if(!validId(event.scheduleId)||typeof event.itemId!=='string'||!/^\w{64}$/.test(event.itemId)||typeof event.liked!=='boolean'||!Number.isSafeInteger(event.version)||event.version<0)fail('点赞参数无效，请刷新歌单');
-    const tx=await db.startTransaction();let result;
-    try{
+    const result=await transactionWithRetry(db,async tx=>{
+     let result;
      const s=await read('schedules',event.scheduleId,tx);
      if(!usable(s))fail('这期歌单已撤回或不在保留范围内','NOT_AVAILABLE');
      if(!interactive(s))fail('仅最新一期和前两期歌单可以点赞或取消','LIKES_CLOSED');
@@ -41,8 +64,8 @@ function createService({db,createDataScope,canUseTestData,now=Date.now}){
       await col('song_likes',tx).doc(key).set({data:record});
       result={...view(s,item,record),count:next};
      }
-     await tx.commit();
-    }catch(e){try{await tx.rollback();}catch(_){}throw e;}
+     return result;
+    });
     return {success:true,data:result};
    }
    if(event.action==='listMine'){
@@ -61,7 +84,7 @@ function createService({db,createDataScope,canUseTestData,now=Date.now}){
     return {success:true,data:{items:entries,hasMore:rows.data.length>20,offset:offset+page.length}};
    }
    fail('未知操作');
-  }catch(e){return {success:false,code:e.code||'SERVICE_UNAVAILABLE',message:e.code?e.message:'点赞服务暂不可用，请稍后刷新重试'};}
+  }catch(e){if(e && e.isBusiness)return {success:false,code:e.code,message:e.message};if(isTransactionConflict(e))return {success:false,code:'RETRY_LATER',message:'当前点赞较多，请稍后再试'};return {success:false,code:'SERVICE_UNAVAILABLE',message:'点赞结果暂时无法确认，请刷新歌单查看'};}
  };
 }
 module.exports={createService};

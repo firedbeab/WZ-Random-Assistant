@@ -13,7 +13,7 @@ function fixture(){
   const put=(k,v)=>{if(writes)writes.set(k,v);else{rows.set(k,v);versions.set(k,(versions.get(k)||0)+1);}};
   const q={where(v){where=v;return q;},orderBy(f,d){orders.push([f,d]);return q;},skip(v){skip=v;return q;},limit(v){limit=v;return q;},async get(){if(offline)throw Error('OFFLINE');let data=[...rows.entries()].filter(([k,v])=>k.startsWith(name+'/')&&matches(v,where)).map(([,v])=>structuredClone(v));data.sort((a,b)=>{for(const [f,d]of orders){if(a[f]!==b[f])return (a[f]>b[f]?1:-1)*(d==='desc'?-1:1);}return 0;});return {data:data.slice(skip,skip+limit)};},async remove(){const keys=[...rows].filter(([k,v])=>k.startsWith(name+'/')&&matches(v,where)).map(([k])=>k);for(const k of keys)rows.delete(k);return {stats:{removed:keys.length}};},doc(id){const k=key(id);return {async get(){return {data:getrow(k)};},async set({data}){put(k,{...structuredClone(data),_id:id});},async update({data}){const old=getrow(k);if(!old)throw Error('MISSING');for(const [field,value]of Object.entries(data)){const parts=field.split('.');let target=old;for(const p of parts.slice(0,-1))target=target[p]||(target[p]={});target[parts.at(-1)]=value;}put(k,old);}};}};return q;
  }
- const db={command,collection:n=>ref(n),async startTransaction(){const observed=new Map(),writes=new Map();return {collection:n=>ref(n,observed,writes),async rollback(){},async commit(){for(const[k,v]of observed)if((versions.get(k)||0)!==v)throw Error('CONFLICT');for(const[k,v]of writes){rows.set(k,v);versions.set(k,(versions.get(k)||0)+1);}}};}};
+ const db={command,collection:n=>ref(n),async startTransaction(){const observed=new Map(),writes=new Map();return {collection:n=>ref(n,observed,writes),async rollback(){},async commit(){for(const[k,v]of observed)if((versions.get(k)||0)!==v)throw Object.assign(Error('concurrent database write'),{code:'DATABASE_TRANSACTION_CONFLICT'});for(const[k,v]of writes){rows.set(k,v);versions.set(k,(versions.get(k)||0)+1);}}};}};
  const seed=(name,id,data)=>rows.set(name+'/'+id,{...data,_id:id});
  seed('schedules','schedule',{week_key:'2026-10-25',status:'published',revision:5,day1:[{submission_id:'a',song_name:'稻香',singer:'周杰伦'},{submission_id:'b',song_name:'海阔天空',singer:'Beyond'}]});
  const service=createService({db,createDataScope,now:()=>time,canUseTestData:async(_,user,scope)=>!scope.testMode||user==='tester'});
@@ -45,9 +45,9 @@ test('重排沿用身份，替换换身份，重复不明旧曲目不可写；�
  f.rows.get('schedules/schedule').status='pending';assert.equal((await describe(f)).code,'NOT_AVAILABLE');
  const duplicates=model.items({_id:'x',day1:[{song_name:'同名'},{song_name:'同名'}]});assert(duplicates.every(r=>r.ambiguous));
 });
-test('并发赞数与个人记录一致，失败的事务可重试而不重复累计',async()=>{
+test('并发赞数与个人记录一致，事务冲突自动重试而不重复累计',async()=>{
  const f=fixture(),item=(await describe(f)).data.items[0];const res=await Promise.all([write(f,item,true,0,'alice'),write(f,item,true,0,'bob')]);
- for(let i=0;i<res.length;i++)if(!res[i].success)assert.equal((await write(f,item,true,0,i?'bob':'alice')).success,true);
+ assert.equal(res.filter(v=>v.success).length,2);
  assert.equal((await describe(f)).data.items[0].count,2);assert.equal([...f.rows.keys()].filter(k=>k.startsWith('song_likes/')).length,2);
 });
 test('个人分页关联当前歌单与最终总数，不返回已撤回或已过期记录',async()=>{

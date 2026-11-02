@@ -9,7 +9,7 @@ function fixture() {
   const db = { command: {neq: expected => ({matches: value => value !== expected})}, collection: collection => reference(collection), async startTransaction() {
     const observed = new Map(), writes = new Map();
     return { collection: name => reference(name, observed, writes), async rollback() {}, async commit() {
-      for (const [k, version] of observed) if ((versions.get(k) || 0) !== version) throw Error('CONCURRENT_MODIFICATION');
+      for (const [k, version] of observed) if ((versions.get(k) || 0) !== version) throw Object.assign(Error('concurrent database write'),{code:'DATABASE_TRANSACTION_CONFLICT'});
       for (const [k, value] of writes) { records.set(k, structuredClone(value)); versions.set(k, (versions.get(k) || 0) + 1); }
     } };
   } };
@@ -83,11 +83,10 @@ test('单选投票可改票且不重复累计；投前隐藏汇总、结束后�
   await f.call('endPoll',{id},'admin'); assert.equal((await f.call('vote',{id,choice:0})).code,'POLL_CLOSED');
   assert.equal((await f.call('listPolls',{},'stranger')).data.items[0].resultsVisible,true);
 });
-test('两个并发投票争用同一汇总时不能覆盖计数，失败后重试按最新数据记票', async () => {
+test('两个并发投票争用同一汇总时自动重读重试，不覆盖或重复计数', async () => {
   const f=fixture(), id=(await f.call('createPoll',pollForm,'admin')).data.id;
   const results=await Promise.all([f.call('vote',{id,choice:0},'alice'),f.call('vote',{id,choice:1},'stranger')]);
-  assert.equal(results.filter(v=>v.success).length,1);
-  for(let i=0;i<results.length;i++)if(!results[i].success)await f.call('vote',{id,choice:i},i===0?'alice':'stranger');
+  assert.equal(results.filter(v=>v.success).length,2);
   const view=(await f.call('adminListPolls',{},'admin')).data.items[0];assert.equal(view.total,2);assert.deepEqual(view.options.map(v=>v.count),[1,1]);
   f.advance(4*86400000);assert.equal((await f.call('vote',{id,choice:1})).code,'POLL_CLOSED');
 });

@@ -1,3 +1,26 @@
+// BEGIN shared transaction retry: only confirmed transaction aborts may be replayed.
+function isTransactionConflict(error) {
+  if (!error || error.businessCode || error.isBusiness) return false;
+  return error.code === 'DATABASE_TRANSACTION_CONFLICT' || error.errCode === 'DATABASE_TRANSACTION_CONFLICT' ||
+    /\b(database transaction conflict|write conflict)\b/i.test(String(error.errMsg || error.message || ''));
+}
+async function transactionWithRetry(db, operation) {
+  for (let attempt = 0; ; attempt++) {
+    let transaction;
+    try {
+      transaction = await db.startTransaction();
+      const result = await operation(transaction);
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      if (transaction) { try { await transaction.rollback(); } catch (_) {} }
+      if (!isTransactionConflict(error) || attempt >= 2) throw error;
+      await new Promise(resolve => setTimeout(resolve, 40 * (attempt + 1) + Math.floor(Math.random() * 30)));
+    }
+  }
+}
+// END shared transaction retry.
+
 // cloudfunctions/checkWeeklyCode/index.js
 //用于提交内容时的验证
 const cloud = require('wx-server-sdk');
@@ -8,7 +31,6 @@ cloud.init({
 });
 
 const db = cloud.database();
-const _ = db.command;
 
 // 辅助函数：计算本周日的日期 (YYYY-MM-DD)，基于北京时间
 function getWeekKey(bjTime) {
@@ -34,10 +56,12 @@ async function inspectWeekSubmissions(transaction, submissionsCollection, weekKe
   const [exact, legacy, pendingCount] = await Promise.all([
     transaction.collection(submissionsCollection)
       .where({ week_key: weekKey, song_key: songKey })
+      .field({ _id: true, status: true })
       .limit(20)
       .get(),
     transaction.collection(submissionsCollection)
       .where({ week_key: weekKey })
+      .field({ song_name: true, song_key: true, status: true })
       .limit(250)
       .get(),
     transaction.collection(submissionsCollection)
@@ -55,27 +79,6 @@ async function inspectWeekSubmissions(transaction, submissionsCollection, weekKe
     pendingTotal: pendingCount.total,
     duplicate: exactDuplicate || legacyDuplicate
   };
-}
-
-// 辅助函数：递增提交计数器
-async function incrementSubmitCount(countersCollection, weekKey) {
-  try {
-    await db.collection(countersCollection).doc(weekKey).update({
-      data: { count: _.inc(1) }
-    });
-    const res = await db.collection(countersCollection).doc(weekKey).get();
-    return res.data.count;
-  } catch (err) {
-    // 文档不存在，创建并初始化为1
-    try {
-      await db.collection(countersCollection).add({
-        data: { _id: weekKey, count: 1 }
-      });
-      return 1;
-    } catch (e) {
-      return null;
-    }
-  }
 }
 
 exports.main = async (event, context) => {
@@ -178,91 +181,95 @@ exports.main = async (event, context) => {
   }
 
   const weekKey = getWeekKey(bjTime); // 基于北京时间获取本周日标识
-  const transaction = await db.startTransaction();
-
   try {
-    // A. 检查验证码是否有效
-    const codeRes = await transaction.collection(codesCollection)
-      .where({ code: weeklyCode, is_published: true })
-      .limit(1)
-      .get();
+    const result = await transactionWithRetry(db, async transaction => {
+      // A. 检查验证码是否有效
+      const codeRes = await transaction.collection(codesCollection)
+        .where({ code: weeklyCode, is_published: true })
+        .limit(1)
+        .get();
 
-    if (codeRes.data.length === 0) {
-      await transaction.rollback();
-      return { success: false, message: '验证码错误' };
-    }
-
-    const codeDoc = codeRes.data[0];
-
-    // 【业务确认】：这里未检查 codeDoc.is_used。
-    // 如果验证码是"全班通用"的（多人可用同一码），则不检查 is_used 是对的。
-    // 如果验证码是"一次性"的，则需要检查 is_used。
-
-    // 检查验证码是否过期
-    // expire_date 是 YYYY-MM-DD，按北京时间自然日比较；到期日当天仍然有效。
-    const bjDateString = bjTime.toISOString().split('T')[0];
-    if (codeDoc.expire_date && codeDoc.expire_date < bjDateString) {
-      await transaction.rollback();
-      return { success: false, message: '该验证码已过期' };
-    }
-
-    // B. 检查该用户本周是否已提交 (防刷)
-    const historyRes = await transaction.collection(submissionsCollection)
-      .where({ user_id: OPENID, week_key: weekKey })
-      .get();
-
-    if (historyRes.data.length > 0) {
-      await transaction.rollback();
-      return { success: false, message: '你本周已经提交过了' };
-    }
-
-    // B2. 以规范化后的名称判重；歌手/补充说明不参与唯一性判断。
-    // 250 条之后仍保存记录，但状态为 overflow，不进入抽取池。
-    const weekSummary = await inspectWeekSubmissions(transaction, submissionsCollection, weekKey, songKey);
-
-    if (weekSummary.duplicate) {
-      await transaction.rollback();
-      return { success: false, message: '本周已有同名内容，请换一个吧' };
-    }
-
-    // C. 前 250 条为 pending，后续为 overflow。两者都是真实投稿记录，
-    // 这样用户换设备或刷新后仍能看到自己提交的曲目。
-    const submissionStatus = weekSummary.pendingTotal >= 250 ? 'overflow' : 'pending';
-    await transaction.collection(submissionsCollection).add({
-      data: {
-        user_id: OPENID,
-        song_name: title,
-        song_key: songKey,
-        singer: remark,
-        special_note: specialNote || '',
-        week_key: weekKey, // 修复点：使用 week_key 字段
-        submit_time: db.serverDate(),
-        status: submissionStatus,
-        overflow_at: submissionStatus === 'overflow' ? db.serverDate() : null
+      if (codeRes.data.length === 0) {
+        return { success: false, message: '验证码错误' };
       }
+
+      const codeDoc = codeRes.data[0];
+
+      // 【业务确认】：这里未检查 codeDoc.is_used。
+      // 如果验证码是"全班通用"的（多人可用同一码），则不检查 is_used 是对的。
+      // 如果验证码是"一次性"的，则需要检查 is_used。
+
+      // 检查验证码是否过期
+      // expire_date 是 YYYY-MM-DD，按北京时间自然日比较；到期日当天仍然有效。
+      const bjDateString = bjTime.toISOString().split('T')[0];
+      if (codeDoc.expire_date && codeDoc.expire_date < bjDateString) {
+        return { success: false, message: '该验证码已过期' };
+      }
+
+      // B. 检查该用户本周是否已提交 (防刷)
+      const historyRes = await transaction.collection(submissionsCollection)
+        .where({ user_id: OPENID, week_key: weekKey })
+        .limit(1)
+        .get();
+
+      if (historyRes.data.length > 0) {
+        const previous = historyRes.data[0];
+        // A retry of the same submitted payload is a confirmation, never a new song or counter increment.
+        if (previous.song_name === title && previous.singer === remark && (previous.special_note || '') === specialNote) {
+          return { success: true, alreadySubmitted: true, message: '你的本周点歌已收到，无需重复提交' };
+        }
+        return { success: false, code: 'ALREADY_SUBMITTED', message: '你本周已经提交过了，请刷新首页查看' };
+      }
+
+      // Read the shared week counter before candidate queries. Its write conflict
+      // serializes concurrent submissions and commits the visible count with the song.
+      const counter = await transaction.collection(countersCollection).where({ _id: weekKey }).limit(1).get();
+      const previousCount = counter.data.length ? counter.data[0].count : 0;
+      if (!Number.isSafeInteger(previousCount) || previousCount < 0) throw Object.assign(new Error('invalid submission counter'), { code: 'COUNTER_INVALID' });
+
+      // B2. 以规范化后的名称判重；歌手/补充说明不参与唯一性判断。
+      // 250 条之后仍保存记录，但状态为 overflow，不进入抽取池。
+      const weekSummary = await inspectWeekSubmissions(transaction, submissionsCollection, weekKey, songKey);
+
+      if (weekSummary.duplicate) {
+        return { success: false, message: '本周已有同名内容，请换一个吧' };
+      }
+
+      // C. 前 250 条为 pending，后续为 overflow。两者都是真实投稿记录，
+      // 这样用户换设备或刷新后仍能看到自己提交的曲目。
+      const submissionStatus = weekSummary.pendingTotal >= 250 ? 'overflow' : 'pending';
+      await transaction.collection(submissionsCollection).add({
+        data: {
+          user_id: OPENID,
+          song_name: title,
+          song_key: songKey,
+          singer: remark,
+          special_note: specialNote || '',
+          week_key: weekKey, // 修复点：使用 week_key 字段
+          submit_time: db.serverDate(),
+          status: submissionStatus,
+          overflow_at: submissionStatus === 'overflow' ? db.serverDate() : null
+        }
     });
 
-    await transaction.commit();
+    const counterRef = transaction.collection(countersCollection).doc(weekKey);
+    if (counter.data.length) await counterRef.update({ data: { count: previousCount + 1 } });
+    else await counterRef.set({ data: { count: 1 } });
+    return { success: true, message: `提交成功！已提交《${title}》`, totalSubmissions: previousCount + 1 };
+    });
 
-    const totalSubmissions = await incrementSubmitCount(countersCollection, weekKey);
-
-    return {
-      success: true,
-      message: `提交成功！已提交《${title}》`,
-      totalSubmissions
-    };
+    return result;
 
   } catch (e) {
-    console.warn('[提交] 事务异常:', e.message || '未知错误');
-    try { await transaction.rollback(); } catch (_) { /* 事务已失败时回滚也会失败，忽略 */ }
+    // SDK codes aid diagnosis without logging user content, identifiers or database queries.
+    const sdkCode = e && typeof e.code === 'string' && /^[A-Z_]{3,80}$/.test(e.code) ? e.code : e && Number.isInteger(e.errCode) ? e.errCode : 'UNKNOWN';
+    console.warn('[提交] 事务未确认', { code: sdkCode, conflict: isTransactionConflict(e) });
     // 唯一索引冲突 = 并发重复提交（需先在控制台创建 user_id+week_key 唯一索引）
-    if (e.message && (e.message.includes('duplicate') || e.message.includes('E11000'))) {
-      return { success: false, message: '你本周已经提交过了' };
+    if (e && e.message && (e.message.includes('duplicate') || e.message.includes('E11000'))) {
+      return { success: false, code: 'ALREADY_SUBMITTED', message: '你本周已经提交过了，请刷新首页查看' };
     }
-    // 测试域返回真实错误便于定位，正式域保持通用文案、不暴露内部信息。
-    if (scope.testMode) {
-      return { success: false, message: `提交失败（测试域）：${e.message || '未知错误'}`, code: 'TEST_DIAG' };
-    }
-    return { success: false, message: '系统繁忙，提交失败' };
+    if (isTransactionConflict(e)) return { success: false, code: 'SUBMISSION_BUSY', message: '当前提交较多，请稍后再试；填写内容已保留' };
+    // A lost commit acknowledgement can mean a saved song. Never replay an unknown failure blindly.
+    return { success: false, code: 'SUBMISSION_UNCERTAIN', message: '暂时无法确认提交结果，请刷新首页查看；填写内容已保留' };
   }
 };

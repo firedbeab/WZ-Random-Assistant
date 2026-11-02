@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-01",
+  "backupCommit": "819fe45",
+  "status": "deployed and source readback verified",
+  "frontendPublished": false,
+  "functions": [
+    {
+      "name": "checkWeeklyCode",
+      "file": "index.js",
+      "sha256": "efc25cc8ea7d642ebff2761bd1d819195715d43d5c15bf2e8504120bd1fbc34d",
+      "timeout": 3,
+      "runtime": "Nodejs16.13",
+      "status": "Active"
+    },
+    {
+      "name": "manageSongLikes",
+      "file": "service.js",
+      "sha256": "2420bfd55f7875bda606f9bafe79d6dea06377e8ea28860b4fae6a3eb7da5963",
+      "timeout": 3,
+      "runtime": "Nodejs16.13",
+      "status": "Active"
+    },
+    {
+      "name": "manageFeedback",
+      "file": "service.js",
+      "sha256": "fe992674a91651ffdf4129e907333c78d7daa06faeecd961f87dfcf398711bd8",
+      "timeout": 3,
+      "runtime": "Nodejs16.13",
+      "status": "Active"
+    }
+  ],
+  "beforeSourceMatchesBackup": true,
+  "deployedFilesDownloadedMatch": true,
+  "otherOnlineSourceFilesPreserved": true,
+  "dependencyAndConfigurationChanged": false,
+  "tests": 180,
+  "compile": {
+    "wxml": 23,
+    "wxss": 29
+  },
+  "sourceBytes": 650896,
+  "maxAttempts": 3,
+  "automaticRetry": "confirmed transaction conflicts only; 40/80 ms plus random jitter; no ambiguous network retries or business revision replay",
+  "smoke": {
+    "testDomainMarker": "_testMode:true",
+    "submission": "closed-window rejection before safety check and transaction",
+    "likes": "test-domain listMine succeeded; only success and item count inspected",
+    "feedback": "test-domain listMine succeeded; only success and item count inspected",
+    "productionBusinessWrites": false
+  },
+  "logEvidence": "User screenshot: displayed completion reports ~625-1312 ms, status 200; cold-start init reports 202. Runtime success does not establish business success. Historic failure cause unconfirmed.",
+  "limitsUnchanged": [
+    "one submission per user/week",
+    "250 pending candidates, overflow persisted",
+    "feedback 1/minute and 3/day",
+    "three interactive playlist periods",
+    "test-domain and admin permissions"
+  ]
+}

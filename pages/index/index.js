@@ -371,9 +371,11 @@ Page(theme.page(feedback.notifications({
         this.showStatusMessage(`已提交，请等待抽取 ${countText}`);
       } else {
         feedback.showToast(this, { title: res.result.message, icon: 'none' });
+        if (['ALREADY_SUBMITTED', 'SUBMISSION_UNCERTAIN'].includes(res.result.code)) await this.checkTimeAndSubmission();
       }
     } catch (err) {
-      feedback.showToast(this, { title: '网络错误', icon: 'none' });
+      feedback.showToast(this, { title: '暂时无法确认提交结果，正在同步；填写内容已保留', icon: 'none' });
+      await this.checkTimeAndSubmission();
     } finally {
       this.setData({ loading: false });
       feedback.hideLoading(this);

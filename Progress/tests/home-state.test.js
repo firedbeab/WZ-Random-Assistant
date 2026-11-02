@@ -179,6 +179,27 @@ test('往期入口参数有边界，默认仍展示最新一期', () => {
   }
 });
 
+test('投稿确认丢失或已提交时只同步读取，不重复写入，保留原输入', async () => {
+  for (const failure of ['network', 'SUBMISSION_UNCERTAIN', 'ALREADY_SUBMITTED']) {
+    const f = fixture({ call: async request => {
+      if (request.name === 'checkWeeklyCode') {
+        if (failure === 'network') throw Error('timeout after commit');
+        return { result: { success:false, code:failure, message:'请刷新查看' } };
+      }
+      return { result: { success:true, data: request.data.action === 'getMySubmission' ? { song_name:'已收到的歌', singer:'歌手', special_note:'备注' } : null } };
+    } });
+    f.page.setData({weeklyCode:'ABC123', title:'已收到的歌', remark:'歌手', specialNote:'备注'});
+    await f.page.submitRequest();
+    assert.equal(f.calls.filter(c => c.name === 'checkWeeklyCode').length, 1);
+    assert(f.calls.some(c => c.data.action === 'getMySubmission'));
+    assert.equal(f.page.data.hasSubmitted, true);
+    assert.equal(f.page.data.submittedTitle, '已收到的歌');
+    assert.equal(f.page.data.title, '已收到的歌');
+    assert.equal(f.page.data.specialNote, '备注');
+    assert.equal(f.page.data.loading, false);
+  }
+});
+
 test('投稿加载和结果通知互不覆盖，重复提交受保护，失败后可重试', async () => {
   for(const success of [true,false]) {
     let resolve;

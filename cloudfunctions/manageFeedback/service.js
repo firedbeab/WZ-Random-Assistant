@@ -1,3 +1,26 @@
+// BEGIN shared transaction retry: only confirmed transaction aborts may be replayed.
+function isTransactionConflict(error) {
+  if (!error || error.businessCode || error.isBusiness) return false;
+  return error.code === 'DATABASE_TRANSACTION_CONFLICT' || error.errCode === 'DATABASE_TRANSACTION_CONFLICT' ||
+    /\b(database transaction conflict|write conflict)\b/i.test(String(error.errMsg || error.message || ''));
+}
+async function transactionWithRetry(db, operation) {
+  for (let attempt = 0; ; attempt++) {
+    let transaction;
+    try {
+      transaction = await db.startTransaction();
+      const result = await operation(transaction);
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      if (transaction) { try { await transaction.rollback(); } catch (_) {} }
+      if (!isTransactionConflict(error) || attempt >= 2) throw error;
+      await new Promise(resolve => setTimeout(resolve, 40 * (attempt + 1) + Math.floor(Math.random() * 30)));
+    }
+  }
+}
+// END shared transaction retry.
+
 const crypto = require('crypto');
 const CATEGORIES = ['使用问题', '功能建议', '其他'];
 const STATUSES = ['received', 'handling', 'done'];
@@ -20,11 +43,7 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
     const col = (name, connection = db) => connection.collection(scope.collection(name));
     const read = async (name, key, connection = db) => (await col(name, connection).doc(key).get()).data;
     const put = (name, key, data, connection = db) => col(name, connection).doc(key).set({ data });
-    const transact = async fn => {
-      const tx = await db.startTransaction();
-      try { const result = await fn(tx); await tx.commit(); return result; }
-      catch (e) { try { await tx.rollback(); } catch (_) {} throw e; }
-    };
+    const transact = fn => transactionWithRetry(db, fn);
     const profile = async () => {
       const result = await col('users').where({ openid }).limit(1).get();
       return result.data[0] || null;
@@ -175,7 +194,8 @@ function createService({ db, checkText, canUseTestData, isProductionSuperadmin, 
       } else error('未知操作');
       return { success: true, data: result };
     } catch (e) {
-      if (e.businessCode) return { success: false, code: e.businessCode, message: e.message };
+      if (e && e.businessCode) return { success: false, code: e.businessCode, message: e.message };
+      if (isTransactionConflict(e)) return { success: false, code: 'RETRY_LATER', message: '当前操作较多，请稍后再试；填写内容和选择已保留' };
       // 不回传 OPENID、数据库错误或用户正文。
       console.warn('[manageFeedback]', scope.testMode ? 'test' : 'production', ADMIN.includes(action) ? 'admin' : 'user', 'BACKEND_UNAVAILABLE');
       return { success: false, code: 'BACKEND_UNAVAILABLE', message: '服务暂不可用，请稍后重试；未确认成功的内容仍保留在当前页面' };

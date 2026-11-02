@@ -41,5 +41,5 @@
   "sourceBytes": 650675,
   "internalWeekKey": "Sunday unchanged",
   "displayPeriod": "following Monday",
-  "smoke": "Closed-time test-domain request rejected with new window message; no submission written"
+  "smoke": "Correction: earlier request used ignored __testMode and reached production closed-window rejection before writes. Rechecked 2026-11-01 with correct _testMode:true: test-domain closed-window rejection; no submission writes."
 }
