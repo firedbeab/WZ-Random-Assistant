@@ -49,6 +49,7 @@
 当前架构、已完成改动、云端配置要求和待办见 [`Progress/广播站点歌小程序.md`](Progress/%E5%B9%BF%E6%92%AD%E7%AB%99%E7%82%B9%E6%AD%8C%E5%B0%8F%E7%A8%8B%E5%BA%8F.md)。
 
 - 当前界面约定：[DESIGN.md](DESIGN.md)。布局方向先讨论、再看 HTML 样稿、确认后才接入正式小程序。
+- AI 辅助审核 K 版仅为独立模拟：[可点击 HTML](Progress/design/mockups/K-ai-audit.html)，[流程、验证与截图](Progress/design/AI辅助审核-K版样稿-20261104.md)。复制材料、粘贴结果、逐项确认及版本冲突均可体验，不连接业务数据，尚未接入正式审核。
 - 歌单平铺历史对照：[E-playlist-flat.html](Progress/design/mockups/E-playlist-flat.html)（E.2）。保留固定数据演示，不连接业务云端；当前页面采用 F.3，深色基础已接入本地代码，待真机验收与发布。
 - 管理后台排版样稿（H 版第二稿，待评审）：[H-admin-shell.html](Progress/design/mockups/H-admin-shell.html) 是一级框架（页头恒定、页签按角色分 2 / 4 个、审核与验证码、控制台、管理入口）；[H-admin-pages.html](Progress/design/mockups/H-admin-pages.html) 是三级页面（说明编辑、投稿详情、排期详情、计数器详情）。两者可互相跳转，固定示例，不接云端，页面代码未改。
 - 管理后台 I 版主体已按用户反馈接入本地正式源码，待真机验收与发布：[原交互样稿](Progress/design/mockups/I-admin-workbench.html) 保留为历史对照；[功能对照表](Progress/design/管理后台-I版功能对照.md) 记录正式落地边界。通道三态调整与七类统计集中在一级控制台，四类维护由控制台对应统计直接进入；正式环境隐藏环境提示，事件改紧凑展开列表。后台共用浅深色与轻柔切换/抽屉动效，五日排期只读/编辑、单日批量、原权限和接口保留。HTML仍仅为虚构示例。
